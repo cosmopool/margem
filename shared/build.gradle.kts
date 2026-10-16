@@ -73,6 +73,9 @@ tasks.register<JavaExec>("mutation") {
             // must not pass for an infinite loop (TIMED_OUT counts as killed) and move the score.
             "--timeoutFactor", "3",
             "--timeoutConst", "30000",
+            // The score reached when this was set up (85.99%: Kotlin 87.04%, SQL 72.83%), rounded down (D48).
+            // Fails `make check` when new code brings surviving mutants: kill them, or argue them equivalent.
+            "--mutationThreshold", "85",
             "--outputFormats", "HTML,XML",
             "--timestampedReports", "false",
             "--reportDir", reports.get().asFile.absolutePath,
