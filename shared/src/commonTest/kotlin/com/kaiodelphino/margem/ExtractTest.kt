@@ -104,6 +104,37 @@ class ExtractTest {
     }
 
     @Test
+    fun `the event time wins over the post time, two-digit years are 20yy and a date past new year is next year's`() {
+        val reposted = read(BANK, "Compra", "Compra de R$ 12,00 em LOJA", whenMs = T, postMs = T + 2 * DAY)
+        assertEquals(LocalDate(2026, 10, 6) to LocalTime(11, 43), reposted.date to reposted.time)
+        assertEquals(LocalDate(2025, 10, 5), read(BANK, "Compra", "Compra de R$ 10,00 em LOJA em 05/10/25").date)
+        assertEquals(LocalDate(2027, 1, 1), read(BANK, "Compra", "Compra de R$ 10,00 em LOJA em 01/01", JAN_2_2027 - 2 * DAY).date)
+    }
+
+    @Test
+    fun `a date that exists in no year keeps the value and falls back to the notice's date`() {
+        val p = read(BANK, "Compra", "Compra de R$ 10,00 em LOJA em 31/02")
+        assertEquals(Parsed(Cents(1000), "LOJA", LocalDate(2026, 10, 6), LocalTime(11, 43)), p)
+    }
+
+    @Test
+    fun `a text without a value still gives its date and time`() {
+        val p = read(BANK, "Fatura", "Sua fatura fecha em 10/11 às 09:00")
+        assertEquals(Parsed(Cents(0), "", LocalDate(2026, 11, 10), LocalTime(9, 0)), p)
+    }
+
+    @Test
+    fun `nubank reads the big text, else the lines, else the text`() {
+        fun nu(text: String = "", lines: String = "", big: String = "") =
+            extract(RawNotice(packageName = NUBANK, title = "Nubank", text = text, textLines = lines, bigText = big, whenMs = T, postedAt = T), zone).cents
+        val a = "Compra de R$ 31,50 APROVADA em LOJA A para o cartão com final 1234."
+        val b = "Compra de R$ 9,94 APROVADA em LOJA B para o cartão com final 1234."
+        assertEquals(Cents(3150), nu(text = a))
+        assertEquals(Cents(3150), nu(text = b, lines = a))
+        assertEquals(Cents(3150), nu(text = b, lines = b, big = a))
+    }
+
+    @Test
     fun `typed values`() {
         assertEquals(Cents(3150), parseBrl("31,50"))
         assertEquals(Cents(123456), parseBrl("1.234,56"))
@@ -117,6 +148,7 @@ class ExtractTest {
         const val NUBANK = "com.nu.production"
         const val BANK = "com.bank"
         const val MIN = 60_000L
+        const val DAY = 24 * 60 * MIN
         /** 2026-10-06 11:43:59 in São Paulo. */
         const val T = 1_791_297_839_102L
         /** 2027-01-02 10:00 in São Paulo. */
