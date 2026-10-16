@@ -770,11 +770,12 @@ private fun CeilingDialog(db: Db, ceiling: Ceiling, snack: SnackHost, close: () 
     Dialog(close, DialogProperties(usePlatformDefaultWidth = false)) {
         val shape = RoundedCornerShape(8.dp)
         Column(
-            Modifier.testTag(BudgetTags.CEILING_DIALOG).padding(horizontal = 32.dp).widthIn(max = 340.dp).fillMaxWidth()
+            // The title is the dialog node's own text (D35); the tagged pieces inside stay nodes of their own.
+            Modifier.semantics { testTag = BudgetTags.CEILING_DIALOG; this[SemanticsProperties.Text] = listOf(AnnotatedString("Teto de $month")) }.padding(horizontal = 32.dp).widthIn(max = 340.dp).fillMaxWidth()
                 .shadow(14.dp, shape, ambientColor = c.shadow, spotColor = c.shadow).background(c.surface, shape)
                 .padding(start = 24.dp, end = 24.dp, top = 24.dp, bottom = 12.dp),
         ) {
-            Text("Teto de $month", serif(22, 500, 28))
+            Text("Teto de $month", serif(22, 500, 28), Modifier.clearAndSetSemantics {})
             if (step == 0) {
                 MoneyField(Cents(value), { value = it.v }, "Máximo para a soma das cotas", size = 30, tag = BudgetTags.CEILING_FIELD)
                 if (value > 0) {

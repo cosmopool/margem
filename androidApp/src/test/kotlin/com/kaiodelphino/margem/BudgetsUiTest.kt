@@ -236,6 +236,7 @@ class BudgetsUiTest {
     }
 
     @Test
+    @Config(qualifiers = "w411dp-h891dp") // a phone: below the teto line, the rows must be on screen to be tapped
     fun `the order is remembered and deleting a budget returns to Verbas`() {
         val (a, b) = runBlocking { db.createBudget("Zebra", Cents(1000), OCT_9) to db.createBudget("Abacate", Cents(1000), OCT_9) }
         open()
