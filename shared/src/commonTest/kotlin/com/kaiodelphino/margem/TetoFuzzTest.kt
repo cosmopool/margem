@@ -229,7 +229,7 @@ private const val MAX_BUDGETS = 30
 class TetoFuzzTest {
 
     @Test
-    fun `random setCeiling, ensureMonths, start days and budgets follow the model`() = realTime {
+    fun `random setCeiling ensureMonths start days and budgets follow the model`() = realTime {
         for (seed in listOf(0x7E70L, 0x7E71L, 0x7E72L)) withDb { db ->
             val rnd = Random(seed)
             val max = findMax(db)

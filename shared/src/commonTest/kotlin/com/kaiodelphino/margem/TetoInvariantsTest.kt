@@ -373,7 +373,7 @@ private class TetoInvariantRun(val db: Db, val seed: Int) {
             val m = m0.tinvShift(k)
             val c = db.ceiling(m)
             assertEquals(m, c.month, "ceiling($m).month")
-            assertEquals(rows[m] ?: 0L, c.cents.v, "ceiling($m).cents (model rows: ${rows.toSortedMap()})")
+            assertEquals(rows[m] ?: 0L, c.cents.v, "ceiling($m).cents (model rows: ${rows.entries.sortedBy { it.key }})")
             assertEquals(standard, c.standard.v, "ceiling($m).standard")
         }
     }
