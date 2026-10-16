@@ -343,11 +343,13 @@ private class TetoInvariantRun(val db: Db, val seed: Int) {
     suspend fun setMonthStartDayAction() {
         val day = 1 + rnd.nextInt(31)
         val v0 = db.version.value
+        val old = db.settings().monthStartDay
         val ok = db.setMonthStartDay(day, today)
         log("setMonthStartDay $day -> $ok (v $v0 -> ${db.version.value})")
         assertTrue(ok, "setMonthStartDay($day)")
-        // D46: changing the start day doesn't touch the teto; nothing disappears (the model is left as it
-        // was, and checkAll compares every month around the new current one with it).
+        // D46: changing the start day doesn't change any ceiling row; the new current month without one
+        // gets the default (decided in the triage), and checkAll compares every month around it with the model.
+        if (day != old) rows.getOrPut(db.monthOf(today)) { standard }
         ensured = false
         if (rnd.nextInt(4) != 0) {
             ensureCurrent()

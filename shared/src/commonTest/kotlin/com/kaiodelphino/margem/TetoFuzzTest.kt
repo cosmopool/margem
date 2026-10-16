@@ -139,6 +139,11 @@ private class TetoModel {
         return Effect(created, intended)
     }
 
+    /** setMonthStartDay that changed the day: the new current month without a row gets the default (D46, triage). */
+    fun startMoved(now: YearMonth) {
+        if (now !in rows) rows[now] = standard
+    }
+
     fun copy(): TetoModel = TetoModel().also { it.standard = standard; it.rows.putAll(rows) }
 }
 
@@ -263,10 +268,12 @@ class TetoFuzzTest {
                     }
                     6 -> {
                         val day = randomStartDay(rnd)
+                        val old = startDay
                         noThrow("$where setMonthStartDay($day)") { db.setMonthStartDay(day, today) }
                         startDay = db.settings().monthStartDay
                         if (day in 1..31) assertEquals(day, startDay, "$where setMonthStartDay($day)")
-                        // D46: the ceiling rows and the default don't move; the model stays as it is.
+                        // D46: existing rows and the default don't move; a new current month without a row gets the default.
+                        if (startDay != old) model.startMoved(tMonthOf(today, startDay))
                     }
                     7 -> if (budgets.size < MAX_BUDGETS) {
                         val id = noThrow("$where createBudget") { db.createBudget("Verba ${names++}", Cents(budgetLimit(rnd, max)), today) }
@@ -410,8 +417,10 @@ class TetoFuzzTest {
             db.createBudget("Casa", Cents(300_000), LocalDate(2026, 1, 10))
             for (step in 0 until 150) {
                 if (rnd.nextInt(15) == 0) {
+                    val old = startDay
                     db.setMonthStartDay(randomStartDay(rnd), LocalDate(2026, 10, 16))
                     startDay = db.settings().monthStartDay
+                    if (startDay != old) model.startMoved(tMonthOf(LocalDate(2026, 10, 16), startDay))
                 }
                 val today = dayFor(model, startDay, rnd)
                 val cur = tMonthOf(today, startDay)
@@ -441,7 +450,7 @@ class TetoFuzzTest {
     }
 
     @Test
-    fun `month start day changes never touch the ceiling`() = realTime {
+    fun `month start day changes keep every ceiling and give a new current month the default`() = realTime {
         withDb { db ->
             val seed = 0x7E77L
             val rnd = Random(seed)
@@ -461,8 +470,10 @@ class TetoFuzzTest {
                 }
                 val day = randomStartDay(rnd)
                 val months = probeMonths(model, cur, rnd) + probeMonths(model, tMonthOf(today, if (day in 1..31) day else startDay), rnd)
+                val old = startDay
                 noThrow("$where setMonthStartDay($day)") { db.setMonthStartDay(day, today) }
                 startDay = db.settings().monthStartDay
+                if (startDay != old) model.startMoved(tMonthOf(today, startDay))
                 check(db, model, months, today, "$where after setMonthStartDay($day)")
                 // The new current month: its own row, or the default once ensureMonths runs (D46).
                 val now = tMonthOf(today, startDay)

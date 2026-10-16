@@ -207,7 +207,8 @@ class Db(
      * Changes the month start day (1..31; false otherwise). Deletes the step edits from the start
      * of [today]'s month onward, by the old or the new day, whichever is earlier (spec §4, D10).
      * Every budget keeps a limit in [today]'s new month: the one of the old current month, unless it
-     * already had one there (D43). The day already set changes nothing.
+     * already had one there (D43). The new current month without a ceiling row gets the default
+     * (D46); ceiling rows that exist stay. The day already set changes nothing.
      */
     suspend fun setMonthStartDay(day: Int, today: LocalDate): Boolean {
         if (day !in 1..31) return false
@@ -224,6 +225,8 @@ class Db(
                     "INSERT OR IGNORE INTO budget_months(budget_id, month, limit_cents) SELECT budget_id, ?, limit_cents FROM budget_months WHERE month = ?",
                     now.toString(), was.toString(),
                 )
+                // ensureMonths never fills backwards: a current month that moved back gets the default here (D46).
+                c.exec("INSERT OR IGNORE INTO ceiling_months(month, cents) VALUES (?, ?)", now.toString(), standardCeiling(c))
                 setSetting(c, "month_start_day", day.toString())
             }
         }
