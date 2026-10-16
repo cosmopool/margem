@@ -1,6 +1,6 @@
 # Margem — spec do produto
 
-Status: **decidido** em 2026-10-09; revisado em 2026-10-14 (bloco 4, ciclo do recado: §2.5, §2.8, §2.10, §7.3, §7.4; bloco 5, Ajustes e importação: §4, §7.6; teto: §3, §7.1, §10; início do mês sem sumir verba: §3); em 2026-10-16 (bloco 6, Leitura: §7.5; cabeçalho do teto: §7.1, §10). O que está em §10 espera resposta, uma por vez.
+Status: **decidido** em 2026-10-09; revisado em 2026-10-14 (bloco 4, ciclo do recado: §2.5, §2.8, §2.10, §7.3, §7.4; bloco 5, Ajustes e importação: §4, §7.6; teto: §3, §7.1, §10; início do mês sem sumir verba: §3); em 2026-10-16 (bloco 6, Leitura: §7.5; cabeçalho do teto: §7.1, §10; teto, T1–T10: §3, §7.1). O que está em §10 espera resposta, uma por vez.
 Escopo: só produto (o quê e por quê). Implementação: [architecture.md](architecture.md).
 Vocabulário: [glossary.md](glossary.md). Identidade visual: [design_system.html](design_system.html).
 
@@ -40,6 +40,7 @@ O estorno não é crédito: é só o registro de que uma compra não conta (§6)
 - **Virada**: a cota recomeça inteira todo mês. Sobra e excesso não passam para o mês seguinte; ficam só no histórico.
 - **Teto** (opcional; sem teto por padrão): valor máximo para a **soma das cotas** do mês (ex.: a renda). É limite de planejamento, não de gasto: o gasto continua medido por verba, e não existe margem, ritmo ou estado do total.
   - **Passar do teto é permitido**: criar verba ou mudar cota que deixa a soma das cotas do mês atual acima do teto avisa enquanto digita (texto sob o campo) e de novo ao salvar (diálogo), e grava se a pessoa confirmar.
+    Só avisa a mudança que **aumenta** a soma: baixar uma cota com a soma ainda acima do teto, ou só renomear, não avisa.
   - **Mudar o teto** pergunta ao salvar: **só este mês** (no mês seguinte volta o padrão) ou **deste mês em diante** (vira o padrão dos próximos meses). A pessoa pode tirar o teto.
   - Aparece só no cabeçalho de Verbas (§7.1) e nos avisos de cota; widget e Leitura não mostram o teto.
 - **Verba criada no meio do mês** tem a cota cheia no mês inteiro (o ritmo ideal de hoje já conta as semanas passadas).
@@ -106,12 +107,13 @@ Cinco abas: **Verbas** (início) · **Pauta** · **Lançamentos** · **Leitura**
 - Lista das verbas do mês atual: nome, régua (gasto, marca do ritmo ideal, cota), margem, estado.
 - **Cabeçalho com o teto** (§3): desenho do book, [8.10 Cabeçalho do teto](design_system.html) e tela 10.1: chapéu, "Dia 9 de 31.", linha fina e, embaixo, o fio do teto com a legenda. O teto não ganha frase na manchete.
   - **Fio do teto**: régua sem ritmo; trilho em fio forte, cotas em tinta (não é gasto: sem cor de estado), fio duplo de argila no teto, os mesmos 9% reservados ao excesso, em hachura.
-  - **Legenda**: "cotas R$ 3.720,00 · teto R$ 4.100,00"; acima do teto, "+ 300" em lacre na faixa reservada; teto só deste mês, "teto R$ 4.400,00 · só outubro".
-  - **Sem teto**: o fio pontilhado, "As cotas somam R$ 3.720,00." e o link "Pôr um teto". Sem verbas, a linha some.
+  - **Legenda**: "cotas R$ 3.720,00 · teto R$ 4.100,00"; acima do teto, "+ 300" em lacre na faixa reservada (reais inteiros; com centavos só quando há: "+ 300,50"); teto só deste mês (o do mês difere do padrão), "teto R$ 4.400,00 · só outubro".
+  - **Sem teto**: o fio pontilhado, "As cotas somam R$ 3.720,00." e o link "Pôr um teto". Sem verbas, a linha some. Mês sem teto com padrão que tem (tirado só deste mês): o mesmo, sem menção ao padrão.
   - **Toque**: do chapéu à legenda, um alvo só, que abre o teto. Leitor de tela: "Teto de outubro: R$ 4.100,00. Cotas somam R$ 3.720,00, a R$ 380,00 do teto. Tocar para mudar." (no teto: "fecham no teto"; acima: "R$ 300,00 além do teto").
-  - **Diálogo**: "Teto de outubro", campo "Máximo para a soma das cotas", dica ao digitar ("As cotas de outubro somam R$ 3.720,00: ficam a R$ 680,00 do teto." / "…: ficariam R$ 220,00 além do teto. Dá para salvar assim."), ação "Tirar teto". Salvar pergunta "Vale para quais meses?": "De outubro em diante" · "Só em outubro" ("Em novembro, volta a R$ 4.100,00." ou "volta a não ter teto"); tocar a opção salva. Tirar pergunta "Tirar o teto de quais meses?", com as mesmas opções.
-  - **Snackbar** com Desfazer: "Teto de R$ 4.400,00 só em outubro." · "Teto de R$ 4.400,00 de outubro em diante." · "Outubro em diante sem teto."
-  - **Nova verba / cota**: sob o campo, "Com esta cota, as cotas de outubro somam R$ 4.400,00: R$ 300,00 além do teto."; ao salvar, "Passar do teto?" · Voltar · "Criar mesmo assim" / "Salvar mesmo assim".
+  - **Diálogo**: "Teto de outubro", campo "Máximo para a soma das cotas", dica ao digitar ("As cotas de outubro somam R$ 3.720,00: ficam a R$ 680,00 do teto." / "…: ficariam R$ 220,00 além do teto. Dá para salvar assim."), ação "Tirar teto". O campo começa com o teto do mês (vazio sem teto); Salvar fica desabilitado em R$ 0,00, e tirar é só "Tirar teto", que aparece só quando o mês tem teto. Salvar pergunta "Vale para quais meses?": "De outubro em diante" · "Só em outubro" ("Em novembro, volta a R$ 4.100,00." ou "volta a não ter teto"); tocar a opção salva. Tirar pergunta "Tirar o teto de quais meses?", com as mesmas opções.
+  - **Snackbar** com Desfazer: "Teto de R$ 4.400,00 só em outubro." · "Teto de R$ 4.400,00 de outubro em diante." · "Outubro em diante sem teto." · "Outubro sem teto."; Desfazer volta o padrão e o teto do mês ao que eram.
+  - **Textos sem desenho no book** (decididos em 2026-10-16): dica no teto exato, "As cotas de outubro somam R$ 4.100,00: fecham no teto."; ao tirar, a sub-linha de "De outubro em diante" é "Os próximos meses ficam sem teto."; leitor de tela sem teto: "As cotas de outubro somam R$ 3.720,00. Sem teto. Tocar para pôr um teto."; corpo de "Passar do teto?": "As cotas de outubro somariam R$ 4.400,00, R$ 300,00 além do teto de R$ 4.100,00. O teto é só um limite de planejamento."
+  - **Nova verba / cota**: sob o campo, "Com esta cota, as cotas de outubro somam R$ 4.400,00: R$ 300,00 além do teto."; ao salvar, "Passar do teto?" · Voltar · "Criar mesmo assim" / "Salvar mesmo assim". Em Editar verba, quando a cota nova também apaga passos editados (§4), o diálogo do teto vem primeiro e o dos passos depois; Voltar em qualquer um não grava nada.
 - **Ordenar**: seletor no topo — **risco** (padrão; mesma regra do widget, §8.1) · **manual** (arrastar) · **A–Z**. A escolha é lembrada.
 - Criar verba: nome + cota mensal, com a prévia dos passos semanais do mês atual.
 - **Detalhe da verba**: seletor de mês (do primeiro mês da verba até o atual); régua; passos semanais (editáveis, com "Voltar ao automático", §4); lançamentos do mês com a soma corrida e a marca "cota atingida aqui" (parcelada conta a parcela do mês; estornada aparece riscada e não soma); editar nome e cota; apagar.
