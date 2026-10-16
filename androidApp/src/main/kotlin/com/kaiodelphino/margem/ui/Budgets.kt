@@ -54,6 +54,7 @@ import com.kaiodelphino.margem.BudgetId
 import com.kaiodelphino.margem.BudgetMonth
 import com.kaiodelphino.margem.BudgetOrder
 import com.kaiodelphino.margem.BudgetSummary
+import com.kaiodelphino.margem.Ceiling
 import com.kaiodelphino.margem.Cents
 import com.kaiodelphino.margem.Db
 import com.kaiodelphino.margem.MonthLine
@@ -78,6 +79,7 @@ import com.kaiodelphino.margem.widgets.MonthPicker
 import com.kaiodelphino.margem.widgets.OptionPicker
 import com.kaiodelphino.margem.widgets.PageHeader
 import com.kaiodelphino.margem.widgets.SectionLine
+import com.kaiodelphino.margem.widgets.SnackHost
 import com.kaiodelphino.margem.widgets.Space
 import com.kaiodelphino.margem.widgets.StatusLabel
 import com.kaiodelphino.margem.widgets.StepsEditor
@@ -125,6 +127,70 @@ object BudgetTags {
      * "Dia 9 de 31." and "Faltam 23 dias, contando hoje." ("Falta 1 dia, contando hoje." on the last day).
      */
     const val HEADER = "budgets.header"
+
+    // ---- Teto in the header (spec §3, §7.1; book 8.10; D46) ----
+
+    /**
+     * The ceiling line under the header's dek, for the current month (after ensureMonths). Absent when the
+     * month has no budget. With a ceiling: "cotas R$ 3.720,00" and "teto R$ 4.100,00" ("teto R$ 4.400,00 ·
+     * só outubro" when Ceiling.cents != Ceiling.standard), plus "+ 300" (whole reais; "+ 300,50" with
+     * cents) when the limits pass it; content description "Teto de outubro: R$ 4.100,00. Cotas somam
+     * R$ 3.720,00, a R$ 380,00 do teto. Tocar para mudar." ("…, fecham no teto. …" when equal; "…, R$ 300,00
+     * além do teto. …" when above). Without a ceiling: "As cotas somam R$ 3.720,00." and "Pôr um teto";
+     * content description "As cotas de outubro somam R$ 3.720,00. Sem teto. Tocar para pôr um teto."
+     * Clicking it, or [HEADER], opens [CEILING_DIALOG] (one touch target from the rubric to the legend);
+     * with no budget, [HEADER] opens nothing.
+     */
+    const val CEILING = "budgets.ceiling"
+
+    /**
+     * The ceiling dialog: "Teto de outubro" (the current month's name). Two steps: the value ([CEILING_FIELD],
+     * [CEILING_HINT], [CEILING_SAVE], [CEILING_REMOVE], [CEILING_CANCEL]) and then the months question
+     * ([CEILING_SCOPE]). Closing it any other way writes nothing.
+     */
+    const val CEILING_DIALOG = "budgets.ceilingDialog"
+
+    /** "Máximo para a soma das cotas": money input, starting with the month's ceiling (zero when none). */
+    const val CEILING_FIELD = "budgets.ceilingDialog.field"
+
+    /**
+     * While the field is > 0: "As cotas de outubro somam R$ 3.720,00: ficam a R$ 680,00 do teto." /
+     * "…: fecham no teto." (equal) / "…: ficariam R$ 220,00 além do teto. Dá para salvar assim." Absent at zero.
+     */
+    const val CEILING_HINT = "budgets.ceilingDialog.hint"
+
+    /** "Salvar": disabled while the field is zero; opens [CEILING_SCOPE] for that value. */
+    const val CEILING_SAVE = "budgets.ceilingDialog.save"
+
+    /** "Tirar teto": only when the month has a ceiling (absent otherwise); opens [CEILING_SCOPE] for removing. */
+    const val CEILING_REMOVE = "budgets.ceilingDialog.remove"
+
+    /** "Cancelar": closes the dialog; nothing is written. */
+    const val CEILING_CANCEL = "budgets.ceilingDialog.cancel"
+
+    /**
+     * The months question, inside [CEILING_DIALOG]: "Vale para quais meses?" after Salvar, "Tirar o teto de
+     * quais meses?" after Tirar teto.
+     */
+    const val CEILING_SCOPE = "budgets.ceilingDialog.scope"
+
+    /**
+     * "De outubro em diante", with "Vira o teto dos próximos meses." ("Os próximos meses ficam sem teto." when
+     * removing). Click writes setCeiling(value or 0, onward = true), closes the dialog and shows the snack
+     * "Teto de R$ 4.400,00 de outubro em diante." / "Outubro em diante sem teto.", whose Desfazer puts the
+     * default and the month's ceiling back as they were (D46).
+     */
+    const val CEILING_ONWARD = "budgets.ceilingDialog.onward"
+
+    /**
+     * "Só em outubro", with "Em novembro, volta a R$ 4.100,00." (the default) or "Em novembro, volta a não ter
+     * teto." (no default). Click writes setCeiling(value or 0, onward = false), closes the dialog and shows the
+     * snack "Teto de R$ 4.400,00 só em outubro." / "Outubro sem teto.", with the same Desfazer.
+     */
+    const val CEILING_ONLY = "budgets.ceilingDialog.only"
+
+    /** "Voltar": back from [CEILING_SCOPE] to the value step, with the typed value kept; nothing is written. */
+    const val CEILING_BACK = "budgets.ceilingDialog.back"
 
     /**
      * "4 recados na pauta" ("1 recado na pauta"), plus "3 novos desde a última vez" ("1 novo desde a
@@ -188,8 +254,27 @@ object BudgetTags {
      * the errors above and stays. Nova verba creates the budget (createBudget, today's month) and goes
      * back to Verbas. Editar verba renames it and, when the limit changed, sets it from today's month on
      * (setLimit) — first asking with [LIMIT_DIALOG] when limitDropsEdits — then goes back to the detail.
+     * When [FORM_CEILING] applies, [CEILING_WARN] asks first, before anything else is written.
      */
     const val FORM_SUBMIT = "budgetForm.submit"
+
+    /**
+     * Under the limit, while the typed limit raises the current month's sum of limits above its ceiling
+     * (previewCeiling over > 0 and limits above the month's; spec §3): "Com esta cota, as cotas de outubro
+     * somam R$ 4.400,00: R$ 300,00 além do teto." Absent otherwise (no ceiling, not above, or the sum
+     * doesn't go up).
+     */
+    const val FORM_CEILING = "budgetForm.ceiling"
+
+    /**
+     * On a valid submit while [FORM_CEILING] applies: "Passar do teto?", "As cotas de outubro somariam
+     * R$ 4.400,00, R$ 300,00 além do teto de R$ 4.100,00. O teto é só um limite de planejamento." Confirm
+     * ("Criar mesmo assim" / "Salvar mesmo assim") goes on with the submit (in Editar verba, [LIMIT_DIALOG]
+     * comes next when it also applies); cancel ("Voltar") closes it, writes nothing and stays on the form.
+     */
+    const val CEILING_WARN = "budgetForm.ceilingDialog"
+    const val CEILING_WARN_CONFIRM = "budgetForm.ceilingDialog.confirm"
+    const val CEILING_WARN_CANCEL = "budgetForm.ceilingDialog.cancel"
 
     /** Editar verba only: "Apagar verba", opens [DELETE_DIALOG]. */
     const val FORM_DELETE = "budgetForm.delete"
@@ -562,6 +647,16 @@ private fun StepsPreview(bm: BudgetMonth, today: LocalDate) {
         )
     }
 }
+
+// ---- Teto ----
+
+/** Book 8.10: the ceiling line and its legend, or the dotted line with "Pôr um teto". Tags: [BudgetTags.CEILING]. */
+@Composable
+private fun CeilingLine(ceiling: Ceiling): Unit = TODO()
+
+/** The ceiling dialog: value, then "Vale para quais meses?"; saving shows a snack with Desfazer. Tags: [BudgetTags.CEILING_DIALOG]. */
+@Composable
+private fun CeilingDialog(db: Db, ceiling: Ceiling, snack: SnackHost, close: () -> Unit): Unit = TODO()
 
 // ---- Detalhe da verba ----
 

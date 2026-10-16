@@ -186,7 +186,10 @@ class Db(
 
     /**
      * Makes sure every budget has a limit row up to [month]: copies the latest earlier row and
-     * fills skipped months. Months before a budget's first row stay without one. Does not bump [version].
+     * fills skipped months. Months before a budget's first row stay without one. Also gives [month]
+     * and every month skipped since the latest ceiling row before it a ceiling row with the default
+     * ([Ceiling.standard]), not the previous month's value (D42); with no ceiling row at all, only
+     * [month] gets one. Never fills backwards. Does not bump [version].
      */
     suspend fun ensureMonths(month: YearMonth): Unit = write(bump = false) { c ->
         for (id in c.query("SELECT id FROM budgets") { it.getLong(0) }) ensureMonth(c, id, month)
@@ -654,6 +657,34 @@ class Db(
         val first = c.query("SELECT MIN(month) FROM budget_months WHERE budget_id = ?", id.v) { if (it.isNull(0)) NO_MONTH else YearMonth.parse(it.getText(0)) }
         BudgetDetail(id, name, bm, lines, first.firstOrNull() ?: NO_MONTH)
     }
+
+    // ---- Teto (spec §3, §7.1; D42, D46) ----
+
+    /**
+     * The ceiling of [month], the default and the sum of the month's limits. A month without its
+     * ceiling row reads cents 0 (no ceiling): screens call [ensureMonths] first. Writes nothing.
+     */
+    suspend fun ceiling(month: YearMonth): Ceiling = TODO()
+
+    /**
+     * Sets the ceiling of [today]'s month to [cents]; 0 removes it. Refused (false, nothing written) for
+     * cents < 0 or above the maximum value. First fills the months skipped up to the current one with the
+     * old default (like [ensureMonths]). [onward] ("deste mês em diante"): the default becomes [cents],
+     * the current month's row becomes [cents] and the rows of later months are deleted. Otherwise ("só este
+     * mês"): only the current month's row changes; the next month gets the default again.
+     * Desfazer (D46) = setCeiling(before.standard, onward = true) then setCeiling(before.cents, onward = false).
+     */
+    suspend fun setCeiling(cents: Cents, onward: Boolean, today: LocalDate): Boolean = TODO()
+
+    /**
+     * Nova verba and Editar verba's warning (spec §3): the [Ceiling] of [today]'s month as if [budget]'s
+     * limit there were [limit] — [Ceiling.limits] = Σ of the other budgets' limits in that month + [limit].
+     * [budget] 0 (or a budget without a row in that month) adds [limit] as a new one. The month's own ceiling
+     * and default as they are (a missing ceiling row reads 0). [limit] ≤ 0 or above the maximum value: the
+     * month as it is, like [ceiling] (the budget keeps its limit). Writes nothing. The screen warns when the
+     * result's [Ceiling.over] > 0 and its limits are above [ceiling]'s for the month (the sum goes up).
+     */
+    suspend fun previewCeiling(budget: BudgetId, limit: Cents, today: LocalDate): Ceiling = TODO()
 
     // ---- Tags ----
 

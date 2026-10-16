@@ -268,6 +268,26 @@ data class BudgetDetail(
     val firstMonth: YearMonth = NO_MONTH,
 )
 
+/**
+ * Teto of one budget month (spec §3, §7.1; D42, D46): the most the month's limits may sum, as a planning
+ * limit. Nothing is ever refused because of it.
+ */
+data class Ceiling(
+    val month: YearMonth = NO_MONTH,
+    /** This month's ceiling; 0 = no ceiling (also for a month without its row). */
+    val cents: Cents = Cents(0),
+    /**
+     * The default (Settings-level "deste mês em diante" value) that months without a row get from
+     * [Db.ensureMonths]; 0 = none. [cents] != [standard] is the "· só outubro" of the legend.
+     */
+    val standard: Cents = Cents(0),
+    /** Σ of the limits of the budgets with a limit row in [month]. */
+    val limits: Cents = Cents(0),
+) {
+    /** How much [limits] passes [cents]: limits − cents when there is a ceiling and limits > cents, else 0. */
+    val over: Cents get() = if (cents.v > 0 && limits > cents) limits - cents else Cents(0)
+}
+
 /** "Mercado: margem R$ 300,00 → R$ 254,00", for the month of the first installment. */
 data class Preview(val month: YearMonth = NO_MONTH, val before: Cents = Cents(0), val after: Cents = Cents(0))
 
