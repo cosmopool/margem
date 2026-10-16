@@ -94,6 +94,7 @@ import androidx.compose.ui.window.Dialog
 import androidx.compose.ui.window.DialogProperties
 import androidx.compose.ui.window.DialogWindowProvider
 import com.kaiodelphino.margem.BudgetMonth
+import com.kaiodelphino.margem.Ceiling
 import com.kaiodelphino.margem.Cents
 import com.kaiodelphino.margem.NoticeRow
 import com.kaiodelphino.margem.PaceStatus
@@ -739,6 +740,62 @@ fun Meter(spent: Cents, limit: Cents, ideal: Cents, status: PaceStatus, modifier
 fun Meter(month: BudgetMonth, modifier: Modifier = Modifier, tall: Boolean = false) =
     Meter(month.spent, month.limit, month.ideal, month.status, modifier, tall)
 
+/**
+ * Book §8.10, the ceiling line: a meter without pace. 1 dp rail in fio forte, the limits in a 3 dp ink
+ * stroke (not spending: no state color), the argila double rule at the ceiling and, past it, the same 9%
+ * reserved for the excess hatch (up to 10% drawn).
+ */
+@Composable
+fun CeilingMeter(limits: Cents, ceiling: Cents, modifier: Modifier = Modifier) {
+    val c = Margem.colors
+    Canvas(modifier.fillMaxWidth().height(10.dp)) {
+        val rail = size.width / 1.09f
+        val t = ceiling.v.toFloat()
+        val g = if (t <= 0f) 0f else (limits.v / t).coerceIn(0f, 1f)
+        drawRect(c.ruleStrong, Offset(0f, 4.dp.toPx()), Size(rail, 1.dp.toPx()))
+        if (g > 0f) drawRect(c.ink, Offset(0f, 3.dp.toPx()), Size(g * rail, 3.dp.toPx()))
+        if (limits > ceiling && t > 0f) {
+            val x = ((limits.v - ceiling.v) / t).coerceIn(0f, 0.1f)
+            hatch(c.overrun, Offset(rail + 3.dp.toPx(), 2.dp.toPx()), Size(x * rail, 5.dp.toPx()), 1.6f.dp.toPx(), 4.dp.toPx())
+        }
+        for (x in listOf(rail - 1.5f.dp.toPx(), rail + 2.5f.dp.toPx())) drawLine(c.brand, Offset(x, 0f), Offset(x, size.height), 1.dp.toPx())
+    }
+}
+
+/**
+ * Book §8.10 under the Verbas header: the ceiling line with "cotas R$ 3.720,00 · teto R$ 4.100,00" ("· só
+ * outubro" when the month's ceiling isn't the default, "+ 300" in lacre above it), or, without a ceiling,
+ * the dotted rule with "As cotas somam R$ 3.720,00." and "Pôr um teto". Draws only: the header is the target.
+ */
+@Composable
+fun CeilingLegend(ceiling: Ceiling, modifier: Modifier = Modifier) {
+    val c = Margem.colors
+    val style = sans(12f, 600, 14.4f, tabular = true)
+    if (ceiling.cents.v == 0L) {
+        Row(
+            modifier.fillMaxWidth().padding(top = 8.dp).heightIn(min = 44.dp).drawBehind {
+                drawLine(c.ruleStrong, Offset(0f, 0.5f), Offset(size.width, 0.5f), 1.dp.toPx(), pathEffect = PathEffect.dashPathEffect(floatArrayOf(1.dp.toPx(), 1.dp.toPx())))
+            },
+            verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.SpaceBetween,
+        ) {
+            Text("As cotas somam ${money(ceiling.limits)}.", sans(13.5f, 400, 17.5f, tabular = true), color = c.inkTertiary)
+            Text("Pôr um teto", sans(14f, 600, 20f, 0.01f), Modifier.padding(start = 12.dp), color = c.info)
+        }
+        return
+    }
+    val over = ceiling.over.v > 0
+    val only = if (ceiling.cents != ceiling.standard) " · só ${monthLong(ceiling.month.month)}" else ""
+    Column(modifier.fillMaxWidth()) {
+        CeilingMeter(ceiling.limits, ceiling.cents, Modifier.padding(top = 10.dp))
+        // Book `.tlab`: the legend ends under the double rule (9% reserved), or spans it when "+ 300" is there.
+        Row(Modifier.padding(top = 5.dp).fillMaxWidth(if (over) 1f else 1f / 1.09f), horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+            Text("cotas ${money(ceiling.limits)}", style, Modifier.weight(1f), c.inkTertiary, maxLines = 1)
+            Text("teto ${money(ceiling.cents)}$only", style, if (over) Modifier else Modifier.offset(x = 5.dp), c.inkTertiary, maxLines = 1)
+            if (over) Text("+ ${stepValue(ceiling.over)}", style, Modifier.widthIn(min = 30.dp), c.overrun, align = TextAlign.End, maxLines = 1)
+        }
+    }
+}
+
 // ---- 8.6 Month and weekly steps ----
 
 /**
@@ -973,11 +1030,14 @@ fun CapturePaused(onReconnect: () -> Unit, modifier: Modifier = Modifier, onManu
  * Folha, radius 8, shadow, title in Newsreader 22, actions as text buttons; [destructive] in lacre.
  */
 @Composable
-fun MargemDialog(title: String, text: String, confirm: String, onConfirm: () -> Unit, onDismiss: () -> Unit, destructive: Boolean = true, tag: String = "") {
+fun MargemDialog(
+    title: String, text: String, confirm: String, onConfirm: () -> Unit, onDismiss: () -> Unit, destructive: Boolean = true, tag: String = "",
+    dismiss: String = "Cancelar",
+) {
     Dialog(onDismiss, DialogProperties(usePlatformDefaultWidth = false)) {
         val c = Margem.colors
         (LocalView.current.parent as? DialogWindowProvider)?.window?.setDimAmount(if (c.isDark) 0.6f else 0.45f)
-        DialogCard(title, text, confirm, onConfirm, onDismiss, destructive, tag = tag)
+        DialogCard(title, text, confirm, onConfirm, onDismiss, destructive, tag = tag, dismiss = dismiss)
     }
 }
 
@@ -985,7 +1045,7 @@ fun MargemDialog(title: String, text: String, confirm: String, onConfirm: () -> 
 @Composable
 fun DialogCard(
     title: String, text: String, confirm: String, onConfirm: () -> Unit, onDismiss: () -> Unit, destructive: Boolean = true,
-    modifier: Modifier = Modifier, tag: String = "",
+    modifier: Modifier = Modifier, tag: String = "", dismiss: String = "Cancelar",
 ) {
     val c = Margem.colors
     val shape = RoundedCornerShape(8.dp)
@@ -997,7 +1057,7 @@ fun DialogCard(
         Text(title, serif(22, 500, 28))
         Text(text, sans(15f, 400, 22.5f), Modifier.padding(top = 8.dp), c.inkSecondary)
         Row(Modifier.fillMaxWidth().padding(top = 18.dp), horizontalArrangement = Arrangement.spacedBy(4.dp, Alignment.End)) {
-            Button("Cancelar", onDismiss, Modifier.testTag("$tag.cancel"), kind = ButtonKind.TEXT)
+            Button(dismiss, onDismiss, Modifier.testTag("$tag.cancel"), kind = ButtonKind.TEXT)
             Button(confirm, onConfirm, Modifier.testTag("$tag.confirm"), kind = ButtonKind.TEXT, color = if (destructive) c.overrun else Color.Unspecified)
         }
     }

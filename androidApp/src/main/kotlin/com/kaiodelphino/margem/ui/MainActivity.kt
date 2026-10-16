@@ -226,7 +226,7 @@ fun App(db: Db, tabRequest: Screen?, onTabOpened: () -> Unit) {
     Column(Modifier.fillMaxSize().background(Margem.colors.paper).windowInsetsPadding(WindowInsets.statusBars).imePadding()) {
         Box(Modifier.weight(1f)) {
             when (screen) {
-                Screen.Budgets -> Budgets(db, go)
+                Screen.Budgets -> Budgets(db, snack, go)
                 Screen.Inbox -> Inbox(db, granted, snack, go)
                 Screen.Transactions -> Transactions(db, snack, go)
                 Screen.Insights -> Insights(db)
