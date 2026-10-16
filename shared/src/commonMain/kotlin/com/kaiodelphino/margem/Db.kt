@@ -25,7 +25,7 @@ import kotlinx.io.buffered
 import kotlinx.io.files.Path
 import kotlinx.io.files.SystemFileSystem
 
-private const val SCHEMA_VERSION = 1L
+private const val SCHEMA_VERSION = 2L
 private const val MAX_INSTALLMENTS = 400
 
 /**
@@ -193,6 +193,7 @@ class Db(
      */
     suspend fun ensureMonths(month: YearMonth): Unit = write(bump = false) { c ->
         for (id in c.query("SELECT id FROM budgets") { it.getLong(0) }) ensureMonth(c, id, month)
+        ensureCeiling(c, month)
     }
 
     /** The budget month [date] falls in, by the current monthStartDay. */
@@ -664,7 +665,7 @@ class Db(
      * The ceiling of [month], the default and the sum of the month's limits. A month without its
      * ceiling row reads cents 0 (no ceiling): screens call [ensureMonths] first. Writes nothing.
      */
-    suspend fun ceiling(month: YearMonth): Ceiling = TODO()
+    suspend fun ceiling(month: YearMonth): Ceiling = read { c -> ceiling(c, month) }
 
     /**
      * Sets the ceiling of [today]'s month to [cents]; 0 removes it. Refused (false, nothing written) for
@@ -674,7 +675,23 @@ class Db(
      * mês"): only the current month's row changes; the next month gets the default again.
      * Desfazer (D46) = setCeiling(before.standard, onward = true) then setCeiling(before.cents, onward = false).
      */
-    suspend fun setCeiling(cents: Cents, onward: Boolean, today: LocalDate): Boolean = TODO()
+    suspend fun setCeiling(cents: Cents, onward: Boolean, today: LocalDate): Boolean {
+        if (cents.v !in 0..MAX_CENTS) return false
+        write { c ->
+            val current = monthOf(today, settings(c).monthStartDay)
+            ensureCeiling(c, current)
+            if (onward) {
+                c.exec("INSERT INTO settings(key, value) VALUES ('ceiling', ?) ON CONFLICT(key) DO UPDATE SET value = excluded.value WHERE value != excluded.value", cents.v.toString())
+                c.exec("DELETE FROM ceiling_months WHERE month > ?", current.toString())
+            }
+            // Upserts that only count as a change when the value differs (D6: no bump for nothing).
+            c.exec(
+                "INSERT INTO ceiling_months(month, cents) VALUES (?, ?) ON CONFLICT(month) DO UPDATE SET cents = excluded.cents WHERE cents != excluded.cents",
+                current.toString(), cents.v,
+            )
+        }
+        return true
+    }
 
     /**
      * Nova verba and Editar verba's warning (spec §3): the [Ceiling] of [today]'s month as if [budget]'s
@@ -684,7 +701,13 @@ class Db(
      * month as it is, like [ceiling] (the budget keeps its limit). Writes nothing. The screen warns when the
      * result's [Ceiling.over] > 0 and its limits are above [ceiling]'s for the month (the sum goes up).
      */
-    suspend fun previewCeiling(budget: BudgetId, limit: Cents, today: LocalDate): Ceiling = TODO()
+    suspend fun previewCeiling(budget: BudgetId, limit: Cents, today: LocalDate): Ceiling = read { c ->
+        val month = monthOf(today, settings(c).monthStartDay)
+        val now = ceiling(c, month)
+        if (limit.v !in 1..MAX_CENTS) return@read now
+        val own = c.long("SELECT COALESCE(MAX(limit_cents), 0) FROM budget_months WHERE budget_id = ? AND month = ?", budget.v, month.toString())
+        now.copy(limits = Cents(now.limits.v - own + limit.v))
+    }
 
     // ---- Tags ----
 
@@ -818,6 +841,36 @@ class Db(
             c.exec("INSERT OR IGNORE INTO budget_months(budget_id, month, limit_cents) VALUES (?, ?, ?)", budget, m.toString(), last.second)
         }
     }
+
+    /**
+     * Gives [month] and the months skipped since the latest ceiling row before it the default (D42). With no
+     * row at all, only [month]; with rows only after it, nothing (never fills backwards).
+     */
+    private fun ensureCeiling(c: SQLiteConnection, month: YearMonth) {
+        val standard = standardCeiling(c)
+        val last = c.query("SELECT month FROM ceiling_months WHERE month <= ? ORDER BY month DESC LIMIT 1", month.toString()) {
+            YearMonth.parse(it.getText(0))
+        }.firstOrNull()
+        if (last == null) {
+            if (c.long("SELECT COUNT(*) FROM ceiling_months") == 0L) c.exec("INSERT INTO ceiling_months(month, cents) VALUES (?, ?)", month.toString(), standard)
+            return
+        }
+        var m: YearMonth = last
+        while (m < month) {
+            m = m.plusMonth()
+            c.exec("INSERT OR IGNORE INTO ceiling_months(month, cents) VALUES (?, ?)", m.toString(), standard)
+        }
+    }
+
+    private fun standardCeiling(c: SQLiteConnection) =
+        c.query("SELECT value FROM settings WHERE key = 'ceiling'") { it.getText(0).toLongOrNull() ?: 0L }.firstOrNull() ?: 0L
+
+    private fun ceiling(c: SQLiteConnection, month: YearMonth) = Ceiling(
+        month = month,
+        cents = Cents(c.long("SELECT cents FROM ceiling_months WHERE month = ?", month.toString())),
+        standard = Cents(standardCeiling(c)),
+        limits = Cents(c.long("SELECT COALESCE(SUM(limit_cents), 0) FROM budget_months WHERE month = ?", month.toString())),
+    )
 
     private fun budgetMonth(c: SQLiteConnection, s: Settings, budget: Long, month: YearMonth, today: LocalDate): BudgetMonth {
         val w = monthWindow(month, s.monthStartDay)
@@ -1029,6 +1082,11 @@ class Db(
             "CREATE INDEX transaction_tags_tag ON transaction_tags(tag_id)",
         )
 
+        /** v2: the teto (D42, D46). Its default lives in settings under "ceiling" (absent = 0, no ceiling). */
+        val SCHEMA_V2 = listOf(
+            "CREATE TABLE ceiling_months(month TEXT PRIMARY KEY, cents INTEGER NOT NULL)",
+        )
+
         /** One `if (v < N)` per version, each in a transaction that ends by writing N (architecture §4). */
         fun migrate(c: SQLiteConnection) {
             val v = c.long("PRAGMA user_version")
@@ -1038,7 +1096,12 @@ class Db(
                 c.execSQL("PRAGMA user_version = 1")
                 c.execSQL("COMMIT")
             }
-
+            if (v < 2) {
+                c.execSQL("BEGIN IMMEDIATE")
+                SCHEMA_V2.forEach(c::execSQL)
+                c.execSQL("PRAGMA user_version = 2")
+                c.execSQL("COMMIT")
+            }
         }
     }
 }
