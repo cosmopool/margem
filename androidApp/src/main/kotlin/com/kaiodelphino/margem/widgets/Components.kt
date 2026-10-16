@@ -756,7 +756,9 @@ fun CeilingMeter(limits: Cents, ceiling: Cents, modifier: Modifier = Modifier) {
         if (g > 0f) drawRect(c.ink, Offset(0f, 3.dp.toPx()), Size(g * rail, 3.dp.toPx()))
         if (limits > ceiling && t > 0f) {
             val x = ((limits.v - ceiling.v) / t).coerceIn(0f, 0.1f)
-            hatch(c.overrun, Offset(rail + 3.dp.toPx(), 2.dp.toPx()), Size(x * rail, 5.dp.toPx()), 1.6f.dp.toPx(), 4.dp.toPx())
+            // Kept inside the 9% reserved: 10% of the rail after the 3 dp gap would cross the page margin.
+            val w = minOf(x * rail, size.width - rail - 3.dp.toPx())
+            hatch(c.overrun, Offset(rail + 3.dp.toPx(), 2.dp.toPx()), Size(w, 5.dp.toPx()), 1.6f.dp.toPx(), 4.dp.toPx())
         }
         for (x in listOf(rail - 1.5f.dp.toPx(), rail + 2.5f.dp.toPx())) drawLine(c.brand, Offset(x, 0f), Offset(x, size.height), 1.dp.toPx())
     }
