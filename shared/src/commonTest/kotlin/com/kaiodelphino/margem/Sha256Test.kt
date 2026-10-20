@@ -36,4 +36,12 @@ class Sha256Test {
         assertEquals("bf2a676355968a4e126dd956d1da8537671ea92264687d0384f0a9d8ab7f8582", contentHash(listOf("\u0000\u0000", "É", "", "", "")))
         assertEquals("09796f801da9edfbef227d57ace945815cdae2143c4a16ae4222205438296474", contentHash(listOf("\u0000", "\u0000É", "", "", "")))
     }
+
+    @Test
+    fun `content hash - lengths of 256 bytes and more use every byte of the prefix`() {
+        assertEquals(
+            "ccb21e826a1e3ddb2eb4c471e5574d7112f5562b67d1bdd6fec4492977fc2217",
+            contentHash(listOf("a".repeat(300), "b".repeat(70_000), "", "", "")),
+        )
+    }
 }

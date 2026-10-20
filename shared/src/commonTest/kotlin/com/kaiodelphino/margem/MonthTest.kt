@@ -99,6 +99,16 @@ class MonthTest {
     }
 
     @Test
+    fun `projection on the last day is what was spent - also where spent times limit leaves 64 bits`() {
+        val last = LocalDate(2026, 11, 30)
+        fun projection(limit: Long, spent: Long) = bm(today = last, limit = limit, spent = mapOf(LocalDate(2026, 11, 10) to spent)).projection.v
+        // Σ steps = ideal on the last day: spent × limit ÷ limit.
+        assertEquals(10_000_000_000_000_001L, projection(3, 10_000_000_000_000_001L)) // above 2^53: no rounding
+        assertEquals(Long.MAX_VALUE / 3, projection(3, Long.MAX_VALUE / 3)) // spent × limit is just Long.MAX_VALUE - 1
+        assertEquals(100L, projection(99_999_999_999_999_999L, 100)) // spent × limit overflows a Long
+    }
+
+    @Test
     fun `an edited plan moves the ideal pace`() {
         // Week 2 lowered to R$ 70: the other 23 days share 53000, so week 1 (1 day) is 53000 / 23 = 2304.
         val m = bm(today = LocalDate(2026, 11, 8), edited = mapOf(LocalDate(2026, 11, 2) to 7000L))

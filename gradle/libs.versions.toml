@@ -11,6 +11,7 @@ coroutines = "1.11.0"
 kotlinxDatetime = "0.8.0"
 kotlinxIo = "0.9.1"
 sqlite = "2.7.1"
+pitest = "1.30.0"
 
 [libraries]
 androidx-core-ktx = { module = "androidx.core:core-ktx", version.ref = "coreKtx" }
@@ -33,6 +34,8 @@ kotlinx-io-core = { module = "org.jetbrains.kotlinx:kotlinx-io-core", version.re
 androidx-sqlite-bundled = { module = "androidx.sqlite:sqlite-bundled", version.ref = "sqlite" }
 androidx-sqlite-framework = { module = "androidx.sqlite:sqlite-framework", version.ref = "sqlite" }
 kotlin-test = { module = "org.jetbrains.kotlin:kotlin-test", version.ref = "kotlin" }
+pitest = { module = "org.pitest:pitest", version.ref = "pitest" }
+pitest-command-line = { module = "org.pitest:pitest-command-line", version.ref = "pitest" }
 
 [plugins]
 android-application = { id = "com.android.application", version.ref = "agp" }

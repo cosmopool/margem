@@ -8,7 +8,7 @@ APK_DIR := androidApp/build/outputs
 FILTER  := $(if $(T),--tests '*$(T)*',)
 
 .DEFAULT_GOAL := help
-.PHONY: help debug install run catalog release bundle test test-shared test-android ios check clean
+.PHONY: help debug install run catalog release bundle test test-shared test-android ios mutation check clean
 
 help: ## List the commands
 	@grep -E '^[a-z-]+:.*## ' $(MAKEFILE_LIST) | awk -F':.*## ' '{printf "  make %-13s %s\n", $$1, $$2}'
@@ -46,7 +46,11 @@ test-android: ## Run the androidApp tests on Robolectric (UI, listener)
 ios: ## Compile shared and its tests for the iOS simulator (no iOS app in v1)
 	$(GRADLE) :shared:compileKotlinIosSimulatorArm64 :shared:compileTestKotlinIosSimulatorArm64
 
-check: test ios debug ## Everything a block must pass: tests, iOS compile, debug build
+mutation: ## Mutation testing of shared on the JVM (PIT, Kotlin + SQL mutants); fails below the threshold (D48)
+	$(GRADLE) :shared:mutation
+	@echo "  report: shared/build/reports/pitest/index.html"
+
+check: test ios debug mutation ## Everything a block must pass: tests, iOS compile, debug build, mutation score
 
 clean: ## Delete build outputs
 	$(GRADLE) clean

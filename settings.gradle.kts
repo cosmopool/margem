@@ -22,3 +22,5 @@ dependencyResolutionManagement {
 
 rootProject.name = "Margem"
 include(":shared", ":androidApp")
+// The SQL mutation operator (D48): built only for :shared:mutation.
+includeBuild("tools/pit-sql")

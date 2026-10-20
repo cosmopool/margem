@@ -16,3 +16,4 @@
 !/androidApp/debug.keystore
 kls_database.db
 /shared/build/
+/tools/pit-sql/build/
