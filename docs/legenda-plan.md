@@ -18,7 +18,7 @@ The same block fixes the estorno search gap: per §7.3 it matches legenda, alias
 | Suggestion (§2.5) | Doesn't carry the legenda. |
 | Emenda | Not an emenda: doesn't set `corrected` or "‸ emendado". |
 | Leitura | Ignores it; the merchant ranking is unchanged. |
-| Text | Trimmed (whitespace and the NBSP family at the edges, 2026-10-20); whitespace only means none; every line break (LF, CRLF, CR, U+2028, U+2029) becomes one space; 80 characters at most. |
+| Text | Trimmed of every invisible at the edges (ASCII controls, VT/FF/NEL, NBSP family — kept in the middle; 2026-10-20); whitespace only means none; every line break (LF, CRLF, CR, U+2028, U+2029) becomes one space; 80 characters at most. |
 | List cut | 2 lines in Lançamentos and budget detail, 1 in estorno candidates, then "…". |
 | Counter | Shows near the limit ("72/80") from 70 characters (O6), and the field stops accepting input at 80. |
 | Edit | Blank (or ✕) and Salvar removes it, unlike the alias. Until Salvar, a "legenda tirada: ~~…~~ Desfazer" line shows. |

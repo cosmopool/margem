@@ -1171,11 +1171,13 @@ class Db(
 private val CLEAN_BREAKS = Regex("\\r\\n|[\\r\\n\\u2028\\u2029]")
 
 /**
- * What the trim takes (spec §2.12, 2026-10-20): whitespace and the NBSP family (U+00A0, U+1680,
- * U+2000–U+200A, U+202F, U+205F, U+3000) — copy-paste spaces that would make the legenda look empty.
+ * What the trim takes (spec §2.12, 2026-10-20): every invisible that makes a line look empty — ASCII
+ * controls (space, tab, VT, FF…), NEL and the NBSP family (U+00A0, U+1680, U+2000–U+200A, U+202F,
+ * U+205F, U+3000). An explicit set: `isWhitespace` differs between targets. In the middle of the text
+ * they stay (only the five breaks of [CLEAN_BREAKS] become spaces).
  */
 private fun isEdgeSpace(c: Char): Boolean =
-    c.isWhitespace() || c == '\u00A0' || c == '\u1680' || c in '\u2000'..'\u200A' || c == '\u202F' || c == '\u205F' || c == '\u3000'
+    c <= ' ' || c == '\u0085' || c == '\u00A0' || c == '\u1680' || c in '\u2000'..'\u200A' || c == '\u202F' || c == '\u205F' || c == '\u3000'
 
 /**
  * The text as SQLite gives it back (D28): its UTF-16 ↔ UTF-8 conversion drops a leading U+FEFF,

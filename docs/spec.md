@@ -31,7 +31,7 @@ O estorno não é crédito: é só o registro de que uma compra não conta (§6)
 11. Recados que chegaram desde a última vez que a Pauta foi aberta aparecem como **novos**.
 12. **Legenda** do lançamento: texto curto, opcional, que a pessoa escreve sobre um lançamento só ("Bolo do aniversário da Ana"). Quando existe, é o nome do lançamento nas listas; sem legenda, vale o apelido, senão o texto do banco.
     - Só deste lançamento: não vem na sugestão (§2.5), não é emenda (não marca "‸ emendado") e não entra na Leitura (§7.5).
-    - Até 80 caracteres. Espaços nas pontas saem (inclusive os não-quebráveis da família NBSP, U+00A0 e afins); só espaços = sem legenda; qualquer quebra de linha (LF, CRLF, CR ou invisível U+2028/U+2029) vira um espaço.
+    - Até 80 caracteres. Todo invisível nas pontas sai — espaço, tabulação, VT/FF/NEL, a família NBSP (U+00A0 e afins) e os controles — mas fica no meio do texto; só espaços = sem legenda; qualquer quebra de linha (LF, CRLF, CR ou invisível U+2028/U+2029) vira um espaço.
     - Na edição, apagar o texto tira a legenda (diferente do apelido, §2.10).
     - Apagar o lançamento (ou Desfazer logo depois de lançar) apaga a legenda junto: o recado volta à Pauta sem ela, sem aviso a mais.
     - Aparece no formulário (§7.3), em Lançamentos (§7.4), no detalhe da verba (§7.1) e na escolha da compra estornada (§7.3). Recados (Pauta, Riscados, widget da Pauta) não têm legenda; snackbars e diálogos não a mostram.

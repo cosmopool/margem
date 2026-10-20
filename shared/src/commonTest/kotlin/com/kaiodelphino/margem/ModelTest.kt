@@ -234,9 +234,9 @@ private fun mtKey(merchant: String) = merchant.filterNot(Char::isWhitespace).low
 
 private fun mtClean(tags: List<String>) = tags.map { it.trim().lowercase() }.filter { it.isNotEmpty() }.distinct()
 
-/** §2.12, D55: every line break (CRLF as one, then LF, CR, U+2028, U+2029) becomes one space; whitespace and the NBSP family go at the edges. */
+/** §2.12, D55: every line break (CRLF as one, then LF, CR, U+2028, U+2029) becomes one space; every invisible goes at the edges (explicit set, like Db.isEdgeSpace). */
 private fun mtCaption(s: String) = s.replace(Regex("\\r\\n|[\\r\\n\\u2028\\u2029]"), " ")
-    .trim { it.isWhitespace() || it == '\u00A0' || it == '\u1680' || it in '\u2000'..'\u200A' || it == '\u202F' || it == '\u205F' || it == '\u3000' }
+    .trim { it <= ' ' || it == '\u0085' || it == '\u00A0' || it == '\u1680' || it in '\u2000'..'\u200A' || it == '\u202F' || it == '\u205F' || it == '\u3000' }
 
 private fun YearMonth.mtShift(n: Int): YearMonth = if (n >= 0) plus(n, DateTimeUnit.MONTH) else minus(-n, DateTimeUnit.MONTH)
 

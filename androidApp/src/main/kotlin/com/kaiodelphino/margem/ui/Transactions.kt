@@ -608,7 +608,11 @@ private fun TxForm(
             }
             // "legenda tirada" is derived (D57): the saved one was cleared in this edit. Gone on Salvar or new text.
             val removed = isEdit && data.detail.row.caption.isNotEmpty() && caption.isEmpty()
-            if (removed) Row(Modifier.testTag(TransactionTags.FORM_CAPTION_REMOVED).padding(bottom = 6.dp), verticalAlignment = Alignment.CenterVertically) {
+            if (removed) Row(
+                Modifier.testTag(TransactionTags.FORM_CAPTION_REMOVED).semantics(mergeDescendants = true) {}
+                    .padding(bottom = 6.dp),
+                verticalAlignment = Alignment.CenterVertically,
+            ) {
                 Text("legenda tirada:", sans(13.5f, 400, 18f), color = c.inkSecondary)
                 Text(
                     data.detail.row.caption, serif(14, 500, 18, italic = true), Modifier.padding(start = 8.dp), c.inkTertiary,
