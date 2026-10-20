@@ -1,6 +1,6 @@
 # Margem — spec do produto
 
-Status: **decidido** em 2026-10-09; revisado em 2026-10-14 (bloco 4, ciclo do recado: §2.5, §2.8, §2.10, §7.3, §7.4; bloco 5, Ajustes e importação: §4, §7.6; teto: §3, §7.1, §10; início do mês sem sumir verba: §3); em 2026-10-16 (bloco 6, Leitura: §7.5; cabeçalho do teto: §7.1, §10). O que está em §10 espera resposta, uma por vez.
+Status: **decidido** em 2026-10-09; revisado em 2026-10-14 (bloco 4, ciclo do recado: §2.5, §2.8, §2.10, §7.3, §7.4; bloco 5, Ajustes e importação: §4, §7.6; teto: §3, §7.1, §10; início do mês sem sumir verba: §3); em 2026-10-16 (legenda do lançamento: §2.10, §2.12, §7.1, §7.3, §7.4, §7.5; bloco 6, Leitura: §7.5; cabeçalho do teto: §7.1, §10); em 2026-10-20 (legenda: quebras de linha em §2.12, nome da prévia em §7.3; apelidos iguais no ranking: §7.5). O que está em §10 espera resposta, uma por vez.
 Escopo: só produto (o quê e por quê). Implementação: [architecture.md](architecture.md).
 Vocabulário: [glossary.md](glossary.md). Identidade visual: [design_system.html](design_system.html).
 
@@ -27,8 +27,14 @@ O estorno não é crédito: é só o registro de que uma compra não conta (§6)
 8. Apagar um lançamento devolve o recado dele à Pauta (o manual simplesmente some). Pede confirmação num diálogo, que diz o que volta à Pauta; não tem Desfazer.
    Se ele estava estornado, o estorno é apagado junto: o recado de estorno também volta à Pauta.
 9. Apagar um marcador apaga os lançamentos que ficam sem nenhum marcador; os recados deles voltam à Pauta.
-10. **Apelido** do estabelecimento substitui o texto do banco em todo lugar. Ao lançar, deixar o apelido em branco não o remove: ele fica como está.
+10. **Apelido** do estabelecimento substitui o texto do banco em todo lugar. Ao lançar, deixar o apelido em branco não o remove: ele fica como está. Num lançamento com legenda (§2.12), a legenda vem antes.
 11. Recados que chegaram desde a última vez que a Pauta foi aberta aparecem como **novos**.
+12. **Legenda** do lançamento: texto curto, opcional, que a pessoa escreve sobre um lançamento só ("Bolo do aniversário da Ana"). Quando existe, é o nome do lançamento nas listas; sem legenda, vale o apelido, senão o texto do banco.
+    - Só deste lançamento: não vem na sugestão (§2.5), não é emenda (não marca "‸ emendado") e não entra na Leitura (§7.5).
+    - Até 80 caracteres. Espaços nas pontas saem; só espaços = sem legenda; qualquer quebra de linha (LF, CRLF, CR ou invisível U+2028/U+2029) vira um espaço.
+    - Na edição, apagar o texto tira a legenda (diferente do apelido, §2.10).
+    - Apagar o lançamento (ou Desfazer logo depois de lançar) apaga a legenda junto: o recado volta à Pauta sem ela, sem aviso a mais.
+    - Aparece no formulário (§7.3), em Lançamentos (§7.4), no detalhe da verba (§7.1) e na escolha da compra estornada (§7.3). Recados (Pauta, Riscados, widget da Pauta) não têm legenda; snackbars e diálogos não a mostram.
 
 ## 3. Verba e cota
 
@@ -114,7 +120,7 @@ Cinco abas: **Verbas** (início) · **Pauta** · **Lançamentos** · **Leitura**
   - **Nova verba / cota**: sob o campo, "Com esta cota, as cotas de outubro somam R$ 4.400,00: R$ 300,00 além do teto."; ao salvar, "Passar do teto?" · Voltar · "Criar mesmo assim" / "Salvar mesmo assim".
 - **Ordenar**: seletor no topo — **risco** (padrão; mesma regra do widget, §8.1) · **manual** (arrastar) · **A–Z**. A escolha é lembrada.
 - Criar verba: nome + cota mensal, com a prévia dos passos semanais do mês atual.
-- **Detalhe da verba**: seletor de mês (do primeiro mês da verba até o atual); régua; passos semanais (editáveis, com "Voltar ao automático", §4); lançamentos do mês com a soma corrida e a marca "cota atingida aqui" (parcelada conta a parcela do mês; estornada aparece riscada e não soma); editar nome e cota; apagar.
+- **Detalhe da verba**: seletor de mês (do primeiro mês da verba até o atual); régua; passos semanais (editáveis, com "Voltar ao automático", §4); lançamentos do mês com a soma corrida e a marca "cota atingida aqui" (parcelada conta a parcela do mês; estornada aparece riscada e não soma; com legenda, a linha é a de Lançamentos, §7.4); editar nome e cota; apagar.
 - Vazio: explica o que é uma verba e como criar a primeira.
 
 ### 7.2 Pauta
@@ -126,14 +132,19 @@ Cinco abas: **Verbas** (início) · **Pauta** · **Lançamentos** · **Leitura**
 - Vazio: "Pauta limpa."
 
 ### 7.3 Lançar / editar lançamento
-- Valor total, estabelecimento (com apelido), data e hora, verba (obrigatória), marcadores (≥1), número de parcelas.
+- Valor total, estabelecimento (com apelido), legenda (opcional), data e hora, verba (obrigatória), marcadores (≥1), número de parcelas.
 - **Estabelecimento em dois campos**: o principal é o **apelido** (vale para este e os próximos lançamentos do estabelecimento). Embaixo, "No banco: …"; tocar vira campo para **emendar o texto do banco** (marca emendado, com Desfazer). No lançamento manual há um campo só, o nome.
+- **Legenda** (§2.12), recolhida: um link "+ Legenda · só deste lançamento" logo abaixo do estabelecimento (do "No banco" no recado; do nome no manual). Tocar abre o campo no lugar, em itálico, com a dica "Aparece no lugar de Padaria do Zé, só neste lançamento."; com legenda, a edição já abre com ele à vista.
+  - O ✕ esvazia o campo e o recolhe. Na edição, até Salvar, mostra "legenda tirada: ~~Bolo do aniversário da Ana~~ Desfazer" (o desenho da emenda, sem "‸").
+  - Perto do limite, a contagem aparece à direita da dica ("72/80"); em 80 o campo para de aceitar.
+  - Desenho: [legenda recolhida](mockups/descricao-b-recolhida.html).
 - **Data e hora** por um seletor próprio (book 8.9): grade do mês com a semana começando no dia dos Ajustes, hoje marcado, dias futuros desabilitados (lançamento é gasto feito) e hora HH:MM.
 - Mostra o texto original do recado e marca o que foi emendado.
 - Enquanto falta verba ou marcador, o botão de lançar fica desabilitado e a tela diz o que falta.
-- **Prévia**: mostra o efeito na verba antes de confirmar ("Mercado: margem R$ 300,00 → R$ 254,00").
+- **Prévia**: mostra o efeito na verba antes de confirmar ("Mercado: margem R$ 300,00 → R$ 254,00"). O nome é o mesmo das listas (§2.12): com legenda, a legenda ("Bolo do aniversário da Ana: margem R$ 300,00 → R$ 254,00"); sem ela, o apelido, senão o texto do banco.
 - **Recado de estorno**: em vez dos campos, a pessoa escolhe a compra estornada (lançamento ou recado, §6); o app sugere a mais provável. O botão é **Registrar estorno**.
-  - A escolha é a lista completa de candidatos, os mais prováveis no topo, com **busca** (lupa) por nome, apelido ou valor.
+  - A escolha é a lista completa de candidatos, os mais prováveis no topo, com **busca** (lupa) por legenda, apelido, texto do banco ou valor, sem diferença de maiúsculas e acentos ("estação" acha LOJA ESTACAO).
+  - Candidato com legenda: a legenda em itálico (uma linha, "…" se passar) e "em" + o estabelecimento embaixo.
   - Prévia na verba quando a compra é um lançamento ("Casa: margem R$ 738,70 → R$ 798,60").
 - **Leitura errada**: a pessoa troca na própria tela. Em Registrar estorno, "Não é estorno? Lançar como compra"; no Lançar de um recado comum, "É um estorno? Registrar estorno".
 - **Na edição**: "Apagar lançamento" (§2.8); compra estornada mostra "estornada" e **Desfazer estorno**.
@@ -141,6 +152,7 @@ Cinco abas: **Verbas** (início) · **Pauta** · **Lançamentos** · **Leitura**
 
 ### 7.4 Lançamentos
 - Todos os lançamentos, mais recentes no topo, **agrupados por dia** como a Pauta: estabelecimento, valor, verba, marcadores; "‸ emendado" quando foi emendado; compras estornadas riscadas como "estornada" (o estorno não tem linha própria).
+- **Com legenda** (§2.12): a legenda é o nome, em itálico, até 2 linhas ("…" se passar); embaixo, "em Padaria do Zé" (apelido, senão texto do banco; sem estabelecimento, essa linha não existe); depois a linha de sempre. Estornada: legenda e "em …" em tinta 3, sem risco; só o valor riscado, como o nome hoje.
 - Parcelada mostra a parcela do mês atual ("Parcela 3 de 10", com o valor dela); sem parcela no mês atual, mostra o total e "10×".
 - Compra estornada: ação **Desfazer estorno** (§6).
 - Tocar abre a edição (7.3). Botão de **lançamento manual**.
@@ -152,7 +164,7 @@ Cinco abas: **Verbas** (início) · **Pauta** · **Lançamentos** · **Leitura**
   - Mês atual: o resto do mês sombreado e em branco; frase "+ R$ 51,10 sobre o ritmo ideal. No passo atual, o mês fecharia em R$ 796." (abaixo do ritmo: "R$ 20,00 abaixo do ritmo ideal. …"; fora da margem: "R$ 12,00 além da cota. …"; sem projeção quando o ritmo ideal de hoje é R$ 0,00, §5, ou quando nada foi gasto no mês).
   - Mês passado: o mês inteiro, sem sombra e sem projeção; frase "Fechou em R$ 1.180,00, R$ 60,00 dentro da cota." ou "… R$ 12,00 além da cota."
 - **Verbas por mês**: a verba escolhida nos 6 meses até o mês do topo, gasto × cota de cada mês (a cota de cada mês, §3), excesso em hachura com o valor. Meses antes do primeiro mês da verba ficam no lugar, vazios. Frase: "Dois meses fora da margem." / "Nenhum mês fora da margem."
-- **Marcadores e estabelecimentos**: ranking **por valor** no mês do topo, com a contagem ao lado (estabelecimentos pelo apelido).
+- **Marcadores e estabelecimentos**: ranking **por valor** no mês do topo, com a contagem ao lado (estabelecimentos pelo apelido; o mesmo apelido é o mesmo lugar, sem diferença de maiúsculas; a legenda não entra).
   - Seletor "Marcadores · Estabelecimentos" numa seção só; 6 linhas e depois "Ver todos (n)", que abre o resto no lugar. A escolha fica enquanto a tela está aberta.
   - Um lançamento com vários marcadores conta inteiro em cada um; a tela avisa que a soma dos marcadores pode passar do total.
   - Frase: "feira puxa a fila."
