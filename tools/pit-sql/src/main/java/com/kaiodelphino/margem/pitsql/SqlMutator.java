@@ -14,7 +14,9 @@ import org.pitest.mutationtest.engine.gregor.MutationContext;
  * PIT mutator for the hand-written SQL of the Db (architecture D48). It mutates the SQL inside string
  * constants: `LDC` of a string, and the recipe of a `makeConcatWithConstants` (a Kotlin string template
  * with `$x` compiles to one, the `\u0001` slots standing for the values). A string is SQL when its first
- * word is SELECT, INSERT, UPDATE, DELETE, WITH or REPLACE. Operators: AND↔OR, `<`↔`<=`, `>`↔`>=`,
+ * word is SELECT, INSERT, UPDATE, DELETE, WITH or REPLACE, or, in the Db and Capture classes (where the
+ * queries are put together from fragments like "t.budget_id = ? AND t.id = ?"), when it has an
+ * uppercase SQL word (AND, OR, WHERE, JOIN, ORDER BY, SUM, IS NULL…). Operators: AND↔OR, `<`↔`<=`, `>`↔`>=`,
  * SUM↔MAX, LEFT JOIN↔JOIN, COALESCE(x, d)→x, ASC↔DESC, IS NULL↔IS NOT NULL; one mutant per
  * occurrence, outside quoted literals.
  *
@@ -26,6 +28,11 @@ public final class SqlMutator implements MethodMutatorFactory {
 
     private static final String PREFIX = "SQL_";
     private static final String[] SQL_STARTS = {"SELECT", "INSERT", "UPDATE", "DELETE", "WITH", "REPLACE"};
+    /** Uppercase only: the Db's SQL is written in capitals, its other strings (setting keys, messages) are not. */
+    private static final java.util.Set<String> SQL_WORDS = java.util.Set.of(
+            "AND", "OR", "WHERE", "JOIN", "ORDER", "GROUP", "HAVING", "SUM", "MAX", "MIN", "COUNT", "COALESCE",
+            "IS", "NULL", "ASC", "DESC", "BETWEEN", "EXISTS", "IN", "NOT", "FROM", "SET", "VALUES", "LIMIT");
+    private static final java.util.regex.Pattern WORD = java.util.regex.Pattern.compile("[A-Za-z_]+");
 
     @Override
     public String getGloballyUniqueId() {
@@ -44,10 +51,12 @@ public final class SqlMutator implements MethodMutatorFactory {
 
     @Override
     public MethodVisitor create(MutationContext context, MethodInfo info, MethodVisitor next) {
+        String owner = info.getOwningClass().getName();
+        boolean fragments = isQueryClass(owner);
         return new MethodVisitor(Opcodes.ASM9, next) {
             @Override
             public void visitLdcInsn(Object value) {
-                super.visitLdcInsn(value instanceof String s ? mutate(context, s) : value);
+                super.visitLdcInsn(value instanceof String s ? mutate(context, s, fragments) : value);
             }
 
             @Override
@@ -55,7 +64,7 @@ public final class SqlMutator implements MethodMutatorFactory {
                 if (bsm.getOwner().equals("java/lang/invoke/StringConcatFactory") && name.equals("makeConcatWithConstants")
                         && args.length > 0 && args[0] instanceof String recipe) {
                     args = args.clone();
-                    args[0] = mutate(context, recipe);
+                    args[0] = mutate(context, recipe, fragments);
                 }
                 super.visitInvokeDynamicInsn(name, descriptor, bsm, args);
             }
@@ -63,8 +72,8 @@ public final class SqlMutator implements MethodMutatorFactory {
     }
 
     /** Registers every mutant of [s]; returns the active one's text, or [s] itself. */
-    private static String mutate(MutationContext context, String s) {
-        if (!isSql(s)) return s;
+    private static String mutate(MutationContext context, String s, boolean fragments) {
+        if (!isSql(s) && !(fragments && hasSqlWord(s))) return s;
         String out = s;
         for (Mutant m : mutants(s)) {
             MutationIdentifier id = context.registerMutation(new Id(m.id), m.description);
@@ -79,6 +88,18 @@ public final class SqlMutator implements MethodMutatorFactory {
             if (t.regionMatches(true, 0, start, 0, start.length())
                     && (t.length() == start.length() || !isWordChar(t.charAt(start.length())))) return true;
         }
+        return false;
+    }
+
+    /** Db, its inner classes, and Capture's file class (CaptureKt): where the SQL lives. */
+    static boolean isQueryClass(String internalName) {
+        String simple = internalName.substring(internalName.lastIndexOf('/') + 1);
+        return simple.equals("Db") || simple.startsWith("Db$") || simple.startsWith("CaptureKt");
+    }
+
+    static boolean hasSqlWord(String s) {
+        java.util.regex.Matcher m = WORD.matcher(s);
+        while (m.find()) if (SQL_WORDS.contains(m.group())) return true;
         return false;
     }
 

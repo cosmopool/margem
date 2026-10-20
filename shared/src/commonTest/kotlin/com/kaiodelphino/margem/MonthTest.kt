@@ -133,7 +133,7 @@ class MonthTest {
         val NOV = YearMonth(2026, 11)
     }
     @Test
-    fun `ideal by day follows the steps - R$ 310 in October is R$ 10 a day`() {
+    fun `ideal by day follows the steps - R 310 in October is R 10 a day`() {
         // Book 10.7: Oct 2026 from Monday, R$ 310 → steps 40 · 70 · 70 · 70 · 60, R$ 10 a day (spec §4, §5).
         val oct = bm(month = YearMonth(2026, 10), limit = 31000, today = LocalDate(2026, 10, 9))
         assertEquals((1..31).map { Cents(it * 1000L) }, oct.idealByDay)

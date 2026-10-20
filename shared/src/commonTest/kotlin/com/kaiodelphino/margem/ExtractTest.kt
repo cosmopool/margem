@@ -104,7 +104,7 @@ class ExtractTest {
     }
 
     @Test
-    fun `the event time wins over the post time, two-digit years are 20yy and a date past new year is next year's`() {
+    fun `the event time wins over the post time - two-digit years are 20yy and a date past new year is next year's`() {
         val reposted = read(BANK, "Compra", "Compra de R$ 12,00 em LOJA", whenMs = T, postMs = T + 2 * DAY)
         assertEquals(LocalDate(2026, 10, 6) to LocalTime(11, 43), reposted.date to reposted.time)
         assertEquals(LocalDate(2025, 10, 5), read(BANK, "Compra", "Compra de R$ 10,00 em LOJA em 05/10/25").date)
@@ -124,7 +124,7 @@ class ExtractTest {
     }
 
     @Test
-    fun `nubank reads the big text, else the lines, else the text`() {
+    fun `nubank reads the big text - else the lines - else the text`() {
         fun nu(text: String = "", lines: String = "", big: String = "") =
             extract(RawNotice(packageName = NUBANK, title = "Nubank", text = text, textLines = lines, bigText = big, whenMs = T, postedAt = T), zone).cents
         val a = "Compra de R$ 31,50 APROVADA em LOJA A para o cartão com final 1234."

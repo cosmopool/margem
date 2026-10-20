@@ -54,6 +54,17 @@ class MutationKillTest {
         assertEquals(3, db.pendingCount())
     }
 
+    @Test
+    fun `pauta and riscados put the later of two notices posted at the same time first`() = runTest {
+        db.addSource(BANK, "Banco", 0)
+        assertTrue(capture(db, bank("a", T, "Compra de R$ 10,00 em A")))
+        assertTrue(capture(db, bank("b", T, "Compra de R$ 20,00 em B")))
+        val order = db.pending().map { it.parsed.merchant }
+        assertEquals(listOf("B", "A"), order)
+        for (n in db.pending()) assertTrue(db.dismiss(n.id))
+        assertEquals(order, db.dismissed().map { it.parsed.merchant })
+    }
+
     // ---- Suggestion (spec §2.5) ----
 
     @Test
@@ -96,7 +107,7 @@ class MutationKillTest {
     }
 
     @Test
-    fun `a purchase posted at the same moment as the estorno is likely, and candidates go newest first by time`() = runTest {
+    fun `a purchase posted at the same moment as the estorno is likely - and candidates go newest first by time`() = runTest {
         db.addSource(BANK, "Banco", 0)
         val a = db.createBudget("A", Cents(100_000), OCT_6)
         assertTrue(capture(db, bank("p", T, "Compra de R$ 10,00 em LOJA")))
@@ -116,7 +127,7 @@ class MutationKillTest {
     }
 
     @Test
-    fun `likely needs a value, and the merchant only when the estorno names one`() = runTest {
+    fun `likely needs a value - and the merchant only when the estorno names one`() = runTest {
         db.addSource(BANK, "Banco", 0)
         capture(db, bank("a", T - 3_000, "Compra de R$ 10,00 em LOJA"))
         capture(db, bank("b", T - 2_000, "Compra de R$ 10,00 em OUTRA"))
@@ -147,7 +158,7 @@ class MutationKillTest {
     // ---- Risk order (spec §8.1, §7.1) ----
 
     @Test
-    fun `risk order - overrun by excess, ahead by distance to the ideal, on pace by margin share of the limit, then name`() = runTest {
+    fun `risk order - overrun by excess - ahead by distance to the ideal - on pace by margin share of the limit - then name`() = runTest {
         val today = LocalDate(2026, 10, 15)
         val spend = listOf(
             Triple("Gama", 1_000L, 0L), Triple("Beta", 1_000L, 0L),
@@ -333,6 +344,52 @@ class MutationKillTest {
         assertEquals(123L, db.sources().single().addedAt)
         db.addSource(BANK, "Banco Novo", 999)
         assertEquals("Banco Novo" to 123L, db.sources().single().let { it.label to it.addedAt })
+    }
+
+    // ---- Deletes leave no orphan rows (spec §2.8, §2.9, §3) ----
+
+    // No public read sees these rows, so only the exported file can show them: the one test that checks
+    // Margem rows in the file itself (D48, decided 2026-10-20).
+    @Test
+    fun `deleting a budget - a transaction or a tag leaves no row pointing at it in the file`() = runTest {
+        db.addSource(BANK, "Banco", 0)
+        val gone = db.createBudget("Some", Cents(100_000), OCT_6)
+        val kept = db.createBudget("Fica", Cents(100_000), OCT_6)
+        fun three(budget: BudgetId, merchant: String, tags: List<String>) = form(budget, merchant, OCT_6, tags = tags).copy(installments = 3)
+        db.addManual(three(gone, "A", listOf("x")))
+        val single = db.addManual(three(kept, "B", listOf("x")))
+        val refunded = db.addManual(three(kept, "C", listOf("x")))
+        val onlyTagged = db.addManual(three(kept, "D", listOf("solo")))
+        val survivor = db.addManual(three(kept, "E", listOf("x", "solo")))
+        assertTrue(capture(db, bank("e", T, "Estorno de R$ 10,00")))
+        assertTrue(db.registerRefund(db.pending().single().id, refunded))
+        db.ensureMonths(YearMonth(2026, 12))
+
+        db.deleteBudget(gone)
+        db.deleteTransaction(single)
+        db.deleteTransaction(refunded)
+        db.deleteTag(db.tags().first { it.name == "solo" }.id)
+        assertEquals(TransactionDetail(), db.transaction(onlyTagged), "setup: a transaction left without tags goes")
+
+        val file = temp("orphans").also { files.add(it) }
+        assertTrue(db.exportTo(file))
+        val c = BundledSQLiteDriver().open(file)
+        try {
+            for ((what, sql) in listOf(
+                "budget_months of a deleted budget" to "SELECT COUNT(*) FROM budget_months WHERE budget_id NOT IN (SELECT id FROM budgets)",
+                "week_steps of a deleted budget" to "SELECT COUNT(*) FROM week_steps WHERE budget_id NOT IN (SELECT id FROM budgets)",
+                "installments of a deleted transaction" to "SELECT COUNT(*) FROM installments WHERE transaction_id NOT IN (SELECT id FROM transactions)",
+                "tag links of a deleted transaction" to "SELECT COUNT(*) FROM transaction_tags WHERE transaction_id NOT IN (SELECT id FROM transactions)",
+                "tag links of a deleted tag" to "SELECT COUNT(*) FROM transaction_tags WHERE tag_id NOT IN (SELECT id FROM tags)",
+                "estornos of a deleted transaction" to "SELECT COUNT(*) FROM refunds WHERE transaction_id <> 0 AND transaction_id NOT IN (SELECT id FROM transactions)",
+            )) assertEquals(0L, c.long(sql), what)
+            // What stays is still there: the checks above aren't passing on an empty file.
+            assertEquals(3L, c.long("SELECT COUNT(*) FROM budget_months WHERE budget_id = ?", kept.v))
+            assertEquals(3L, c.long("SELECT COUNT(*) FROM installments WHERE transaction_id = ?", survivor.v))
+            assertEquals(1L, c.long("SELECT COUNT(*) FROM transaction_tags WHERE transaction_id = ?", survivor.v))
+        } finally {
+            c.close()
+        }
     }
 
     // ---- Backup and import (D14, D40) ----
