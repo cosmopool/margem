@@ -341,15 +341,17 @@ class Db(
     /**
      * Lançar: turns a pending notice into a transaction. Refused (TransactionId(0), nothing written)
      * unless the notice is pending, [TransactionForm.budget] exists, at least one tag remains after
-     * cleaning, total > 0, installments in 1..400 and every installment dated in 0001-01-01..9999-12-31
-     * (dates are stored as ISO text, which sorts only in that range).
+     * cleaning, total > 0, installments in 1..400, every installment dated in 0001-01-01..9999-12-31
+     * (dates are stored as ISO text, which sorts only in that range) and the cleaned caption is at most
+     * 80 characters (spec §2.12, D53; see [TransactionForm.caption]).
      *
      * Writes the transaction, under an id never used before (not even by a deleted transaction: a stale
      * edit screen can't open another one), its installments and its tags in one transaction: installment k
      * (1..n) is dated purchase date + (k−1) months, moved to the nearest day inside the k-th
      * budget month when that date falls outside it (start days 29–31); each is total / n rounded
      * down and the last absorbs the remainder. `corrected` when total, merchant, date or time
-     * differ from the notice's [Parsed]. A non-blank alias names the merchant.
+     * differ from the notice's [Parsed]. A non-blank alias names the merchant. The caption, cleaned as
+     * [TransactionForm.caption] says, is stored as the legenda.
      */
     suspend fun accept(notice: NoticeId, form: TransactionForm): TransactionId = write { c ->
         if (c.long("SELECT COUNT(*) FROM ($NOTICES) WHERE id = ? AND status = 0", notice.v) == 0L) return@write TransactionId(0)
@@ -361,7 +363,9 @@ class Db(
 
     /**
      * Replaces every field, installment and tag of a transaction; same rules as [accept]. corrected
-     * is recomputed against the notice's [Parsed]. A registered estorno stays. False if refused or unknown.
+     * is recomputed against the notice's [Parsed]. A registered estorno stays. False if refused or
+     * unknown. A blank caption removes the legenda (unlike the alias, §2.10); a refused edit (too long
+     * a caption among the rest) leaves the transaction as it was.
      */
     suspend fun edit(id: TransactionId, form: TransactionForm): Boolean = write { c ->
         val notice = c.query("SELECT notice_id FROM transactions WHERE id = ?", id.v) { it.getLong(0) }.firstOrNull()
@@ -371,7 +375,8 @@ class Db(
 
     /**
      * Deletes the transaction with its installments, tag links and the estorno registered on it:
-     * its notice and that estorno notice become pending again (spec §2.8).
+     * its notice and that estorno notice become pending again (spec §2.8). The legenda goes with the
+     * transaction (spec §2.12): the notice returns to the Pauta without one, no extra warning.
      */
     suspend fun deleteTransaction(id: TransactionId): Unit = write { c -> deleteTransactions(c, "id = ?", id.v) }
 
@@ -486,6 +491,12 @@ class Db(
      * What [estorno] may cancel: transactions not refunded and pending notices (not the estorno
      * itself, nor notices parsed as estornos). Likely ones first, newest first within each group;
      * likely = same source, same value, same merchant key when the estorno names one, posted no later.
+     */
+    /**
+     * The purchases an estorno can cancel (spec §6, §7.3): every unrefunded transaction and pending
+     * non-estorno notice, most likely first. Each candidate carries its caption, alias and bank text for
+     * the search (§7.3: legenda, apelido, texto do banco ou valor, sem diferença de maiúsculas e acentos)
+     * and the "em …" credit; a pending notice has caption "" (recados have none).
      */
     suspend fun refundCandidates(estorno: NoticeId): List<RefundCandidate> = read { c ->
         val e = notice(c, estorno.v)

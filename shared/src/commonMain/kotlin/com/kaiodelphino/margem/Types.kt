@@ -133,6 +133,16 @@ data class TransactionForm(
     val time: LocalTime = NO_TIME,
     /** Non-blank sets the merchant's alias; blank leaves the alias as it is. */
     val alias: String = "",
+    /**
+     * The legenda of this one lançamento (spec §2.12, D52–D55); "" = none. The Db cleans it on write:
+     * every line break (LF, CRLF, CR, U+2028, U+2029) becomes one space, the edges are trimmed and the
+     * text goes through `storable`; whitespace-only becomes "" (no legenda). Over 80 characters after
+     * cleaning (`String.length` — an astral emoji counts 2) refuses the whole form like an out-of-range
+     * installment (D53): nothing is written and a refused edit keeps the previous state. Blank removes
+     * the legenda on edit, unlike [alias] (§2.10). Never comes from a [Suggestion] and never sets
+     * `corrected` (not an emenda).
+     */
+    val caption: String = "",
 )
 
 /** One line of Lançamentos and of the budget detail. */
@@ -163,8 +173,12 @@ data class TransactionRow(
      * other read. At most one installment falls in a month (D7). Refunded or not, it's the same.
      */
     val now: Installment = Installment(),
+    /** The legenda (spec §2.12); "" = none. Lists and the preview show [title] instead of [name] when set. */
+    val caption: String = "",
 ) {
     val name: String get() = alias.ifEmpty { merchant }
+    /** The row's headline (spec §2.12, D54): [caption] when set, else [name]. The credit "em …" shows [name]. */
+    val title: String get() = caption.ifEmpty { name }
     val refunded: Boolean get() = estorno.v != 0L
 }
 
@@ -190,7 +204,16 @@ data class RefundCandidate(
     val date: LocalDate = NO_DATE,
     /** Same source, same value, same merchant (when the estorno names one) and not after the estorno. */
     val likely: Boolean = false,
-)
+    /** The legenda (spec §2.12); "" = none; always "" for a pending notice (recados have none). */
+    val caption: String = "",
+    /** Alias of the merchant; "" = none. For the estorno search (spec §7.3). */
+    val alias: String = "",
+    /** Bank text of the merchant; "" = none. For the estorno search (spec §7.3). */
+    val merchant: String = "",
+) {
+    /** The candidate's headline (spec §7.3, D54): [caption] when set (one line), else [name]. The credit "em …" shows [name]. */
+    val title: String get() = caption.ifEmpty { name }
+}
 
 data class Week(
     /** Cut to the month: the first and last weeks may be partial. */

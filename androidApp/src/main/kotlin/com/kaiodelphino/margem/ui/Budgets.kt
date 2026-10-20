@@ -356,9 +356,11 @@ object BudgetTags {
     const val STEP_CANCEL = "budget.step.cancel"
 
     /**
-     * Prefix: LINE + transaction id, one per BudgetDetail.lines, oldest first. Name (alias, else bank
-     * text); "qui, 1" (weekday and day of MonthLine.date) and the tags; "Parcela 3 de 10" when in
-     * installments; "estornada" when refunded; the installment's value (money). Click opens the edit form (TransactionTags).
+     * Prefix: LINE + transaction id, one per BudgetDetail.lines, oldest first. Headline like
+     * TransactionTags.ROW: the legenda in italic with an "em …" credit under it (2 lines) when set, else
+     * the name (alias, else bank text). "qui, 1" (weekday and day of MonthLine.date) and the tags;
+     * "Parcela 3 de 10" when in installments; "estornada" when refunded; the installment's value (money).
+     * Click opens the edit form (TransactionTags).
      */
     const val LINE = "budget.line."
 

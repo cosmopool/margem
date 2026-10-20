@@ -126,11 +126,14 @@ object TransactionTags {
 
     /**
      * Prefix: ROW + transaction id, one per Db.transactions(today), in that order, under the day of its
-     * purchase date. Name (alias, else bank text); "Lazer · bar, amigos" (budget · tags joined by ", "),
-     * then "‸ emendado" when corrected, "Parcela 3 de 10" when in installments with one in today's month
-     * (TransactionRow.now) or "10×" when it has none there, and "estornada" when refunded. The value is the
-     * installment of today's month (now.cents) for an installment purchase with one there, else the total;
-     * struck through when refunded. Click opens the edit form.
+     * purchase date. Headline: the legenda in italic (TransactionRow.caption) when set, else the name
+     * (alias, else bank text); with a legenda, the name moves to an "em …" credit line under it (2 lines
+     * for the headline, "…" when it passes — the alias underline is on the credit). "Lazer · bar, amigos"
+     * (budget · tags joined by ", "), then "‸ emendado" when corrected, "Parcela 3 de 10" when in
+     * installments with one in today's month (TransactionRow.now) or "10×" when it has none there, and
+     * "estornada" when refunded (headline and credit in ink 3, unstruck; only the value struck). The
+     * value is the installment of today's month (now.cents) for an installment purchase with one there,
+     * else the total; struck through when refunded. Click opens the edit form.
      */
     const val ROW = "transactions.row."
 
@@ -172,6 +175,34 @@ object TransactionTags {
 
     /** Manual (new, or editing one with no notice): the one name input, saved as the merchant. Absent in forms from a notice. */
     const val FORM_NAME = "txForm.name"
+
+    /**
+     * "+ Legenda · só deste lançamento" (spec §2.12, D57): the collapsed link under the merchant field —
+     * under "No banco" in a form from a notice, under [FORM_NAME] when manual. Click opens [FORM_CAPTION]
+     * in its place. Absent while the caption field is open or the caption is set.
+     */
+    const val FORM_CAPTION_OPEN = "txForm.caption.open"
+
+    /**
+     * The legenda input, italic, shown while open (D57). Hint "Aparece no lugar de Padaria do Zé, só neste
+     * lançamento."; with a caption saved, the edit form opens with it visible. Accepts at most 80
+     * characters (`String.length`; the input cuts, never splitting an astral emoji). Saves the caption;
+     * blank (or [FORM_CAPTION_CLEAR]) and Salvar removes it, unlike the alias.
+     */
+    const val FORM_CAPTION = "txForm.caption"
+
+    /** The ✕ of the caption field: empties it and folds the field back. In edit, [FORM_CAPTION_REMOVED] appears. */
+    const val FORM_CAPTION_CLEAR = "txForm.caption.clear"
+
+    /** The "72/80" counter at the right of the hint, shown from 70 characters (D57); at 80 the input stops accepting. */
+    const val FORM_CAPTION_COUNT = "txForm.caption.count"
+
+    /**
+     * "legenda tirada: ~~Bolo do aniversário da Ana~~" (edit only, until Salvar; D57): present while the
+     * saved caption was cleared in this edit. "$FORM_CAPTION_REMOVED.undo" ("Desfazer") puts the text back
+     * and reopens the field. Typing new text also makes it go away.
+     */
+    const val FORM_CAPTION_REMOVED = "txForm.caption.removed"
 
     /** "quinta, 8 de outubro · 23:10" (dateLong · time). Click opens the date and time dialog (DateTimeTags). */
     const val FORM_DATE = "txForm.date"

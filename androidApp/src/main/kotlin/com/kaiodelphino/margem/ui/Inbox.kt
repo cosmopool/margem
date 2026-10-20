@@ -151,9 +151,11 @@ object InboxTags {
     const val REFUND_NOTICE = "refund.notice"
 
     /**
-     * Search input (lupa). Filters the candidates as the person types: a candidate stays when its name
-     * contains the query ignoring case, or when moneyPlain of its total contains it ("59,9" keeps R$ 59,90).
-     * Blank = no filter. The selection stays even when the selected candidate is filtered out.
+     * Search input (lupa), placeholder "nome, legenda ou valor". Filters the candidates as the person
+     * types: a candidate stays when its legenda, alias, bank text or name contains the query ignoring case
+     * and accents ("estação" finds LOJA ESTACAO; one `fold`: NFD, no combining marks, lowercase — D56), or
+     * when moneyPlain of its total contains it ("59,9" keeps R$ 59,90). Blank = no filter. The selection
+     * stays even when the selected candidate is filtered out.
      */
     const val REFUND_SEARCH = "refund.search"
 
@@ -165,11 +167,12 @@ object InboxTags {
 
     /**
      * Prefix: CANDIDATE_TX + transaction id, or CANDIDATE_NOTICE + notice id: one per Db.refundCandidates
-     * entry that passes the search, in that order. A transaction shows its name, "Casa · sex, 2 out ·
-     * lançamento" (budget · dateShort · "lançamento") and its total (money); a notice shows its name,
-     * "hoje, 07:15 · recado na pauta" ("hoje", "ontem" or dateShort of its date, then time) and its value.
-     * Click selects it (`selected`); exactly one or none is selected. On open the first candidate is
-     * selected when it is likely; otherwise none.
+     * entry that passes the search, in that order. Headline: the legenda in italic, one line ("…" when it
+     * passes), else the name; with a legenda, "em" + the name under it (no credit line without a name).
+     * A transaction also shows "Casa · sex, 2 out · lançamento" (budget · dateShort · "lançamento") and its
+     * total (money); a notice shows "hoje, 07:15 · recado na pauta" ("hoje", "ontem" or dateShort of its
+     * date, then time) and its value. Click selects it (`selected`); exactly one or none is selected. On
+     * open the first candidate is selected when it is likely; otherwise none.
      */
     const val CANDIDATE_TX = "refund.candidate.t."
     const val CANDIDATE_NOTICE = "refund.candidate.n."
