@@ -412,7 +412,7 @@ class MutationKillTest {
         db.createBudget("A", Cents(100_000), OCT_6)
         assertTrue(db.exportTo(file))
         BundledSQLiteDriver().open(file).let { c ->
-            c.execSQL("PRAGMA user_version = 2")
+            c.execSQL("PRAGMA user_version = ${c.long("PRAGMA user_version") + 1}")
             c.close()
         }
         db.createBudget("B", Cents(100_000), OCT_6)
