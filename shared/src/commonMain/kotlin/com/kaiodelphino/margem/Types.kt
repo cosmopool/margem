@@ -138,12 +138,12 @@ data class TransactionForm(
     val alias: String = "",
     /**
      * The legenda of this one lançamento (spec §2.12, D52–D55); "" = none. The Db cleans it on write:
-     * every line break (LF, CRLF, CR, U+2028, U+2029) becomes one space, the edges are trimmed and the
-     * text goes through `storable`; whitespace-only becomes "" (no legenda). Over 80 characters after
-     * cleaning (`String.length` — an astral emoji counts 2) refuses the whole form like an out-of-range
-     * installment (D53): nothing is written and a refused edit keeps the previous state. Blank removes
-     * the legenda on edit, unlike [alias] (§2.10). Never comes from a [Suggestion] and never sets
-     * `corrected` (not an emenda).
+     * every line break (LF, CRLF, CR, U+2028, U+2029) becomes one space, the edges are trimmed (whitespace
+     * and the NBSP family) and the text goes through `storable`; whitespace-only becomes "" (no legenda).
+     * Over 80 characters after cleaning (`String.length` — an astral emoji counts 2) refuses the whole form
+     * like an out-of-range installment (D53): nothing is written and a refused edit keeps the previous state.
+     * Blank removes the legenda on edit, unlike [alias] (§2.10). Never comes from a [Suggestion] and never
+     * sets `corrected` (not an emenda).
      */
     val caption: String = "",
 )

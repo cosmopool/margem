@@ -1026,7 +1026,7 @@ class Db(
         val dates = (1..form.installments).map { installmentDate(form.date, it, day) }
         if (dates.any { it !in FIRST_DATE..LAST_DATE }) return 0
         val merchant = storable(form.merchant.trim())
-        val caption = storable(CLEAN_BREAKS.replace(form.caption, " ").trim())
+        val caption = storable(CLEAN_BREAKS.replace(form.caption, " ").trim(::isEdgeSpace))
         if (caption.length > MAX_CAPTION) return 0
         val corrected = notice != 0L && extract(notice(c, notice).raw, timeZone).let {
             it.cents != form.total || it.merchant != merchant || it.date != form.date || it.time != form.time
@@ -1169,6 +1169,13 @@ class Db(
 
 /** Every line break of a legenda (spec §2.12): CRLF as one, then LF, CR and the invisible U+2028/U+2029. */
 private val CLEAN_BREAKS = Regex("\\r\\n|[\\r\\n\\u2028\\u2029]")
+
+/**
+ * What the trim takes (spec §2.12, 2026-10-20): whitespace and the NBSP family (U+00A0, U+1680,
+ * U+2000–U+200A, U+202F, U+205F, U+3000) — copy-paste spaces that would make the legenda look empty.
+ */
+private fun isEdgeSpace(c: Char): Boolean =
+    c.isWhitespace() || c == '\u00A0' || c == '\u1680' || c in '\u2000'..'\u200A' || c == '\u202F' || c == '\u205F' || c == '\u3000'
 
 /**
  * The text as SQLite gives it back (D28): its UTF-16 ↔ UTF-8 conversion drops a leading U+FEFF,
