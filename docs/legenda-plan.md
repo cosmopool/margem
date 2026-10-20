@@ -26,7 +26,7 @@ The same block fixes the estorno search gap: per §7.3 it matches legenda, alias
 | Where shown | Form, Lançamentos, budget detail, estorno candidates. Not in Pauta, Riscados, widgets, snackbars or dialogs. |
 | Estornada | Legenda and credit in tinta 3, unstruck; only the value is struck. |
 | Estorno search | Legenda, alias, bank text and value; case- and accent-insensitive ("estação" finds LOJA ESTACAO). |
-| Preview (2026-10-20) | Shows the lists' title: `caption.ifEmpty { name }` ("Bolo do aniversário da Ana: margem R$ 300,00 → R$ 254,00"). |
+| Preview (2026-10-20) | Keeps the budget's name ("Mercado: margem …"): the legenda does **not** enter the preview (user decision, after the mockup and the tests showed the name is the verba's). |
 | Manual form | Keeps the single "Estabelecimento" field and gets the same link underneath. |
 | Manual without merchant | Legenda only, with no "em …" line. |
 

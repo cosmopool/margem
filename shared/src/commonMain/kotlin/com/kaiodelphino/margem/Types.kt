@@ -176,7 +176,7 @@ data class TransactionRow(
      * other read. At most one installment falls in a month (D7). Refunded or not, it's the same.
      */
     val now: Installment = Installment(),
-    /** The legenda (spec §2.12); "" = none. Lists and the preview show [title] instead of [name] when set. */
+    /** The legenda (spec §2.12); "" = none. Lists show [title] instead of [name] when set. */
     val caption: String = "",
 ) {
     val name: String get() = alias.ifEmpty { merchant }

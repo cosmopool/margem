@@ -46,6 +46,7 @@ import com.kaiodelphino.margem.widgets.Button
 import com.kaiodelphino.margem.widgets.ButtonKind
 import com.kaiodelphino.margem.widgets.CapturePaused
 import com.kaiodelphino.margem.widgets.Check
+import com.kaiodelphino.margem.widgets.CreditLine
 import com.kaiodelphino.margem.widgets.DayHeader
 import com.kaiodelphino.margem.widgets.EmptyState
 import com.kaiodelphino.margem.widgets.Field
@@ -339,8 +340,11 @@ fun RefundScreen(db: Db, estorno: NoticeId, snack: SnackHost, replace: (Screen) 
     Column(Modifier.fillMaxSize()) {
         TopBar("Registrar estorno", Modifier.testTag(InboxTags.REFUND_TITLE).semantics(mergeDescendants = true) {}, onBack = back, close = true)
         if (data == null || !opened) return@Column
-        val q = search.trim()
-        val shown = data.candidates.filter { q.isEmpty() || it.name.contains(q, ignoreCase = true) || moneyPlain(it.total).contains(q) }
+        val q = fold(search.trim())
+        val shown = data.candidates.filter {
+            q.isEmpty() || fold(it.caption).contains(q) || fold(it.alias).contains(q) || fold(it.merchant).contains(q) ||
+                fold(it.name).contains(q) || moneyPlain(it.total).contains(search.trim())
+        }
         LazyColumn(Modifier.weight(1f).testTag(InboxTags.REFUND_LIST), contentPadding = PaddingValues(start = Margem.space.page, end = Margem.space.page, bottom = 24.dp)) {
             item { NoticeQuote(data.notice, Modifier.testTag(InboxTags.REFUND_NOTICE).semantics(mergeDescendants = true) {}) }
             item {
@@ -350,7 +354,7 @@ fun RefundScreen(db: Db, estorno: NoticeId, snack: SnackHost, replace: (Screen) 
                 )
             }
             item {
-                Field(search, { search = it }, "Buscar", placeholder = "nome ou valor", tag = InboxTags.REFUND_SEARCH) {
+                Field(search, { search = it }, "Buscar", placeholder = "nome, legenda ou valor", tag = InboxTags.REFUND_SEARCH) {
                     Icon(R.drawable.i_lupa, tint = c.inkTertiary, size = 20.dp)
                 }
             }
@@ -424,7 +428,12 @@ private fun CandidateRow(cand: RefundCandidate, on: Boolean, data: RefundData, t
     ) {
         Check(on)
         Column(Modifier.weight(1f)) {
-            Text(cand.name, serif(17, 500, 22), maxLines = 1)
+            if (cand.caption.isEmpty()) Text(cand.name, serif(17, 500, 22), maxLines = 1)
+            else {
+                // §2.12: the legenda is the name (one line), the merchant drops to the "em …" credit.
+                Text(cand.title, serif(17, 500, 22, italic = true), maxLines = 1)
+                if (cand.name.isNotEmpty()) CreditLine(cand.name, cand.alias.isNotEmpty(), modifier = Modifier.padding(top = 1.dp))
+            }
             Text(sub, sans(13f, 400, 17f), Modifier.padding(top = 2.dp), c.inkTertiary, maxLines = 2)
         }
         Amount(cand.total, size = 17)
@@ -437,3 +446,7 @@ fun dayTitle(day: LocalDate, today: LocalDate): String = when (day) {
     today.minus(DatePeriod(days = 1)) -> "Ontem · ${dateLong(day)}"
     else -> dateLong(day).replaceFirstChar { it.uppercase() }
 }
+
+/** D56: the estorno search ignores case and accents ("estação" finds LOJA ESTACAO): NFD, no combining marks, lowercase. */
+private fun fold(s: String): String =
+    java.text.Normalizer.normalize(s, java.text.Normalizer.Form.NFD).replace(Regex("\\p{M}"), "").lowercase()

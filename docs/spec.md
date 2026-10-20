@@ -143,7 +143,7 @@ Cinco abas: **Verbas** (início) · **Pauta** · **Lançamentos** · **Leitura**
 - **Data e hora** por um seletor próprio (book 8.9): grade do mês com a semana começando no dia dos Ajustes, hoje marcado, dias futuros desabilitados (lançamento é gasto feito) e hora HH:MM.
 - Mostra o texto original do recado e marca o que foi emendado.
 - Enquanto falta verba ou marcador, o botão de lançar fica desabilitado e a tela diz o que falta.
-- **Prévia**: mostra o efeito na verba antes de confirmar ("Mercado: margem R$ 300,00 → R$ 254,00"). O nome é o mesmo das listas (§2.12): com legenda, a legenda ("Bolo do aniversário da Ana: margem R$ 300,00 → R$ 254,00"); sem ela, o apelido, senão o texto do banco.
+- **Prévia**: mostra o efeito na verba antes de confirmar ("Mercado: margem R$ 300,00 → R$ 254,00"). O nome é sempre o da verba; a legenda não entra aqui (2026-10-20).
 - **Recado de estorno**: em vez dos campos, a pessoa escolhe a compra estornada (lançamento ou recado, §6); o app sugere a mais provável. O botão é **Registrar estorno**.
   - A escolha é a lista completa de candidatos, os mais prováveis no topo, com **busca** (lupa) por legenda, apelido, texto do banco ou valor, sem diferença de maiúsculas e acentos ("estação" acha LOJA ESTACAO).
   - Candidato com legenda: a legenda em itálico (uma linha, "…" se passar) e "em" + o estabelecimento embaixo.

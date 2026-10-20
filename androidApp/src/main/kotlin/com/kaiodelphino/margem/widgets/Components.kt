@@ -263,15 +263,21 @@ fun IconButton(icon: Int, onClick: () -> Unit, modifier: Modifier = Modifier, di
 @Composable
 private fun FieldLabel(text: String, color: Color) = Text(text.uppercase(), sans(11f, 600, 14f, 0.12f), color = color)
 
-/** With [tag], the error line is tagged "$tag.error" (D35). */
+/** With [tag], the error line is tagged "$tag.error" (D35). [counter] ("72/80") sits at the right of the hint. */
 @Composable
-private fun FieldHint(hint: String, error: String, tag: String = "") {
-    if (hint.isEmpty() && error.isEmpty()) return
+private fun FieldHint(hint: String, error: String, tag: String = "", counter: String = "", counterTag: String = "") {
+    if (hint.isEmpty() && error.isEmpty() && counter.isEmpty()) return
     val c = Margem.colors
     val tagged = if (tag.isNotEmpty() && error.isNotEmpty()) Modifier.testTag("$tag.error").semantics(mergeDescendants = true) {} else Modifier
-    Row(tagged.padding(top = 6.dp), horizontalArrangement = Arrangement.spacedBy(6.dp)) {
-        if (error.isNotEmpty()) Icon(R.drawable.i_aviso, Modifier.padding(top = 1.dp), c.overrun, 16.dp)
-        Text(error.ifEmpty { hint }, sans(13.5f, 400, 18f), color = if (error.isNotEmpty()) c.overrun else c.inkTertiary)
+    Row(tagged.padding(top = 6.dp), horizontalArrangement = Arrangement.spacedBy(6.dp), verticalAlignment = Alignment.Top) {
+        Row(Modifier.weight(1f), horizontalArrangement = Arrangement.spacedBy(6.dp)) {
+            if (error.isNotEmpty()) Icon(R.drawable.i_aviso, Modifier.padding(top = 1.dp), c.overrun, 16.dp)
+            Text(error.ifEmpty { hint }, sans(13.5f, 400, 18f), color = if (error.isNotEmpty()) c.overrun else c.inkTertiary)
+        }
+        if (counter.isNotEmpty()) Text(
+            counter, sans(13f, 400, 18f, tabular = true),
+            Modifier.then(if (counterTag.isEmpty()) Modifier else Modifier.testTag(counterTag)), c.inkTertiary,
+        )
     }
 }
 
@@ -288,14 +294,16 @@ private fun Modifier.fieldLine(focused: Boolean, error: Boolean, enabled: Boolea
 
 /**
  * Book §8.2: a printed form line, rubric on top, line below, no box. [alias] draws the text with the
- * argila dotted underline (Apelido). [tag] goes on the input, "$tag.error" on the error line (D35).
+ * argila dotted underline (Apelido). [italic] writes the text in Newsreader italic 500 (the legenda, §2.12).
+ * [counter] ("72/80", tagged [counterTag]) sits at the right of the hint (D57). [tag] goes on the input,
+ * "$tag.error" on the error line (D35).
  */
 @Composable
 fun Field(
     value: String, onChange: (String) -> Unit, label: String, modifier: Modifier = Modifier,
     placeholder: String = "", hint: String = "", error: String = "", enabled: Boolean = true,
     alias: Boolean = false, focused: Boolean = false, tag: String = "", onDone: (() -> Unit)? = null,
-    trailing: @Composable (() -> Unit)? = null,
+    italic: Boolean = false, counter: String = "", counterTag: String = "", trailing: @Composable (() -> Unit)? = null,
 ) {
     val c = Margem.colors
     val interaction = remember { MutableInteractionSource() }
@@ -305,7 +313,7 @@ fun Field(
         FieldLabel(label, if (error.isNotEmpty()) c.overrun else if (isFocused) c.ink else c.inkTertiary)
         BasicTextField(
             value, onChange, Modifier.fillMaxWidth().then(if (tag.isEmpty()) Modifier else Modifier.testTag(tag)), enabled = enabled, readOnly = !enabled, onTextLayout = { layout = it },
-            textStyle = serif(19, 400, 24).copy(color = if (enabled) c.ink else c.inkTertiary),
+            textStyle = serif(19, if (italic) 500 else 400, 24, italic = italic).copy(color = if (enabled) c.ink else c.inkTertiary),
             singleLine = true, interactionSource = interaction, cursorBrush = SolidColor(c.info),
             keyboardOptions = if (onDone == null) KeyboardOptions.Default else KeyboardOptions(imeAction = ImeAction.Done),
             keyboardActions = KeyboardActions(onDone = { onDone?.invoke() }),
@@ -329,7 +337,7 @@ fun Field(
                 }
             },
         )
-        FieldHint(hint, error, tag)
+        FieldHint(hint, error, tag, counter, counterTag)
     }
 }
 
@@ -350,6 +358,18 @@ fun AliasText(text: String, style: TextStyle, modifier: Modifier = Modifier, ali
         },
         style.copy(color = color), onTextLayout = { layout = it }, maxLines = maxLines, overflow = TextOverflow.Ellipsis,
     )
+}
+
+/**
+ * "em Padaria do Zé" (spec §2.12): the credit under a legenda headline — "em" in sans ink 3, then the
+ * merchant name with the Apelido dotted underline (book `.by`).
+ */
+@Composable
+fun CreditLine(name: String, alias: Boolean, color: Color = Margem.colors.inkSecondary, modifier: Modifier = Modifier) {
+    Row(modifier, verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(4.dp)) {
+        Text("em", sans(13f, 400, 20f), color = Margem.colors.inkTertiary)
+        AliasText(name, serif(15, 500, 20), alias = alias, color = color, maxLines = 1)
+    }
 }
 
 /** Digits typed into the money field become cents: 2-3-9-0 = R$ 23,90 (book §8.2). */

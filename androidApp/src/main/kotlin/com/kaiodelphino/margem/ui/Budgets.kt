@@ -73,6 +73,7 @@ import com.kaiodelphino.margem.widgets.Amount
 import com.kaiodelphino.margem.widgets.Button
 import com.kaiodelphino.margem.widgets.ButtonKind
 import com.kaiodelphino.margem.widgets.CeilingLegend
+import com.kaiodelphino.margem.widgets.CreditLine
 import com.kaiodelphino.margem.widgets.EmptyState
 import com.kaiodelphino.margem.widgets.Field
 import com.kaiodelphino.margem.widgets.Gap
@@ -925,7 +926,15 @@ private fun MonthLineRow(line: MonthLine, sum: Long, over: Boolean, onClick: () 
         verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(12.dp),
     ) {
         Column(Modifier.weight(1f)) {
-            AliasText(r.name, serif(17, 500, 22), alias = r.alias.isNotEmpty(), color = if (r.refunded) c.inkTertiary else c.ink)
+            if (r.caption.isEmpty()) AliasText(
+                r.name, serif(17, 500, 22), alias = r.alias.isNotEmpty(), color = if (r.refunded) c.inkTertiary else c.ink,
+            ) else {
+                // §2.12: the legenda is the name; the merchant drops to an "em …" credit (like TransactionLine).
+                Text(r.title, serif(17, 500, 22, italic = true), Modifier, if (r.refunded) c.inkTertiary else c.ink, maxLines = 2)
+                if (r.name.isNotEmpty()) CreditLine(
+                    r.name, r.alias.isNotEmpty(), if (r.refunded) c.inkTertiary else c.inkSecondary, Modifier.padding(top = 1.dp),
+                )
+            }
             Text(sub, sans(13f, 400, 17f), Modifier.padding(top = 2.dp), c.inkTertiary, maxLines = 2)
         }
         Column(horizontalAlignment = Alignment.End) {

@@ -39,12 +39,17 @@ import androidx.compose.ui.semantics.Role
 import androidx.compose.ui.semantics.selected
 import androidx.compose.ui.semantics.semantics
 import androidx.compose.ui.semantics.stateDescription
+import androidx.compose.ui.text.SpanStyle
+import androidx.compose.ui.text.buildAnnotatedString
+import androidx.compose.ui.text.style.TextDecoration
+import androidx.compose.ui.text.withStyle
 import androidx.compose.ui.unit.dp
 import com.kaiodelphino.margem.BudgetId
 import com.kaiodelphino.margem.BudgetOrder
 import com.kaiodelphino.margem.BudgetSummary
 import com.kaiodelphino.margem.Cents
 import com.kaiodelphino.margem.Db
+import com.kaiodelphino.margem.MAX_CAPTION
 import com.kaiodelphino.margem.NoticeId
 import com.kaiodelphino.margem.NoticeRow
 import com.kaiodelphino.margem.NoticeStatus
@@ -60,12 +65,14 @@ import com.kaiodelphino.margem.widgets.Amount
 import com.kaiodelphino.margem.widgets.Button
 import com.kaiodelphino.margem.widgets.ButtonKind
 import com.kaiodelphino.margem.widgets.ChipState
+import com.kaiodelphino.margem.widgets.CreditLine
 import com.kaiodelphino.margem.widgets.DateTimeDialog
 import com.kaiodelphino.margem.widgets.DayHeader
 import com.kaiodelphino.margem.widgets.Emenda
 import com.kaiodelphino.margem.widgets.EmptyState
 import com.kaiodelphino.margem.widgets.Field
 import com.kaiodelphino.margem.widgets.Icon
+import com.kaiodelphino.margem.widgets.IconButton
 import com.kaiodelphino.margem.widgets.MargemDialog
 import com.kaiodelphino.margem.widgets.Margem
 import com.kaiodelphino.margem.widgets.MoneyField
@@ -345,7 +352,15 @@ private fun TransactionLine(t: TransactionRow, onClick: () -> Unit, onUndoRefund
         verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(12.dp),
     ) {
         Column(Modifier.weight(1f)) {
-            AliasText(t.name, serif(17, 500, 22), alias = t.alias.isNotEmpty(), color = if (t.refunded) c.inkTertiary else c.ink)
+            if (t.caption.isEmpty()) AliasText(
+                t.name, serif(17, 500, 22), alias = t.alias.isNotEmpty(), color = if (t.refunded) c.inkTertiary else c.ink,
+            ) else {
+                // §2.12: the legenda is the name, in italic; the merchant drops to an "em …" credit.
+                Text(t.title, serif(17, 500, 22, italic = true), Modifier, if (t.refunded) c.inkTertiary else c.ink, maxLines = 2)
+                if (t.name.isNotEmpty()) CreditLine(
+                    t.name, t.alias.isNotEmpty(), if (t.refunded) c.inkTertiary else c.inkSecondary, Modifier.padding(top = 1.dp),
+                )
+            }
             Text(sub, sans(13f, 400, 17f), Modifier.padding(top = 2.dp), c.inkTertiary, maxLines = 2)
             if (t.refunded) Button(
                 "Desfazer estorno", onUndoRefund, Modifier.testTag(TransactionTags.UNDO_REFUND + t.id.v), kind = ButtonKind.TEXT, small = true,
@@ -356,6 +371,11 @@ private fun TransactionLine(t: TransactionRow, onClick: () -> Unit, onUndoRefund
         Amount(value, size = 17, color = if (t.refunded) c.inkTertiary else c.ink, struck = t.refunded)
     }
 }
+
+/** D55: the caption input takes at most [MAX_CAPTION] UTF-16 units and never leaves a lone high surrogate at the cut. */
+private fun cutCaption(s: String): String =
+    if (s.length <= MAX_CAPTION) s
+    else s.take(MAX_CAPTION).let { if (it.last().isHighSurrogate()) it.dropLast(1) else it }
 
 /** Lançar recado (book 10.3) for the pending notice [notice]. [replace] swaps this screen (Registrar estorno). */
 @Composable
@@ -421,6 +441,8 @@ private fun TxForm(
     var merchant by rememberSaveable { mutableStateOf("") }
     var editingBank by rememberSaveable { mutableStateOf(false) }
     var alias by rememberSaveable { mutableStateOf("") }
+    var caption by rememberSaveable { mutableStateOf("") }
+    var captionOpen by rememberSaveable { mutableStateOf(false) }
     var date by rememberSaveable { mutableStateOf(today.toString()) }
     var hour by rememberSaveable { mutableStateOf("00:00") }
     var budget by rememberSaveable { mutableLongStateOf(0L) }
@@ -461,6 +483,9 @@ private fun TxForm(
                 total = r.total.v
                 merchant = r.merchant
                 alias = r.alias
+                caption = r.caption
+                // §2.12: editing a launch with legenda opens with the field in sight.
+                captionOpen = r.caption.isNotEmpty()
                 date = r.date.toString()
                 hour = time(r.time)
                 budget = r.budget.v
@@ -493,7 +518,7 @@ private fun TxForm(
         if (selectedTags.isEmpty()) add("um marcador")
     }
 
-    fun form() = TransactionForm(BudgetId(budget), selectedTags, Cents(total), installments, merchant, day, at, alias)
+    fun form() = TransactionForm(BudgetId(budget), selectedTags, Cents(total), installments, merchant, day, at, alias, caption)
 
     fun submit() {
         if (busy || missing.isNotEmpty()) return
@@ -557,6 +582,42 @@ private fun TxForm(
                 }, TransactionTags.FORM_BANK_EMENDA)
             } else {
                 Field(merchant, { merchant = it }, "Estabelecimento", placeholder = "Feira, por exemplo", tag = TransactionTags.FORM_NAME)
+            }
+
+            // Legenda (spec §2.12, D57): behind the link while folded, the field while open or set.
+            val displayName = alias.trim().ifEmpty { merchant.trim() }
+            if (captionOpen || caption.isNotEmpty()) Field(
+                caption, { caption = cutCaption(it) }, "Legenda",
+                hint = if (displayName.isEmpty()) "Só deste lançamento." else "Aparece no lugar de $displayName, só neste lançamento.",
+                italic = true, tag = TransactionTags.FORM_CAPTION,
+                counter = if (caption.length >= 70) "${caption.length}/$MAX_CAPTION" else "",
+                counterTag = TransactionTags.FORM_CAPTION_COUNT,
+            ) {
+                IconButton(R.drawable.i_fechar, { caption = ""; captionOpen = false }, Modifier.testTag(TransactionTags.FORM_CAPTION_CLEAR))
+            } else Row(
+                Modifier.fillMaxWidth().testTag(TransactionTags.FORM_CAPTION_OPEN).clickable(role = Role.Button) { captionOpen = true }
+                    .padding(vertical = 8.dp),
+            ) {
+                Text(
+                    buildAnnotatedString {
+                        withStyle(SpanStyle(color = c.info)) { append("+ Legenda · ") }
+                        withStyle(SpanStyle(color = c.inkTertiary)) { append("só deste lançamento") }
+                    },
+                    sans(14.5f, 600, 20f),
+                )
+            }
+            // "legenda tirada" is derived (D57): the saved one was cleared in this edit. Gone on Salvar or new text.
+            val removed = isEdit && data.detail.row.caption.isNotEmpty() && caption.isEmpty()
+            if (removed) Row(Modifier.testTag(TransactionTags.FORM_CAPTION_REMOVED).padding(bottom = 6.dp), verticalAlignment = Alignment.CenterVertically) {
+                Text("legenda tirada:", sans(13.5f, 400, 18f), color = c.inkSecondary)
+                Text(
+                    data.detail.row.caption, serif(14, 500, 18, italic = true), Modifier.padding(start = 8.dp), c.inkTertiary,
+                    decoration = TextDecoration.LineThrough,
+                )
+                Button("Desfazer", {
+                    caption = data.detail.row.caption
+                    captionOpen = true
+                }, Modifier.testTag(TransactionTags.FORM_CAPTION_REMOVED + ".undo").padding(start = 8.dp), kind = ButtonKind.TEXT, small = true)
             }
 
             Column(Modifier.padding(top = 8.dp).fillMaxWidth().testTag(TransactionTags.FORM_DATE).clickable(role = Role.Button) { picking = true }) {
