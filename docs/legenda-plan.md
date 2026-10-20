@@ -91,7 +91,7 @@ The same block fixes the estorno search gap: per §7.3 it matches legenda, alias
 - **Agent prompt:** pin the contract commit, verify `git log -1`, never read from the main checkout or from `androidApp/src/main` beyond the contract files (tags). Read spec §2.5, §2.8, §2.10, §2.12, §7.1, §7.3, §7.4, §7.5, the glossary, the relevant architecture rows (D52–D57), AGENTS.md, `.agents/rules/testing.md` and the contract files (types, KDoc, tags — the KDoc carries O2–O6). Suite conventions: one temp sqlite file per test with the block prefix, drop `-wal`/`-shm`, `TimeZone.of("America/Sao_Paulo")`, fixed dates per file, `runTest(timeout = …)`.
 - **Triage when green:** a code bug → fix the code; a misread rule → fix the test and say why; a rule the spec doesn't cover → the user's decision, recorded in the docs. Never loosen a test.
 
-## 7. Order of work
+## 7. Order of work (0–6 done 2026-10-20; 7 and 8 pending)
 
 0. **Teto merge first** (2026-10-20 decision): `claude/teto-dc57c8` into `main`, `make test` green; the legenda then takes v3.
 1. Docs: this plan decided, D52–D57 in architecture.md, spec §2.12/§7.3/§7.5 amendments.
