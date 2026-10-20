@@ -25,7 +25,7 @@ import kotlinx.io.buffered
 import kotlinx.io.files.Path
 import kotlinx.io.files.SystemFileSystem
 
-private const val SCHEMA_VERSION = 1L
+private const val SCHEMA_VERSION = 2L
 private const val MAX_INSTALLMENTS = 400
 
 /**
@@ -186,10 +186,14 @@ class Db(
 
     /**
      * Makes sure every budget has a limit row up to [month]: copies the latest earlier row and
-     * fills skipped months. Months before a budget's first row stay without one. Does not bump [version].
+     * fills skipped months. Months before a budget's first row stay without one. Also gives [month]
+     * and every month skipped since the latest ceiling row before it a ceiling row with the default
+     * ([Ceiling.standard]), not the previous month's value (D42); with no ceiling row at all, only
+     * [month] gets one. Never fills backwards. Does not bump [version].
      */
     suspend fun ensureMonths(month: YearMonth): Unit = write(bump = false) { c ->
         for (id in c.query("SELECT id FROM budgets") { it.getLong(0) }) ensureMonth(c, id, month)
+        ensureCeiling(c, month)
     }
 
     /** The budget month [date] falls in, by the current monthStartDay. */
@@ -203,7 +207,8 @@ class Db(
      * Changes the month start day (1..31; false otherwise). Deletes the step edits from the start
      * of [today]'s month onward, by the old or the new day, whichever is earlier (spec §4, D10).
      * Every budget keeps a limit in [today]'s new month: the one of the old current month, unless it
-     * already had one there (D43). Installment dates are recomputed with the new day, so
+     * already had one there (D43). The new current month without a ceiling row gets the default
+     * (D46); ceiling rows that exist stay. Installment dates are recomputed with the new day, so
      * installment k stays in the k-th month (D7). The day already set changes nothing.
      */
     suspend fun setMonthStartDay(day: Int, today: LocalDate): Boolean {
@@ -221,6 +226,8 @@ class Db(
                     "INSERT OR IGNORE INTO budget_months(budget_id, month, limit_cents) SELECT budget_id, ?, limit_cents FROM budget_months WHERE month = ?",
                     now.toString(), was.toString(),
                 )
+                // ensureMonths never fills backwards: a current month that moved back gets the default here (D46).
+                c.exec("INSERT OR IGNORE INTO ceiling_months(month, cents) VALUES (?, ?)", now.toString(), standardCeiling(c))
                 // Installment k must stay in the k-th month (spec §6): dates clamped by the old day can drift with the new one (D7).
                 val dates = c.query("SELECT i.transaction_id, i.k, t.date FROM installments i JOIN transactions t ON t.id = i.transaction_id") {
                     Triple(it.getLong(0), it.getInt(1), LocalDate.parse(it.getText(2)))
@@ -665,6 +672,56 @@ class Db(
         BudgetDetail(id, name, bm, lines, first.firstOrNull() ?: NO_MONTH)
     }
 
+    // ---- Teto (spec §3, §7.1; D42, D46) ----
+
+    /**
+     * The ceiling of [month], the default and the sum of the month's limits. A month without its
+     * ceiling row reads cents 0 (no ceiling): screens call [ensureMonths] first. Writes nothing.
+     */
+    suspend fun ceiling(month: YearMonth): Ceiling = read { c -> ceiling(c, month) }
+
+    /**
+     * Sets the ceiling of [today]'s month to [cents]; 0 removes it. Refused (false, nothing written) for
+     * cents < 0 or above the maximum value. First fills the months skipped up to the current one with the
+     * old default (like [ensureMonths]). [onward] ("deste mês em diante"): the default becomes [cents],
+     * the current month's row becomes [cents] and the rows of later months are deleted. Otherwise ("só este
+     * mês"): only the current month's row changes; the next month gets the default again.
+     * Desfazer (D46) = setCeiling(before.standard, onward = true) then setCeiling(before.cents, onward = false).
+     */
+    suspend fun setCeiling(cents: Cents, onward: Boolean, today: LocalDate): Boolean {
+        if (cents.v !in 0..MAX_CENTS) return false
+        write { c ->
+            val current = monthOf(today, settings(c).monthStartDay)
+            ensureCeiling(c, current)
+            if (onward) {
+                c.exec("INSERT INTO settings(key, value) VALUES ('ceiling', ?) ON CONFLICT(key) DO UPDATE SET value = excluded.value WHERE value != excluded.value", cents.v.toString())
+                c.exec("DELETE FROM ceiling_months WHERE month > ?", current.toString())
+            }
+            // Upserts that only count as a change when the value differs (D6: no bump for nothing).
+            c.exec(
+                "INSERT INTO ceiling_months(month, cents) VALUES (?, ?) ON CONFLICT(month) DO UPDATE SET cents = excluded.cents WHERE cents != excluded.cents",
+                current.toString(), cents.v,
+            )
+        }
+        return true
+    }
+
+    /**
+     * Nova verba and Editar verba's warning (spec §3): the [Ceiling] of [today]'s month as if [budget]'s
+     * limit there were [limit] — [Ceiling.limits] = Σ of the other budgets' limits in that month + [limit].
+     * [budget] 0 (or a budget without a row in that month) adds [limit] as a new one. The month's own ceiling
+     * and default as they are (a missing ceiling row reads 0). [limit] ≤ 0 or above the maximum value: the
+     * month as it is, like [ceiling] (the budget keeps its limit). Writes nothing. The screen warns when the
+     * result's [Ceiling.over] > 0 and its limits are above [ceiling]'s for the month (the sum goes up).
+     */
+    suspend fun previewCeiling(budget: BudgetId, limit: Cents, today: LocalDate): Ceiling = read { c ->
+        val month = monthOf(today, settings(c).monthStartDay)
+        val now = ceiling(c, month)
+        if (limit.v !in 1..MAX_CENTS) return@read now
+        val own = c.long("SELECT COALESCE(MAX(limit_cents), 0) FROM budget_months WHERE budget_id = ? AND month = ?", budget.v, month.toString())
+        now.copy(limits = Cents(now.limits.v - own + limit.v))
+    }
+
     // ---- Tags ----
 
     /** With use counts, sorted by name. */
@@ -801,6 +858,36 @@ class Db(
             c.exec("INSERT OR IGNORE INTO budget_months(budget_id, month, limit_cents) VALUES (?, ?, ?)", budget, m.toString(), last.second)
         }
     }
+
+    /**
+     * Gives [month] and the months skipped since the latest ceiling row before it the default (D42). With no
+     * row at all, only [month]; with rows only after it, nothing (never fills backwards).
+     */
+    private fun ensureCeiling(c: SQLiteConnection, month: YearMonth) {
+        val standard = standardCeiling(c)
+        val last = c.query("SELECT month FROM ceiling_months WHERE month <= ? ORDER BY month DESC LIMIT 1", month.toString()) {
+            YearMonth.parse(it.getText(0))
+        }.firstOrNull()
+        if (last == null) {
+            if (c.long("SELECT COUNT(*) FROM ceiling_months") == 0L) c.exec("INSERT INTO ceiling_months(month, cents) VALUES (?, ?)", month.toString(), standard)
+            return
+        }
+        var m: YearMonth = last
+        while (m < month) {
+            m = m.plusMonth()
+            c.exec("INSERT OR IGNORE INTO ceiling_months(month, cents) VALUES (?, ?)", m.toString(), standard)
+        }
+    }
+
+    private fun standardCeiling(c: SQLiteConnection) =
+        c.query("SELECT value FROM settings WHERE key = 'ceiling'") { it.getText(0).toLongOrNull() ?: 0L }.firstOrNull() ?: 0L
+
+    private fun ceiling(c: SQLiteConnection, month: YearMonth) = Ceiling(
+        month = month,
+        cents = Cents(c.long("SELECT cents FROM ceiling_months WHERE month = ?", month.toString())),
+        standard = Cents(standardCeiling(c)),
+        limits = Cents(c.long("SELECT COALESCE(SUM(limit_cents), 0) FROM budget_months WHERE month = ?", month.toString())),
+    )
 
     private fun budgetMonth(c: SQLiteConnection, s: Settings, budget: Long, month: YearMonth, today: LocalDate): BudgetMonth {
         val w = monthWindow(month, s.monthStartDay)
@@ -1012,6 +1099,11 @@ class Db(
             "CREATE INDEX transaction_tags_tag ON transaction_tags(tag_id)",
         )
 
+        /** v2: the teto (D42, D46). Its default lives in settings under "ceiling" (absent = 0, no ceiling). */
+        val SCHEMA_V2 = listOf(
+            "CREATE TABLE ceiling_months(month TEXT PRIMARY KEY, cents INTEGER NOT NULL)",
+        )
+
         /** One `if (v < N)` per version, each in a transaction that ends by writing N (architecture §4). */
         fun migrate(c: SQLiteConnection) {
             val v = c.long("PRAGMA user_version")
@@ -1021,7 +1113,12 @@ class Db(
                 c.execSQL("PRAGMA user_version = 1")
                 c.execSQL("COMMIT")
             }
-
+            if (v < 2) {
+                c.execSQL("BEGIN IMMEDIATE")
+                SCHEMA_V2.forEach(c::execSQL)
+                c.execSQL("PRAGMA user_version = 2")
+                c.execSQL("COMMIT")
+            }
         }
     }
 }

@@ -57,6 +57,7 @@ import com.kaiodelphino.margem.widgets.Margem
 import com.kaiodelphino.margem.widgets.MargemDialog
 import com.kaiodelphino.margem.widgets.MargemTheme
 import com.kaiodelphino.margem.widgets.Mark
+import com.kaiodelphino.margem.widgets.CeilingLegend
 import com.kaiodelphino.margem.widgets.Meter
 import com.kaiodelphino.margem.widgets.MoneyField
 import com.kaiodelphino.margem.widgets.MonthPicker
@@ -201,6 +202,16 @@ private fun Catalog(dark: Boolean, setDark: (Boolean) -> Unit) {
                         Meter(Cents(spent), Cents(100000), Cents(if (spent == 0L) 29000 else 57000), status, Modifier.padding(top = 6.dp))
                     }
                 }
+
+                SectionLine("8.10 Cabeçalho do teto")
+                val oct = YearMonth(2026, 10)
+                for (ceiling in listOf(
+                    Ceiling(oct, Cents(0), Cents(0), Cents(372000)),
+                    Ceiling(oct, Cents(410000), Cents(410000), Cents(372000)),
+                    Ceiling(oct, Cents(410000), Cents(410000), Cents(410000)),
+                    Ceiling(oct, Cents(410000), Cents(410000), Cents(440000)),
+                    Ceiling(oct, Cents(440000), Cents(410000), Cents(440000)),
+                )) CeilingLegend(ceiling, Modifier.padding(top = 10.dp))
 
                 SectionLine("8.6 Mês e passos")
                 MonthPicker(YearMonth(2026, 10), "1 a 31 · mês atual", {}, {}, canNext = false)

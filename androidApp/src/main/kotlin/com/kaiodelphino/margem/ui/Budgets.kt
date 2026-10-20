@@ -5,6 +5,7 @@ import androidx.compose.foundation.background
 import androidx.compose.foundation.border
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.gestures.detectDragGesturesAfterLongPress
+import androidx.compose.foundation.gestures.detectTapGestures
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
@@ -22,6 +23,7 @@ import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableFloatStateOf
+import androidx.compose.runtime.mutableIntStateOf
 import androidx.compose.runtime.mutableLongStateOf
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
@@ -33,14 +35,19 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.drawBehind
 import androidx.compose.ui.draw.shadow
 import androidx.compose.ui.geometry.Offset
+import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.PathEffect
 import androidx.compose.ui.graphics.graphicsLayer
 import androidx.compose.ui.input.pointer.pointerInput
+import androidx.compose.ui.layout.layout
 import androidx.compose.ui.layout.onSizeChanged
 import androidx.compose.ui.platform.testTag
 import androidx.compose.ui.semantics.Role
 import androidx.compose.ui.semantics.SemanticsProperties
 import androidx.compose.ui.semantics.clearAndSetSemantics
+import androidx.compose.ui.semantics.contentDescription
+import androidx.compose.ui.semantics.onClick
+import androidx.compose.ui.semantics.role
 import androidx.compose.ui.semantics.semantics
 import androidx.compose.ui.semantics.testTag
 import androidx.compose.ui.semantics.text
@@ -54,6 +61,7 @@ import com.kaiodelphino.margem.BudgetId
 import com.kaiodelphino.margem.BudgetMonth
 import com.kaiodelphino.margem.BudgetOrder
 import com.kaiodelphino.margem.BudgetSummary
+import com.kaiodelphino.margem.Ceiling
 import com.kaiodelphino.margem.Cents
 import com.kaiodelphino.margem.Db
 import com.kaiodelphino.margem.MonthLine
@@ -64,20 +72,24 @@ import com.kaiodelphino.margem.widgets.AliasText
 import com.kaiodelphino.margem.widgets.Amount
 import com.kaiodelphino.margem.widgets.Button
 import com.kaiodelphino.margem.widgets.ButtonKind
+import com.kaiodelphino.margem.widgets.CeilingLegend
 import com.kaiodelphino.margem.widgets.EmptyState
 import com.kaiodelphino.margem.widgets.Field
 import com.kaiodelphino.margem.widgets.Gap
 import com.kaiodelphino.margem.widgets.HomeBar
 import com.kaiodelphino.margem.widgets.Icon
 import com.kaiodelphino.margem.widgets.IconButton
-import com.kaiodelphino.margem.widgets.MargemDialog
+import com.kaiodelphino.margem.widgets.ListRow
 import com.kaiodelphino.margem.widgets.Margem
+import com.kaiodelphino.margem.widgets.MargemDialog
 import com.kaiodelphino.margem.widgets.Meter
 import com.kaiodelphino.margem.widgets.MoneyField
 import com.kaiodelphino.margem.widgets.MonthPicker
 import com.kaiodelphino.margem.widgets.OptionPicker
 import com.kaiodelphino.margem.widgets.PageHeader
 import com.kaiodelphino.margem.widgets.SectionLine
+import com.kaiodelphino.margem.widgets.Snack
+import com.kaiodelphino.margem.widgets.SnackHost
 import com.kaiodelphino.margem.widgets.Space
 import com.kaiodelphino.margem.widgets.StatusLabel
 import com.kaiodelphino.margem.widgets.StepsEditor
@@ -125,6 +137,70 @@ object BudgetTags {
      * "Dia 9 de 31." and "Faltam 23 dias, contando hoje." ("Falta 1 dia, contando hoje." on the last day).
      */
     const val HEADER = "budgets.header"
+
+    // ---- Teto in the header (spec §3, §7.1; book 8.10; D46) ----
+
+    /**
+     * The ceiling line under the header's dek, for the current month (after ensureMonths). Absent when the
+     * month has no budget. With a ceiling: "cotas R$ 3.720,00" and "teto R$ 4.100,00" ("teto R$ 4.400,00 ·
+     * só outubro" when Ceiling.cents != Ceiling.standard), plus "+ 300" (whole reais; "+ 300,50" with
+     * cents) when the limits pass it; content description "Teto de outubro: R$ 4.100,00. Cotas somam
+     * R$ 3.720,00, a R$ 380,00 do teto. Tocar para mudar." ("…, fecham no teto. …" when equal; "…, R$ 300,00
+     * além do teto. …" when above). Without a ceiling: "As cotas somam R$ 3.720,00." and "Pôr um teto";
+     * content description "As cotas de outubro somam R$ 3.720,00. Sem teto. Tocar para pôr um teto."
+     * Clicking it, or [HEADER], opens [CEILING_DIALOG] (one touch target from the rubric to the legend);
+     * with no budget, [HEADER] opens nothing.
+     */
+    const val CEILING = "budgets.ceiling"
+
+    /**
+     * The ceiling dialog: "Teto de outubro" (the current month's name). Two steps: the value ([CEILING_FIELD],
+     * [CEILING_HINT], [CEILING_SAVE], [CEILING_REMOVE], [CEILING_CANCEL]) and then the months question
+     * ([CEILING_SCOPE]). Closing it any other way writes nothing.
+     */
+    const val CEILING_DIALOG = "budgets.ceilingDialog"
+
+    /** "Máximo para a soma das cotas": money input, starting with the month's ceiling (zero when none). */
+    const val CEILING_FIELD = "budgets.ceilingDialog.field"
+
+    /**
+     * While the field is > 0: "As cotas de outubro somam R$ 3.720,00: ficam a R$ 680,00 do teto." /
+     * "…: fecham no teto." (equal) / "…: ficariam R$ 220,00 além do teto. Dá para salvar assim." Absent at zero.
+     */
+    const val CEILING_HINT = "budgets.ceilingDialog.hint"
+
+    /** "Salvar": disabled while the field is zero; opens [CEILING_SCOPE] for that value. */
+    const val CEILING_SAVE = "budgets.ceilingDialog.save"
+
+    /** "Tirar teto": only when the month has a ceiling (absent otherwise); opens [CEILING_SCOPE] for removing. */
+    const val CEILING_REMOVE = "budgets.ceilingDialog.remove"
+
+    /** "Cancelar": closes the dialog; nothing is written. */
+    const val CEILING_CANCEL = "budgets.ceilingDialog.cancel"
+
+    /**
+     * The months question, inside [CEILING_DIALOG]: "Vale para quais meses?" after Salvar, "Tirar o teto de
+     * quais meses?" after Tirar teto.
+     */
+    const val CEILING_SCOPE = "budgets.ceilingDialog.scope"
+
+    /**
+     * "De outubro em diante", with "Vira o teto dos próximos meses." ("Os próximos meses ficam sem teto." when
+     * removing). Click writes setCeiling(value or 0, onward = true), closes the dialog and shows the snack
+     * "Teto de R$ 4.400,00 de outubro em diante." / "Outubro em diante sem teto.", whose Desfazer puts the
+     * default and the month's ceiling back as they were (D46).
+     */
+    const val CEILING_ONWARD = "budgets.ceilingDialog.onward"
+
+    /**
+     * "Só em outubro", with "Em novembro, volta a R$ 4.100,00." (the default) or "Em novembro, volta a não ter
+     * teto." (no default). Click writes setCeiling(value or 0, onward = false), closes the dialog and shows the
+     * snack "Teto de R$ 4.400,00 só em outubro." / "Outubro sem teto.", with the same Desfazer.
+     */
+    const val CEILING_ONLY = "budgets.ceilingDialog.only"
+
+    /** "Voltar": back from [CEILING_SCOPE] to the value step, with the typed value kept; nothing is written. */
+    const val CEILING_BACK = "budgets.ceilingDialog.back"
 
     /**
      * "4 recados na pauta" ("1 recado na pauta"), plus "3 novos desde a última vez" ("1 novo desde a
@@ -188,8 +264,27 @@ object BudgetTags {
      * the errors above and stays. Nova verba creates the budget (createBudget, today's month) and goes
      * back to Verbas. Editar verba renames it and, when the limit changed, sets it from today's month on
      * (setLimit) — first asking with [LIMIT_DIALOG] when limitDropsEdits — then goes back to the detail.
+     * When [FORM_CEILING] applies, [CEILING_WARN] asks first, before anything else is written.
      */
     const val FORM_SUBMIT = "budgetForm.submit"
+
+    /**
+     * Under the limit, while the typed limit raises the current month's sum of limits above its ceiling
+     * (previewCeiling over > 0 and limits above the month's; spec §3): "Com esta cota, as cotas de outubro
+     * somam R$ 4.400,00: R$ 300,00 além do teto." Absent otherwise (no ceiling, not above, or the sum
+     * doesn't go up).
+     */
+    const val FORM_CEILING = "budgetForm.ceiling"
+
+    /**
+     * On a valid submit while [FORM_CEILING] applies: "Passar do teto?", "As cotas de outubro somariam
+     * R$ 4.400,00, R$ 300,00 além do teto de R$ 4.100,00. O teto é só um limite de planejamento." Confirm
+     * ("Criar mesmo assim" / "Salvar mesmo assim") goes on with the submit (in Editar verba, [LIMIT_DIALOG]
+     * comes next when it also applies); cancel ("Voltar") closes it, writes nothing and stays on the form.
+     */
+    const val CEILING_WARN = "budgetForm.ceilingDialog"
+    const val CEILING_WARN_CONFIRM = "budgetForm.ceilingDialog.confirm"
+    const val CEILING_WARN_CANCEL = "budgetForm.ceilingDialog.cancel"
 
     /** Editar verba only: "Apagar verba", opens [DELETE_DIALOG]. */
     const val FORM_DELETE = "budgetForm.delete"
@@ -290,22 +385,28 @@ private fun monthSpan(start: LocalDate, end: LocalDate) =
     if (start.month == end.month) "Mês de ${start.day} a ${end.day} de ${monthLong(start.month)}"
     else "Mês de ${start.day} de ${monthLong(start.month)} a ${end.day} de ${monthLong(end.month)}"
 
-private class Overview(val budgets: List<BudgetSummary>, val order: BudgetOrder, val window: BudgetMonth, val pending: Int, val fresh: Int)
+private class Overview(
+    val budgets: List<BudgetSummary>, val order: BudgetOrder, val window: BudgetMonth, val pending: Int, val fresh: Int, val ceiling: Ceiling,
+)
 
 /**
  * Verbas (spec §7.1, book 10.1): header of today's month, the Pauta strip, "Ordenar", the budgets of
  * the current month (after ensureMonths, D30) and "+". Tags: [BudgetTags].
  */
 @Composable
-fun Budgets(db: Db, go: (Screen) -> Unit) {
+fun Budgets(db: Db, snack: SnackHost, go: (Screen) -> Unit) {
     val today = LocalToday.current()
     val scope = rememberCoroutineScope()
+    var ceilingOpen by rememberSaveable { mutableStateOf(false) }
     val data = query(db, today) {
         val month = it.monthOf(today)
         it.ensureMonths(month)
         val pending = it.pending()
         // The month's window and day count, with or without budgets: a preview with any valid limit.
-        Overview(it.budgetsOverview(month, today, it.settings().budgetOrder), it.settings().budgetOrder, it.previewBudget(Cents(1), today), pending.size, pending.count { n -> n.isNew })
+        Overview(
+            it.budgetsOverview(month, today, it.settings().budgetOrder), it.settings().budgetOrder, it.previewBudget(Cents(1), today),
+            pending.size, pending.count { n -> n.isNew }, it.ceiling(month),
+        )
     }
     Column {
         HomeBar { IconButton(R.drawable.i_mais, { go(Screen.NewBudget) }, Modifier.testTag(BudgetTags.ADD)) }
@@ -316,7 +417,24 @@ fun Budgets(db: Db, go: (Screen) -> Unit) {
             val headline = "Dia ${w.start.daysUntil(today) + 1} de ${w.start.daysUntil(w.end) + 1}."
             val left = today.daysUntil(w.end) + 1
             val dek = if (left == 1) "Falta 1 dia, contando hoje." else "Faltam $left dias, contando hoje."
-            PageHeader(over, headline, Modifier.texts(BudgetTags.HEADER, over, headline, dek), dek)
+            val any = data.budgets.isNotEmpty()
+            // Book 8.10: from the rubric to the legend, one touch target that opens the teto; pressed = folha 2.
+            var pressed by remember { mutableStateOf(false) }
+            Column(
+                Modifier.layout { m, cons ->
+                    val extra = 24.dp.roundToPx()
+                    val p = m.measure(cons.copy(minWidth = cons.minWidth + extra, maxWidth = cons.maxWidth + extra))
+                    layout(p.width - extra, p.height) { p.place(-extra / 2, 0) }
+                }.then(
+                    if (!any) Modifier else Modifier
+                        .pointerInput(Unit) { detectTapGestures(onPress = { pressed = true; tryAwaitRelease(); pressed = false }, onTap = { ceilingOpen = true }) }
+                        .semantics { role = Role.Button; onClick { ceilingOpen = true; true } },
+                ).background(if (pressed) Margem.colors.surfaceSunken else Color.Transparent, RoundedCornerShape(6.dp))
+                    .padding(start = 12.dp, end = 12.dp, top = 2.dp, bottom = 8.dp),
+            ) {
+                PageHeader(over, headline, Modifier.texts(BudgetTags.HEADER, over, headline, dek), dek)
+                if (any) CeilingLine(data.ceiling)
+            }
             if (data.pending > 0) PautaStrip(data.pending, data.fresh) { go(Screen.Inbox) }
             val ink = Margem.colors.ink
             Row(
@@ -380,6 +498,7 @@ fun Budgets(db: Db, go: (Screen) -> Unit) {
             }
         }
     }
+    if (ceilingOpen && data != null && data.budgets.isNotEmpty()) CeilingDialog(db, data.ceiling, snack) { ceilingOpen = false }
 }
 
 /** Book `.strip`: "4 recados na pauta / 3 novos desde a última vez", the only call to action of Verbas. */
@@ -451,6 +570,7 @@ private fun BudgetForm(db: Db, id: BudgetId, back: () -> Unit, home: () -> Unit)
     var limitError by rememberSaveable { mutableStateOf("") }
     var askLimit by rememberSaveable { mutableStateOf(false) }
     var askDelete by rememberSaveable { mutableStateOf(false) }
+    var askCeiling by rememberSaveable { mutableStateOf(false) }
     val current = if (isNew) null else query(db, id, today) {
         val month = it.monthOf(today)
         it.ensureMonths(month)
@@ -464,6 +584,11 @@ private fun BudgetForm(db: Db, id: BudgetId, back: () -> Unit, home: () -> Unit)
         loaded = true
     }
     val preview = if (isNew && limit > 0) query(db, limit, today) { it.previewBudget(Cents(limit), today) } else null
+    // Spec §3: warn only when the limit raises the month's sum above the teto (T4).
+    val ceiling = if (limit > 0) query(db, id, limit, today) {
+        it.ensureMonths(it.monthOf(today))
+        it.previewCeiling(id, Cents(limit), today).takeIf { p -> p.over.v > 0 && p.limits > it.ceiling(p.month).limits }
+    } else null
 
     suspend fun save() {
         if (!db.renameBudget(id, name)) {
@@ -474,10 +599,7 @@ private fun BudgetForm(db: Db, id: BudgetId, back: () -> Unit, home: () -> Unit)
         back()
     }
 
-    fun submit() {
-        nameError = if (name.isBlank()) "Dê um nome à verba." else ""
-        limitError = if (limit <= 0) "A cota precisa ser maior que zero." else ""
-        if (nameError.isNotEmpty() || limitError.isNotEmpty()) return
+    fun proceed() {
         scope.launch {
             if (isNew) {
                 if (db.createBudget(name, Cents(limit), today).v == 0L) nameError = "Já existe uma verba com esse nome." else back()
@@ -486,6 +608,17 @@ private fun BudgetForm(db: Db, id: BudgetId, back: () -> Unit, home: () -> Unit)
             } else {
                 save()
             }
+        }
+    }
+
+    fun submit() {
+        nameError = if (name.isBlank()) "Dê um nome à verba." else ""
+        limitError = if (limit <= 0) "A cota precisa ser maior que zero." else ""
+        if (nameError.isNotEmpty() || limitError.isNotEmpty()) return
+        scope.launch {
+            // Read fresh: the form's query may not have caught up with the last digit.
+            val p = db.previewCeiling(id, Cents(limit), today)
+            if (p.over.v > 0 && p.limits > db.ceiling(p.month).limits) askCeiling = true else proceed()
         }
     }
 
@@ -498,6 +631,10 @@ private fun BudgetForm(db: Db, id: BudgetId, back: () -> Unit, home: () -> Unit)
                 Cents(limit), { limit = it.v; limitError = "" }, "Cota mensal", size = 40, error = limitError, tag = BudgetTags.FORM_LIMIT,
                 hint = "Quanto a verba permite gastar por mês. A cota recomeça inteira na virada; sobra e excesso não passam adiante.",
             )
+            if (ceiling != null) Text(
+                "Com esta cota, as cotas de ${monthLong(ceiling.month.month)} somam ${money(ceiling.limits)}: ${money(ceiling.over)} além do teto.",
+                sans(13.5f, 400, 18f, tabular = true), Modifier.padding(top = 2.dp).testTag(BudgetTags.FORM_CEILING), Margem.colors.overrun,
+            )
             if (preview != null && preview.weeks.isNotEmpty()) StepsPreview(preview, today)
             if (!isNew) Button(
                 "Apagar verba", { askDelete = true }, Modifier.padding(top = 24.dp).testTag(BudgetTags.FORM_DELETE),
@@ -509,6 +646,13 @@ private fun BudgetForm(db: Db, id: BudgetId, back: () -> Unit, home: () -> Unit)
             Modifier.fillMaxWidth().padding(horizontal = Margem.space.page, vertical = 16.dp).testTag(BudgetTags.FORM_SUBMIT),
         )
     }
+    if (askCeiling && ceiling != null) MargemDialog(
+        "Passar do teto?",
+        "As cotas de ${monthLong(ceiling.month.month)} somariam ${money(ceiling.limits)}, ${money(ceiling.over)} além do teto de ${money(ceiling.cents)}. " +
+            "O teto é só um limite de planejamento.",
+        if (isNew) "Criar mesmo assim" else "Salvar mesmo assim", { askCeiling = false; proceed() }, { askCeiling = false },
+        destructive = false, tag = BudgetTags.CEILING_WARN, dismiss = "Voltar",
+    )
     if (askLimit) MargemDialog(
         "Apagar os passos editados?",
         "Com a cota de ${money(Cents(limit))}, os passos que você editou não cabem mais em algum mês. As semanas desses meses voltam ao automático.",
@@ -562,6 +706,120 @@ private fun StepsPreview(bm: BudgetMonth, today: LocalDate) {
         )
     }
 }
+
+// ---- Teto ----
+
+/** Book 8.10: the ceiling line and its legend, or the dotted line with "Pôr um teto". Tags: [BudgetTags.CEILING]. */
+@Composable
+private fun CeilingLine(ceiling: Ceiling) {
+    val m = monthLong(ceiling.month.month)
+    val texts = if (ceiling.cents.v == 0L) listOf("As cotas somam ${money(ceiling.limits)}.", "Pôr um teto") else buildList {
+        add("cotas ${money(ceiling.limits)}")
+        add("teto ${money(ceiling.cents)}" + if (ceiling.cents != ceiling.standard) " · só $m" else "")
+        if (ceiling.over.v > 0) add("+ ${stepValue(ceiling.over)}")
+    }
+    val spoken = when {
+        ceiling.cents.v == 0L -> "As cotas de $m somam ${money(ceiling.limits)}. Sem teto. Tocar para pôr um teto."
+        else -> "Teto de $m: ${money(ceiling.cents)}. Cotas somam ${money(ceiling.limits)}, " + when {
+            ceiling.over.v > 0 -> "${money(ceiling.over)} além do teto."
+            ceiling.limits == ceiling.cents -> "fecham no teto."
+            else -> "a ${money(ceiling.cents - ceiling.limits)} do teto."
+        } + " Tocar para mudar."
+    }
+    CeilingLegend(ceiling, Modifier.clearAndSetSemantics {
+        testTag = BudgetTags.CEILING
+        this[SemanticsProperties.Text] = texts.map(::AnnotatedString)
+        contentDescription = spoken
+    })
+}
+
+/** The ceiling dialog: value, then "Vale para quais meses?"; saving shows a snack with Desfazer. Tags: [BudgetTags.CEILING_DIALOG]. */
+@Composable
+private fun CeilingDialog(db: Db, ceiling: Ceiling, snack: SnackHost, close: () -> Unit) {
+    val c = Margem.colors
+    val today = LocalToday.current()
+    val month = monthLong(ceiling.month.month)
+    val Month = month.replaceFirstChar { it.uppercase() }
+    val next = monthLong(ceiling.month.plusMonth().month)
+    var value by rememberSaveable { mutableLongStateOf(ceiling.cents.v) }
+    // 0: the value; 1: "Vale para quais meses?"; 2: "Tirar o teto de quais meses?".
+    var step by rememberSaveable { mutableIntStateOf(0) }
+    var saving by remember { mutableStateOf(false) }
+
+    fun save(onward: Boolean) {
+        if (saving) return
+        saving = true
+        val cents = if (step == 2) Cents(0) else Cents(value)
+        snack.scope.launch {
+            val before = db.ceiling(ceiling.month)
+            if (!db.setCeiling(cents, onward, today)) { saving = false; return@launch }
+            close()
+            val text = when {
+                cents.v == 0L && onward -> "$Month em diante sem teto."
+                cents.v == 0L -> "$Month sem teto."
+                onward -> "Teto de ${money(cents)} de $month em diante."
+                else -> "Teto de ${money(cents)} só em $month."
+            }
+            snack.show(Snack(text, "Desfazer") {
+                db.setCeiling(before.standard, onward = true, today)
+                db.setCeiling(before.cents, onward = false, today)
+            })
+        }
+    }
+
+    Dialog(close, DialogProperties(usePlatformDefaultWidth = false)) {
+        val shape = RoundedCornerShape(8.dp)
+        Column(
+            // The title is the dialog node's own text (D35); the tagged pieces inside stay nodes of their own.
+            Modifier.semantics { testTag = BudgetTags.CEILING_DIALOG; this[SemanticsProperties.Text] = listOf(AnnotatedString("Teto de $month")) }.padding(horizontal = 32.dp).widthIn(max = 340.dp).fillMaxWidth()
+                .shadow(14.dp, shape, ambientColor = c.shadow, spotColor = c.shadow).background(c.surface, shape)
+                .padding(start = 24.dp, end = 24.dp, top = 24.dp, bottom = 12.dp),
+        ) {
+            Text("Teto de $month", serif(22, 500, 28), Modifier.clearAndSetSemantics {})
+            if (step == 0) {
+                MoneyField(Cents(value), { value = it.v }, "Máximo para a soma das cotas", size = 30, tag = BudgetTags.CEILING_FIELD)
+                if (value > 0) {
+                    val head = "As cotas de $month somam ${money(ceiling.limits)}: "
+                    val hint = when {
+                        ceiling.limits.v > value -> head + "ficariam ${money(ceiling.limits - Cents(value))} além do teto. Dá para salvar assim."
+                        ceiling.limits.v == value -> head + "fecham no teto."
+                        else -> head + "ficam a ${money(Cents(value) - ceiling.limits)} do teto."
+                    }
+                    Text(hint, sans(13.5f, 400, 18f, tabular = true), Modifier.testTag(BudgetTags.CEILING_HINT), c.inkSecondary)
+                }
+                Row(Modifier.fillMaxWidth().padding(top = 12.dp), verticalAlignment = Alignment.CenterVertically) {
+                    if (ceiling.cents.v > 0) Button("Tirar teto", { step = 2 }, Modifier.testTag(BudgetTags.CEILING_REMOVE), kind = ButtonKind.TEXT, color = c.overrun)
+                    Gap(0.dp)
+                    Row(Modifier.weight(1f), horizontalArrangement = Arrangement.spacedBy(4.dp, Alignment.End)) {
+                        Button("Cancelar", close, Modifier.testTag(BudgetTags.CEILING_CANCEL), kind = ButtonKind.TEXT)
+                        Button("Salvar", { step = 1 }, Modifier.testTag(BudgetTags.CEILING_SAVE), kind = ButtonKind.TEXT, enabled = value > 0)
+                    }
+                }
+            } else {
+                val removing = step == 2
+                val question = if (removing) "Tirar o teto de quais meses?" else "Vale para quais meses?"
+                Text(question, sans(15f, 600, 22f), Modifier.padding(top = 8.dp, bottom = 4.dp).testTag(BudgetTags.CEILING_SCOPE))
+                ScopeOption(
+                    "De $month em diante", if (removing) "Os próximos meses ficam sem teto." else "Vira o teto dos próximos meses.",
+                    BudgetTags.CEILING_ONWARD,
+                ) { save(onward = true) }
+                ScopeOption(
+                    "Só em $month",
+                    if (ceiling.standard.v > 0) "Em $next, volta a ${money(ceiling.standard)}." else "Em $next, volta a não ter teto.",
+                    BudgetTags.CEILING_ONLY,
+                ) { save(onward = false) }
+                Row(Modifier.fillMaxWidth().padding(top = 6.dp), horizontalArrangement = Arrangement.End) {
+                    Button("Voltar", { step = 0 }, Modifier.testTag(BudgetTags.CEILING_BACK), kind = ButtonKind.TEXT)
+                }
+            }
+        }
+    }
+}
+
+/** One answer of "Vale para quais meses?": tapping it saves. */
+@Composable
+private fun ScopeOption(title: String, sub: String, tag: String, onClick: () -> Unit) =
+    ListRow(title, Modifier.testTag(tag).semantics(mergeDescendants = true) {}, sub = sub, onClick = onClick)
 
 // ---- Detalhe da verba ----
 
