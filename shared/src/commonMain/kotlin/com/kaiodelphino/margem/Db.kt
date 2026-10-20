@@ -203,7 +203,8 @@ class Db(
      * Changes the month start day (1..31; false otherwise). Deletes the step edits from the start
      * of [today]'s month onward, by the old or the new day, whichever is earlier (spec §4, D10).
      * Every budget keeps a limit in [today]'s new month: the one of the old current month, unless it
-     * already had one there (D43). The day already set changes nothing.
+     * already had one there (D43). Installment dates are recomputed with the new day, so
+     * installment k stays in the k-th month (D7). The day already set changes nothing.
      */
     suspend fun setMonthStartDay(day: Int, today: LocalDate): Boolean {
         if (day !in 1..31) return false
@@ -220,6 +221,13 @@ class Db(
                     "INSERT OR IGNORE INTO budget_months(budget_id, month, limit_cents) SELECT budget_id, ?, limit_cents FROM budget_months WHERE month = ?",
                     now.toString(), was.toString(),
                 )
+                // Installment k must stay in the k-th month (spec §6): dates clamped by the old day can drift with the new one (D7).
+                val dates = c.query("SELECT i.transaction_id, i.k, t.date FROM installments i JOIN transactions t ON t.id = i.transaction_id") {
+                    Triple(it.getLong(0), it.getInt(1), LocalDate.parse(it.getText(2)))
+                }
+                for ((tx, k, date) in dates) {
+                    c.exec("UPDATE installments SET date = ? WHERE transaction_id = ? AND k = ?", installmentDate(date, k, day).toString(), tx, k)
+                }
                 setSetting(c, "month_start_day", day.toString())
             }
         }
@@ -391,7 +399,8 @@ class Db(
     /**
      * Margin of [budget] in the month of [date] (the first installment's), before and after a
      * purchase of [total] in [installments]. For an edit, [replacing] is the transaction being
-     * edited: "before" includes it as it is, "after" swaps it for the new values.
+     * edited: "before" includes it as it is, "after" swaps it for the new values. A refunded
+     * transaction stays refunded after the edit, so its margin doesn't move (after = before).
      * Zero when the budget or the inputs aren't valid.
      */
     suspend fun previewAccept(
@@ -412,6 +421,7 @@ class Db(
         val spent = spentIn(c, "t.budget_id = ?", budget.v, window.start, window.endInclusive)
         val old = spentIn(c, "t.budget_id = ? AND t.id = ?", budget.v, window.start, window.endInclusive, replacing.v)
         val before = limit - spent
+        if (replacing.v != 0L && c.long("SELECT COUNT(*) FROM refunds WHERE transaction_id = ?", replacing.v) > 0L) return@read Preview(month, Cents(before), Cents(before))
         Preview(month, Cents(before), Cents(before + old - total.v / installments))
     }
 
@@ -738,12 +748,16 @@ class Db(
         ) { RankRow(it.getText(0), Cents(it.getLong(1)), it.getInt(2)) }
     }
 
-    /** Same, by merchant (grouped by key, named by alias). */
+    /**
+     * Same, by merchant (spec §7.5): merchants with the same alias (ignoring ASCII case) are one row,
+     * named by the alias; merchants without one are grouped by key and named by the bank text.
+     */
     suspend fun merchantRanking(from: LocalDate, to: LocalDate): List<RankRow> = read { c ->
         c.query(
-            "SELECT COALESCE(a.alias, MAX(t.merchant)), SUM(i.cents), COUNT(DISTINCT t.id) FROM installments i " +
+            "SELECT COALESCE(MAX(a.alias), MAX(t.merchant)), SUM(i.cents), COUNT(DISTINCT t.id) FROM installments i " +
                 "JOIN transactions t ON t.id = i.transaction_id LEFT JOIN merchant_aliases a ON a.merchant_key = t.merchant_key " +
-                "WHERE i.date BETWEEN ? AND ? AND $NOT_REFUNDED GROUP BY t.merchant_key ORDER BY 2 DESC, 1",
+                "WHERE i.date BETWEEN ? AND ? AND $NOT_REFUNDED " +
+                "GROUP BY CASE WHEN a.alias IS NULL THEN 'k' || t.merchant_key ELSE 'a' || LOWER(a.alias) END ORDER BY 2 DESC, 1",
             from.low(), to.high(),
         ) { RankRow(it.getText(0), Cents(it.getLong(1)), it.getInt(2)) }
     }

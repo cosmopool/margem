@@ -814,6 +814,15 @@ class RecadoFuzzTest {
                 assertEquals(day, db.settings().monthStartDay, "seed=$seed month start day")
                 val cache = HashMap<LocalDate, YearMonth>()
                 suspend fun monthOf(d: LocalDate): YearMonth = cache.getOrPut(d) { rfNoThrow("seed=$seed day=$day monthOf($d)") { db.monthOf(d) } }
+                // D7: the new day redates every installment, still one per month from the purchase's.
+                for (id in made) {
+                    val detail = db.transaction(id)
+                    val first = monthOf(detail.row.date)
+                    for (p in detail.installments) {
+                        if (monthOf(p.date) != rfMonthPlus(first, p.k - 1)) fail("seed=$seed day=$day: transaction ${id.v} installment ${p.k} dated ${p.date} after the start day change")
+                    }
+                    installments[id] = detail.installments
+                }
 
                 // Purchases at extreme dates; Jan 1970 ones so that NO_DATE, read as a real day, would find one.
                 // 9999-12-31 in 1× and 9999-01-31 in 12× end on the last storable day; in 13× it spills past it (refused).

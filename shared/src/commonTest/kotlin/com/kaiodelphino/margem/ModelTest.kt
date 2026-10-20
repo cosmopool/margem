@@ -201,7 +201,7 @@ private data class MtModel(
         return copy(settings = settings.copy(monthStartDay = newDay), budgets = budgets.map { b ->
             val keep = b.limitAt(was)
             b.copy(edits = b.edits.filterKeys { it < cut }, limits = if (keep != null && b.limitAt(now) == null) b.limits + (now to keep) else b.limits)
-        })
+        }, txs = txs.map { it.copy(inst = mtInstallments(it.date, it.total, it.inst.size, newDay)) }) // D7: dates redone with the new day
     }
 
     fun withWeekStart(w: DayOfWeek, today: LocalDate): MtModel {
@@ -543,7 +543,13 @@ private class MtRun(val db: Db, val path: String, val seed: Int) {
         if (got) m = m.copy(notices = m.notices.map { if (it.id == n.id) it.copy(dismissed = false) else it })
     }
 
-    fun aliasFor(merchant: String) = if (rnd.nextInt(8) == 0) " Ap ${mtKey(merchant)} ${rnd.nextInt(2)} " else if (rnd.nextInt(10) == 0) "   " else ""
+    // Some aliases are shared across merchants, in other case, so the ranking has to merge them (§7.5).
+    fun aliasFor(merchant: String) = when {
+        rnd.nextInt(16) == 0 -> listOf("Rede", "REDE", "rede").random(rnd)
+        rnd.nextInt(8) == 0 -> " Ap ${mtKey(merchant)} ${rnd.nextInt(2)} "
+        rnd.nextInt(10) == 0 -> "   "
+        else -> ""
+    }
 
     /** A form, valid most of the time; sometimes exactly what the notice said (not emendado). */
     fun form(parsed: Parsed?): TransactionForm {
@@ -970,8 +976,7 @@ private class MtRun(val db: Db, val path: String, val seed: Int) {
         assertEquals(pending.size, db.pendingCount(), "pendingCount")
         assertEquals(newest.filter { m.status(it) == NoticeStatus.DISMISSED }.map { m.noticeRow(it) }, db.dismissed(), "dismissed (Riscados)")
 
-        // §6: installment k counts in the k-th month, one per month. Their dates stay as written (D7), so after a start day
-        // change two can share a month; then "the installment of this month" (TransactionRow.now) means nothing.
+        // §6: installment k counts in the k-th month, one per month, also after a start day change (D7 redates them).
         for (t in m.txs) {
             val months = t.inst.map { mtMonthOf(it.date, s.monthStartDay) }
             assertEquals(months.distinct(), months, "§6: one installment per month for transaction ${t.id.v} ${t.inst} (installmentsKeepOneMonthEachAfterStartDayChange)")
@@ -1031,10 +1036,12 @@ private class MtRun(val db: Db, val path: String, val seed: Int) {
             assertEquals(tagRank.sortedBy { it.name }, gotTags.sortedBy { it.name }, "tagRanking $a..$z")
             for (i in 1 until gotTags.size) assertTrue(gotTags[i - 1].total >= gotTags[i].total, "tagRanking by value")
 
-            // Merchants by key, named by the alias. Without one, the spec doesn't say which bank spelling names the row.
+            // Merchants with the same alias (any case) are one row named by it; without one, by key. The spec doesn't say which
+            // spelling names the row, so any of the group's aliases or bank texts will do.
             class Group(val total: Long, val count: Int, val names: Set<String>)
-            val groups = counted.groupBy { mtKey(it.first.merchant) }.map { (key, list) ->
-                Group(list.sumOf { (_, i) -> i.sumOf { it.cents.v } }, list.size, m.aliases[key]?.let { setOf(it) } ?: list.map { it.first.merchant }.toSet())
+            val groups = counted.groupBy { m.aliases[mtKey(it.first.merchant)]?.let { a -> "a" + a.lowercase() } ?: ("k" + mtKey(it.first.merchant)) }.map { (_, list) ->
+                val aliases = list.mapNotNull { m.aliases[mtKey(it.first.merchant)] }.toSet()
+                Group(list.sumOf { (_, i) -> i.sumOf { it.cents.v } }, list.size, aliases.ifEmpty { list.map { it.first.merchant }.toSet() })
             }.toMutableList()
             val gotMerchants = db.merchantRanking(a, z)
             for (r in gotMerchants) {
