@@ -112,7 +112,7 @@ class LegendaEdgeTest {
     }
 
     @Test
-    fun `a contagem é depois da limpeza, 81 crus que viram 80 cabem e 81 limpos não`() = withDb { db ->
+    fun `a contagem é depois da limpeza - 81 crus que viram 80 cabem e 81 limpos não`() = withDb { db ->
         val b = db.budget("Mercado", 60000)
         val id = db.purchase(1)
         val read = db.asRead(id, b)
@@ -160,7 +160,7 @@ class LegendaEdgeTest {
     }
 
     @Test
-    fun `a contagem é o comprimento UTF-16 e não os code points, NFD tem uma casa a mais`() = withDb { db ->
+    fun `a contagem é o comprimento UTF-16 e não os code points - NFD tem uma casa a mais`() = withDb { db ->
         val b = db.budget("Mercado", 60000)
         val nfc = "\u00E9"  // é: one unit
         val nfd = "e\u0301" // é decomposto: two units
@@ -193,7 +193,7 @@ class LegendaEdgeTest {
     }
 
     @Test
-    fun `só espaços, tabulação ou quebra de linha não tem legenda`() = withDb { db ->
+    fun `só espaços tabulação ou quebra de linha não tem legenda`() = withDb { db ->
         val b = db.budget("Mercado", 60000)
         for ((i, blank) in listOf("", " ", "\t", "\n", " \t\n ", "   ").withIndex()) {
             val tx = db.addManual(form(b, 500, merchant = "LOJA $i", caption = blank))
@@ -344,7 +344,7 @@ class LegendaEdgeTest {
     // ---- Leitura (spec §7.5: a legenda não entra) ----
 
     @Test
-    fun `merchantRanking, tagRanking e history são os de um lançamento idêntico sem legenda`() = withDb { db ->
+    fun `merchantRanking tagRanking e history são os de um lançamento idêntico sem legenda`() = withDb { db ->
         val b = db.budget("Casa", 90000)
         fun of(caption: String) = form(b, 3000, date = OCT_6, merchant = "PADARIA DO ZE", tags = listOf("feira"), alias = "Padaria do Zé", caption = caption)
         val with = db.addManual(of("Bolo da Ana"))
@@ -369,7 +369,7 @@ class LegendaEdgeTest {
     // ---- Escolha da compra estornada (spec §7.3) ----
 
     @Test
-    fun `refundCandidates carrega legenda, apelido e texto do banco e o recado pendente tem legenda vazia`() = withDb { db ->
+    fun `refundCandidates carrega legenda apelido e texto do banco e o recado pendente tem legenda vazia`() = withDb { db ->
         val b = db.budget("Casa", 60000)
         val n = db.purchase(1, "12,00", "PADARIA DO ZE")
         val tx = db.accept(n, db.asRead(n, b).copy(caption = "Bolo da Ana", alias = "Padaria do Zé"))
