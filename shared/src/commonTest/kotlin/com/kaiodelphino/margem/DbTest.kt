@@ -180,7 +180,10 @@ class DbTest {
         assertTrue(db.notice(estorno).parsed.isRefund)
 
         val candidates = db.refundCandidates(estorno)
-        assertEquals(RefundCandidate(transaction = purchase, name = "DL *UberRides", total = Cents(994), date = OCT_6, likely = true), candidates.first())
+        assertEquals(
+            RefundCandidate(transaction = purchase, name = "DL *UberRides", total = Cents(994), date = OCT_6, likely = true, merchant = "DL *UberRides"),
+            candidates.first(),
+        )
         assertTrue(candidates.single { it.transaction == older }.likely)
 
         assertTrue(db.registerRefund(estorno, purchase))
@@ -206,7 +209,10 @@ class DbTest {
         val estorno = post(nu(UBER_REFUND, T + 6 * MIN))
 
         val candidates = db.refundCandidates(estorno)
-        assertEquals(RefundCandidate(notice = purchase, name = "DL *UberRides", total = Cents(994), date = OCT_6, likely = true), candidates.first())
+        assertEquals(
+            RefundCandidate(notice = purchase, name = "DL *UberRides", total = Cents(994), date = OCT_6, likely = true, merchant = "DL *UberRides"),
+            candidates.first(),
+        )
         assertFalse(candidates.single { it.notice == other }.likely)
         assertTrue(candidates.none { it.notice == estorno })
 

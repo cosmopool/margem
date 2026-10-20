@@ -118,6 +118,9 @@ data class NoticeRow(
     val looksLikeAd: Boolean = false,
 )
 
+/** The most a legenda takes (spec §2.12, D53, D55): `String.length` units — the field cuts here, the Db refuses past it. */
+const val MAX_CAPTION = 80
+
 /** The input of accept, addManual and edit (spec §7.3). The Db parses it: see [Db.accept]. */
 data class TransactionForm(
     val budget: BudgetId = BudgetId(0),

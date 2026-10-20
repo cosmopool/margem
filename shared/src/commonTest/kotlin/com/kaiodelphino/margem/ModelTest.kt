@@ -70,6 +70,7 @@ private data class MtTx(
     val notice: NoticeId,
     val budget: BudgetId,
     val merchant: String,
+    val caption: String,
     val total: Long,
     val date: LocalDate,
     val time: LocalTime,
@@ -123,6 +124,7 @@ private data class MtModel(
         alias = aliases[mtKey(t.merchant)] ?: "", total = Cents(t.total), installments = t.inst.size, date = t.date, time = t.time,
         tags = t.tags.sorted(), estorno = refunds.entries.firstOrNull { it.value.first == t.id }?.key ?: NoticeId(0), corrected = t.corrected,
         now = if (today == null) Installment() else t.inst.firstOrNull { mtMonthOf(it.date, day) == mtMonthOf(today, day) } ?: Installment(),
+        caption = t.caption,
     )
 
     /** Spec §3: Gasto do mês = installments of the budget dated in the month, without the refunded purchases. */
@@ -154,12 +156,14 @@ private data class MtModel(
     /** Lançar / manual / editar (§2.4, §6, §7.3): a refused form gives null. */
     fun txOf(id: TransactionId, notice: NoticeId, f: TransactionForm): MtTx? {
         val tags = mtClean(f.tags)
+        val caption = mtCaption(f.caption)
         if (budget(f.budget) == null || tags.isEmpty() || f.total.v <= 0 || f.installments !in 1..400) return null
+        if (caption.length > MAX_CAPTION) return null // §2.12, D53: the whole form is refused
         val merchant = f.merchant.trim()
         val p = notice(notice)?.parsed
-        // Glossary, Emenda: value, merchant, date or time changed from what the notice said.
+        // Glossary, Emenda: value, merchant, date or time changed from what the notice said. The caption is never an emenda (§2.12).
         val corrected = p != null && (p.cents != f.total || p.merchant != merchant || p.date != f.date || p.time != f.time)
-        return MtTx(id, notice, f.budget, merchant, f.total.v, f.date, f.time, tags.toSet(), corrected, mtInstallments(f.date, f.total.v, f.installments, day))
+        return MtTx(id, notice, f.budget, merchant, caption, f.total.v, f.date, f.time, tags.toSet(), corrected, mtInstallments(f.date, f.total.v, f.installments, day))
     }
 
     fun saveTx(t: MtTx, f: TransactionForm): MtModel {
@@ -229,6 +233,9 @@ private fun mtContent(r: RawNotice) = listOf(r.title, r.text, r.bigText, r.subTe
 private fun mtKey(merchant: String) = merchant.filterNot(Char::isWhitespace).lowercase()
 
 private fun mtClean(tags: List<String>) = tags.map { it.trim().lowercase() }.filter { it.isNotEmpty() }.distinct()
+
+/** §2.12, D55: every line break (CRLF as one, then LF, CR, U+2028, U+2029) becomes one space; the edges are trimmed. */
+private fun mtCaption(s: String) = s.replace(Regex("\\r\\n|[\\r\\n\\u2028\\u2029]"), " ").trim()
 
 private fun YearMonth.mtShift(n: Int): YearMonth = if (n >= 0) plus(n, DateTimeUnit.MONTH) else minus(-n, DateTimeUnit.MONTH)
 
@@ -569,7 +576,7 @@ private class MtRun(val db: Db, val path: String, val seed: Int) {
             else -> if (rnd.nextInt(3) == 0) 2 + rnd.nextInt(13) else 1
         }
         if (parsed != null && parsed.cents.v > 0 && rnd.nextInt(3) == 0) {
-            return TransactionForm(budget, tags, parsed.cents, n, parsed.merchant, parsed.date, parsed.time, aliasFor(parsed.merchant))
+            return TransactionForm(budget, tags, parsed.cents, n, parsed.merchant, parsed.date, parsed.time, aliasFor(parsed.merchant), captionFor())
         }
         val merchant = MT_FORM_MERCHANTS.random(rnd)
         val total = when (rnd.nextInt(20)) {
@@ -579,11 +586,21 @@ private class MtRun(val db: Db, val path: String, val seed: Int) {
             else -> 100L + rnd.nextLong(120_000)
         }
         val date = today.minus(rnd.nextInt(-5, 120), DAY)
-        return TransactionForm(budget, tags, Cents(total), n, merchant, date, LocalTime(rnd.nextInt(24), rnd.nextInt(60)), aliasFor(merchant))
+        return TransactionForm(budget, tags, Cents(total), n, merchant, date, LocalTime(rnd.nextInt(24), rnd.nextInt(60)), aliasFor(merchant), captionFor())
+    }
+
+    /** §2.12: usually none; sometimes text, whitespace only, line breaks or past 80 (D53 refuses the form). */
+    fun captionFor(): String = when (rnd.nextInt(7)) {
+        0, 1 -> ""
+        2 -> " Bolo da Ana ${rnd.nextInt(9)} "
+        3 -> "  \t "
+        4 -> "linha um\nlinha dois\r\nfim ${rnd.nextInt(9)}"
+        5 -> "x".repeat(MAX_CAPTION + 1 + rnd.nextInt(20))
+        else -> "Feira ${rnd.nextInt(9)}"
     }
 
     fun describe(f: TransactionForm) =
-        "budget=${f.budget.v} tags=${f.tags} total=${f.total.v} n=${f.installments} merchant=\"${f.merchant}\" ${f.date} ${f.time} alias=\"${f.alias}\""
+        "budget=${f.budget.v} tags=${f.tags} total=${f.total.v} n=${f.installments} merchant=\"${f.merchant}\" ${f.date} ${f.time} alias=\"${f.alias}\" caption=\"${f.caption}\""
 
     suspend fun accept() {
         val n = pickNotice { !it.parsed.isRefund || rnd.nextInt(5) == 0 } ?: return
@@ -940,10 +957,12 @@ private class MtRun(val db: Db, val path: String, val seed: Int) {
             val exp = m.txs.filter { !m.refunded(it.id) }.map { x ->
                 val bought = m.notice(x.notice)
                 RefundCandidate(transaction = x.id, name = m.aliases[mtKey(x.merchant)] ?: x.merchant, total = Cents(x.total), date = x.date,
-                    likely = bought != null && likely(bought.raw.packageName, x.total, x.merchant, bought.raw.postedAt))
+                    likely = bought != null && likely(bought.raw.packageName, x.total, x.merchant, bought.raw.postedAt),
+                    caption = x.caption, alias = m.aliases[mtKey(x.merchant)] ?: "", merchant = x.merchant)
             } + m.notices.filter { it.id != e.id && m.status(it) == NoticeStatus.PENDING && !it.parsed.isRefund }.map { x ->
                 RefundCandidate(notice = x.id, name = m.aliases[mtKey(x.parsed.merchant)] ?: x.parsed.merchant, total = x.parsed.cents, date = x.parsed.date,
-                    likely = likely(x.raw.packageName, x.parsed.cents.v, x.parsed.merchant, x.raw.postedAt))
+                    likely = likely(x.raw.packageName, x.parsed.cents.v, x.parsed.merchant, x.raw.postedAt),
+                    alias = m.aliases[mtKey(x.parsed.merchant)] ?: "", merchant = x.parsed.merchant)
             }
             val got = db.refundCandidates(e.id)
             val canon = compareBy<RefundCandidate> { it.transaction.v }.thenBy { it.notice.v }

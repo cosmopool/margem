@@ -25,7 +25,6 @@ import kotlinx.io.buffered
 import kotlinx.io.files.Path
 import kotlinx.io.files.SystemFileSystem
 
-private const val SCHEMA_VERSION = 2L
 private const val MAX_INSTALLMENTS = 400
 
 /**
@@ -513,13 +512,29 @@ class Db(
                 it.getText(0) to it.getLong(1)
             }.firstOrNull()
             val isLikely = n != null && likely(n.first, t.total.v, t.merchant, n.second)
-            ranked.add(Ranked(RefundCandidate(transaction = t.id, name = t.name, total = t.total, date = t.date, likely = isLikely), t.time))
+            ranked.add(
+                Ranked(
+                    RefundCandidate(
+                        transaction = t.id, name = t.name, total = t.total, date = t.date, likely = isLikely,
+                        caption = t.caption, alias = t.alias, merchant = t.merchant,
+                    ),
+                    t.time,
+                ),
+            )
         }
         for (n in notices(c, "WHERE status = 0 AND id != ${estorno.v}")) {
             if (n.parsed.isRefund) continue
             val isLikely = likely(n.raw.packageName, n.parsed.cents.v, n.parsed.merchant, n.raw.postedAt)
             val name = n.alias.ifEmpty { n.parsed.merchant }
-            ranked.add(Ranked(RefundCandidate(notice = n.id, name = name, total = n.parsed.cents, date = n.parsed.date, likely = isLikely), n.parsed.time))
+            ranked.add(
+                Ranked(
+                    RefundCandidate(
+                        notice = n.id, name = name, total = n.parsed.cents, date = n.parsed.date, likely = isLikely,
+                        alias = n.alias, merchant = n.parsed.merchant,
+                    ),
+                    n.parsed.time,
+                ),
+            )
         }
         ranked.sortedWith(
             compareByDescending<Ranked> { it.candidate.likely }.thenByDescending { it.candidate.date }.thenByDescending { it.time }
@@ -979,7 +994,7 @@ class Db(
         val rows = c.query(
             "SELECT t.id, t.notice_id, t.budget_id, b.name, t.merchant, COALESCE(a.alias, ''), t.total_cents, " +
                 "(SELECT COUNT(*) FROM installments i WHERE i.transaction_id = t.id), t.date, t.time, " +
-                "COALESCE((SELECT r.estorno_notice_id FROM refunds r WHERE r.transaction_id = t.id), 0), t.corrected " +
+                "COALESCE((SELECT r.estorno_notice_id FROM refunds r WHERE r.transaction_id = t.id), 0), t.corrected, t.caption " +
                 "FROM transactions t JOIN budgets b ON b.id = t.budget_id LEFT JOIN merchant_aliases a ON a.merchant_key = t.merchant_key " +
                 "$where ORDER BY t.date DESC, t.time DESC, t.id DESC",
             *args,
@@ -988,7 +1003,7 @@ class Db(
                 id = TransactionId(it.getLong(0)), notice = NoticeId(it.getLong(1)), budget = BudgetId(it.getLong(2)), budgetName = it.getText(3),
                 merchant = it.getText(4), alias = it.getText(5), total = Cents(it.getLong(6)), installments = it.getInt(7),
                 date = LocalDate.parse(it.getText(8)), time = LocalTime.parse(it.getText(9)), estorno = NoticeId(it.getLong(10)),
-                corrected = it.getLong(11) != 0L,
+                corrected = it.getLong(11) != 0L, caption = it.getText(12),
             )
         }
         if (rows.isEmpty()) return rows
@@ -1011,20 +1026,22 @@ class Db(
         val dates = (1..form.installments).map { installmentDate(form.date, it, day) }
         if (dates.any { it !in FIRST_DATE..LAST_DATE }) return 0
         val merchant = storable(form.merchant.trim())
+        val caption = storable(CLEAN_BREAKS.replace(form.caption, " ").trim())
+        if (caption.length > MAX_CAPTION) return 0
         val corrected = notice != 0L && extract(notice(c, notice).raw, timeZone).let {
             it.cents != form.total || it.merchant != merchant || it.date != form.date || it.time != form.time
         }
         val key = merchantKey(merchant)
         val txId = if (id == 0L) {
             c.exec(
-                "INSERT INTO transactions(notice_id, budget_id, merchant, merchant_key, date, time, total_cents, corrected) VALUES (?,?,?,?,?,?,?,?)",
-                notice, form.budget.v, merchant, key, form.date.toString(), form.time.toString(), form.total.v, corrected,
+                "INSERT INTO transactions(notice_id, budget_id, merchant, merchant_key, date, time, total_cents, corrected, caption) VALUES (?,?,?,?,?,?,?,?,?)",
+                notice, form.budget.v, merchant, key, form.date.toString(), form.time.toString(), form.total.v, corrected, caption,
             )
             c.lastId()
         } else {
             c.exec(
-                "UPDATE transactions SET budget_id = ?, merchant = ?, merchant_key = ?, date = ?, time = ?, total_cents = ?, corrected = ? WHERE id = ?",
-                form.budget.v, merchant, key, form.date.toString(), form.time.toString(), form.total.v, corrected, id,
+                "UPDATE transactions SET budget_id = ?, merchant = ?, merchant_key = ?, date = ?, time = ?, total_cents = ?, corrected = ?, caption = ? WHERE id = ?",
+                form.budget.v, merchant, key, form.date.toString(), form.time.toString(), form.total.v, corrected, caption, id,
             )
             c.exec("DELETE FROM installments WHERE transaction_id = ?", id)
             c.exec("DELETE FROM transaction_tags WHERE transaction_id = ?", id)
@@ -1110,10 +1127,18 @@ class Db(
             "CREATE INDEX transaction_tags_tag ON transaction_tags(tag_id)",
         )
 
-        /** v2: the teto (D42, D46). Its default lives in settings under "ceiling" (absent = 0, no ceiling). */
+        /** v2: the teto (D42, D58). Its default lives in settings under "ceiling" (absent = 0, no ceiling). */
         val SCHEMA_V2 = listOf(
             "CREATE TABLE ceiling_months(month TEXT PRIMARY KEY, cents INTEGER NOT NULL)",
         )
+
+        /** v3: the legenda (D52). Old rows read caption '' (no legenda): zero is initialization. */
+        val SCHEMA_V3 = listOf(
+            "ALTER TABLE transactions ADD COLUMN caption TEXT NOT NULL DEFAULT ''",
+        )
+
+        /** The schema version = how many SCHEMA_Vn migrations exist (v1 is SCHEMA_V1): a new migration can't be forgotten here. */
+        val SCHEMA_VERSION = listOf(SCHEMA_V1, SCHEMA_V2, SCHEMA_V3).size.toLong()
 
         /** One `if (v < N)` per version, each in a transaction that ends by writing N (architecture §4). */
         fun migrate(c: SQLiteConnection) {
@@ -1130,11 +1155,20 @@ class Db(
                 c.execSQL("PRAGMA user_version = 2")
                 c.execSQL("COMMIT")
             }
+            if (v < 3) {
+                c.execSQL("BEGIN IMMEDIATE")
+                SCHEMA_V3.forEach(c::execSQL)
+                c.execSQL("PRAGMA user_version = 3")
+                c.execSQL("COMMIT")
+            }
         }
     }
 }
 
 // ---- SQL helpers: bind by position (Long, Int, String, Boolean) ----
+
+/** Every line break of a legenda (spec §2.12): CRLF as one, then LF, CR and the invisible U+2028/U+2029. */
+private val CLEAN_BREAKS = Regex("\\r\\n|[\\r\\n\\u2028\\u2029]")
 
 /**
  * The text as SQLite gives it back (D28): its UTF-16 ↔ UTF-8 conversion drops a leading U+FEFF,
