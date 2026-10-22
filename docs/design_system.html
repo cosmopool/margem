@@ -438,6 +438,67 @@ p.tx.serif{font:400 19px/1.6 'Newsreader'}
 .tsem{display:flex;align-items:center;justify-content:space-between;gap:8px;margin-top:8px;border-top:1px dotted var(--fio-forte);font:13.5px/1.3 'Source Sans 3';color:var(--tinta-3);min-height:44px}
 .tsem .btn{margin-right:-12px;min-height:44px}
 
+/* ---------- 8.11 previsto ---------- */
+/* legenda: manchete em itálico, crédito do estabelecimento (spec §2.12) */
+.leg{display:block;font:italic 500 17px/22px 'Newsreader';color:var(--tinta)}
+.by{display:block;margin-top:1px;line-height:20px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.by .em{font:400 13px 'Source Sans 3';color:var(--tinta-3);margin-right:4px}
+.by .mer{font:500 15px/20px 'Newsreader';color:var(--tinta-2)}
+.fld.lg .in{font:italic 500 19px/1.2 'Newsreader'}
+.fld.lg .in .x{margin-left:auto;color:var(--tinta-3)}
+.fld.money.sm .in{font-size:36px;min-height:50px;padding-top:6px}
+.bank{font:13.5px/18px 'Source Sans 3';color:var(--tinta-2);padding:6px 0 2px}
+/* link "É um previsto? Ligar" */
+.addleg{display:flex;align-items:center;gap:10px;min-height:44px}
+.addleg .lk{display:inline-flex;align-items:center;gap:3px;min-height:44px;font:600 14.5px 'Source Sans 3';color:var(--anil)}
+.addleg .lk .ico{width:18px;height:18px;stroke-width:1.75}
+/* Repete: dois botões de escolha */
+.rb{font:600 11px/1.3 'Source Sans 3';letter-spacing:.12em;text-transform:uppercase;color:var(--tinta-3);margin-top:12px}
+.bos{display:flex;flex-wrap:wrap;gap:8px;margin-top:6px}
+.bo{display:inline-flex;align-items:center;height:36px;padding:0 13px;border:1px solid var(--fio-forte);border-radius:4px;font:600 14.5px 'Source Sans 3';color:var(--tinta);background:var(--folha);white-space:nowrap}
+.bo.on{background:var(--tinta);color:var(--papel);border-color:var(--tinta)}
+.rhint{font:13.5px/1.35 'Source Sans 3';color:var(--tinta-3);margin-top:6px}
+/* folhinha do dia: tracejada = ainda vai acontecer (mesma regra do ritmo ideal e da projeção) */
+.dia{width:42px;flex:none;border:1px dashed var(--fio-forte);border-radius:3px;text-align:center;padding:3px 0 4px;align-self:center}
+.dia small{display:block;font:700 9.5px/1.2 'Source Sans 3';letter-spacing:.12em;text-transform:uppercase;color:var(--tinta-3)}
+.dia b{display:block;font:500 20px/1.05 'Newsreader';font-variant-numeric:lining-nums tabular-nums;color:var(--tinta)}
+.dia.late b{color:var(--tinta-3)}
+.prow{display:flex;gap:12px;align-items:center;padding:9px 0;border-bottom:1px solid var(--fio)}
+.prow>.tx{flex:1;min-width:0}
+.prow .nm{display:block;font:500 17px/22px 'Newsreader'}
+.prow .w{display:block;font:13px/17px 'Source Sans 3';color:var(--tinta-3);white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.prow .w.lk{color:var(--anil);font-weight:600}
+.prow .w.late{color:var(--tinta-2)}
+.prow .amt{font-size:17px;color:var(--tinta-2);text-align:right}
+/* faixa do app reconhecendo: informação, em anil */
+.liga{display:flex;gap:10px;align-items:flex-start;margin-top:10px;padding:9px 12px;border-radius:6px;background:var(--anil-fundo);font:13.5px/1.35 'Source Sans 3';color:var(--tinta-2)}
+.liga .ico{color:var(--anil);margin-top:2px}
+.liga .tx{flex:1;min-width:0}
+.liga b{display:block;font:500 16px/1.25 'Newsreader';color:var(--tinta)}
+.liga a{font-weight:600;color:var(--anil);text-decoration:none;white-space:nowrap}
+/* "A caminho": uma linha no topo de Lançamentos */
+.acam{display:flex;align-items:center;gap:10px;min-height:60px;margin:4px 0 2px;padding:8px 4px 8px 12px;background:var(--folha-2);border-radius:6px}
+.acam>.ico{color:var(--tinta-2)}
+.acam .tx{flex:1;min-width:0}
+.acam .tx b{display:block;font:500 17px/22px 'Newsreader'}
+.acam .tx small{display:block;font:13px/17px 'Source Sans 3';color:var(--tinta-2)}
+.acam .ib{width:40px;height:40px}
+.acam.open .ib .ico{transform:rotate(90deg)}
+/* folha inferior e escolha */
+.veil{position:absolute;inset:0;background:var(--scrim);z-index:5}
+.sheet{position:absolute;left:0;right:0;bottom:0;background:var(--folha);border-radius:16px 16px 0 0;box-shadow:var(--sombra);padding:10px 24px 30px}
+.sheet::before{content:"";display:block;width:32px;height:4px;border-radius:2px;background:var(--fio-forte);margin:0 auto 14px}
+.mrow{display:flex;align-items:center;gap:14px;min-height:52px;border-bottom:1px solid var(--fio);font:500 15.5px/1.3 'Source Sans 3'}
+.mrow .ico{color:var(--tinta-2)}
+.mrow small{display:block;font:400 13px 'Source Sans 3';color:var(--tinta-3)}
+.mrow.dis{color:var(--tinta-3)}.mrow.dis .ico{color:var(--tinta-3)}
+.mrow.del,.mrow.del .ico{color:var(--lacre)}
+.lrow.pick{padding:10px 4px;align-items:center;gap:12px}
+.lrow.pick.on{background:var(--folha-2)}
+.lrow.pick>span:nth-child(2){flex:1;min-width:0}
+.box0{width:20px;height:20px;border:1px solid var(--fio-forte);border-radius:3px;flex:none}
+.likely{font:600 11px 'Source Sans 3';letter-spacing:.1em;text-transform:uppercase;color:var(--anil)}
+
 @media (max-width:960px){
   .sec{grid-template-columns:minmax(0,1fr);row-gap:24px}
   .mg-in{position:static}
@@ -498,6 +559,8 @@ p.tx.serif{font:400 19px/1.6 'Newsreader'}
     <symbol id="i-sinal" viewBox="0 0 24 24"><path d="M3 18h3v2H3zM8 14h3v6H8zM13 10h3v10h-3zM18 6h3v14h-3z" fill="currentColor" stroke="none"/></symbol>
     <symbol id="i-bat" viewBox="0 0 24 24"><rect x="3" y="7" width="16" height="10" rx="2"/><path d="M21 10.5v3"/><rect x="5" y="9" width="10" height="6" rx="1" fill="currentColor" stroke="none"/></symbol>
     <!-- Marca -->
+    <symbol id="i-ligar" viewBox="0 0 24 24"><path d="M10 14l4-4"/><path d="M8.5 11.5l-2 2a3 3 0 0 0 4.2 4.2l2-2"/><path d="M15.5 12.5l2-2a3 3 0 0 0-4.2-4.2l-2 2"/></symbol>
+    <symbol id="i-previsto" viewBox="0 0 24 24"><path d="M4 6h16v14H4z" stroke-dasharray="2.2 2.2"/><path d="M8 3.5V7.5M16 3.5V7.5"/><path d="M9 13.5l2 2 4-4.5"/></symbol>
     <symbol id="marca" viewBox="0 0 48 48">
       <path d="M13 6v36M17.5 6v36" stroke="var(--marca-fio,#A44D29)" stroke-width="1.8" fill="none"/>
       <path d="M22 15h18M22 24h14M22 33h7" stroke="var(--marca-tinta,#1E1B16)" stroke-width="3.4" fill="none"/>
@@ -512,7 +575,7 @@ p.tx.serif{font:400 19px/1.6 'Newsreader'}
      CAPA
      ========================================================= -->
 <header class="cover" id="capa">
-  <div class="meta"><span>Livro de identidade · Edição nº 1</span><span>Sistema visual e verbal para Android</span><span class="num">Outubro de 2026</span></div>
+  <div class="meta"><span>Livro de identidade · Edição nº 1 · revista em 22 out 2026 (previsto)</span><span>Sistema visual e verbal para Android</span><span class="num">Outubro de 2026</span></div>
   <div class="mid">
     <div>
       <div style="display:flex;align-items:flex-end;gap:clamp(12px,2vw,28px);--marca-tinta:var(--tinta);--marca-fio:var(--argila)">
@@ -825,7 +888,7 @@ p.tx.serif{font:400 19px/1.6 'Newsreader'}
       <tbody>
         <tr><td>Fundo</td><td><code>paper</code></td><td class="num">#F3EEE4</td><td class="num">#171512</td><td>Página de toda tela.</td></tr>
         <tr><td>Superfície</td><td><code>surface</code></td><td class="num">#FBF8F1</td><td class="num">#201D19</td><td>Recados, diálogos, folhas inferiores, widgets.</td></tr>
-        <tr><td>Superfície rebaixada</td><td><code>surfaceSunken</code></td><td class="num">#ECE5D8</td><td class="num">#2A2621</td><td>Texto original do banco, faixa da pauta, botão desabilitado.</td></tr>
+        <tr><td>Superfície rebaixada</td><td><code>surfaceSunken</code></td><td class="num">#ECE5D8</td><td class="num">#2A2621</td><td>Texto original do banco, faixa da pauta, linha “A caminho”, botão desabilitado.</td></tr>
         <tr><td>Fio</td><td><code>rule</code></td><td class="num">#DDD3C2</td><td class="num">#36312A</td><td>Separadores de lista, trilho da régua, grade de gráfico.</td></tr>
         <tr><td>Fio forte</td><td><code>ruleStrong</code></td><td class="num">#8A7E6A</td><td class="num">#7C7262</td><td>Contorno de campo, chip e botão secundário.</td></tr>
         <tr><td>Texto</td><td><code>ink</code> · <code>inkSecondary</code> · <code>inkTertiary</code></td><td class="num">#1E1B16 · #514A40 · #6B6254</td><td class="num">#EEE7DA · #BDB3A3 · #988E7F</td><td>Títulos e valores · apoio · rubricas e eixos.</td></tr>
@@ -834,7 +897,7 @@ p.tx.serif{font:400 19px/1.6 'Newsreader'}
         <tr><td><span class="st ok">No ritmo</span></td><td><code>onPace</code> · <code>onPaceContainer</code></td><td class="num">#3E5E38 · #E3EADB</td><td class="num">#A3C092 · #24301F</td><td>Régua dentro do ritmo, confirmação.</td></tr>
         <tr><td><span class="st at">Acima do ritmo</span></td><td><code>ahead</code> · <code>aheadContainer</code></td><td class="num">#85590F · #F4E7CC</td><td class="num">#DDB063 · #382C17</td><td>Gasto adiantado em relação ao ritmo ideal; “parece propaganda”.</td></tr>
         <tr><td><span class="st ov">Fora da margem</span></td><td><code>overrun</code> · <code>overrunContainer</code></td><td class="num">#9A2A20 · #F6E3DC</td><td class="num">#EE937E · #3A221C</td><td>Passou da cota, erro de leitura, ação de riscar.</td></tr>
-        <tr><td>Informação</td><td><code>info</code> · <code>infoContainer</code></td><td class="num">#2D4C6E · #DFE6EE</td><td class="num">#A3BCDB · #1F2A36</td><td>Links, botões de texto, anel de foco, cursor.</td></tr>
+        <tr><td>Informação</td><td><code>info</code> · <code>infoContainer</code></td><td class="num">#2D4C6E · #DFE6EE</td><td class="num">#A3BCDB · #1F2A36</td><td>Links, botões de texto, anel de foco, cursor; o app reconhecendo (a faixa “É o previsto Internet”, “Ligado à Conta de luz”, “Data à frente”). Não é cor de estado.</td></tr>
       </tbody>
     </table></div>
 
@@ -1021,7 +1084,7 @@ p.tx.serif{font:400 19px/1.6 'Newsreader'}
           <div><div style="height:1px;background:var(--fio)"></div><span class="cap" style="display:block;margin-top:6px"><b>Fio</b>1 dp · separa linhas de lista.</span></div>
           <div><div style="height:1px;background:var(--tinta)"></div><span class="cap" style="display:block;margin-top:6px"><b>Fio de tinta</b>1 dp · abre uma seção.</span></div>
           <div><div style="height:2px;background:var(--tinta)"></div><span class="cap" style="display:block;margin-top:6px"><b>Fio de ênfase</b>2 dp · aba ativa, total.</span></div>
-          <div><div style="height:0;border-top:1.5px dashed var(--tinta-2)"></div><span class="cap" style="display:block;margin-top:6px"><b>Fio tracejado</b>ritmo ideal, projeção.</span></div>
+          <div><div style="height:0;border-top:1.5px dashed var(--tinta-2)"></div><span class="cap" style="display:block;margin-top:6px"><b>Fio tracejado</b>“ainda não aconteceu”: ritmo ideal, projeção, marcador sugerido e a folhinha do previsto (8.11).</span></div>
           <div><div style="height:6px;border-left:0;border-top:1px solid var(--argila);border-bottom:1px solid var(--argila);width:100%"></div><span class="cap" style="display:block;margin-top:6px"><b>Fio duplo</b>a margem. Assinatura — fim da régua, recado novo.</span></div>
         </div>
       </div>
@@ -1057,6 +1120,8 @@ p.tx.serif{font:400 19px/1.6 'Newsreader'}
       <div style="padding:18px 12px 14px 0;border-bottom:1px solid var(--fio)"><svg class="ico" style="width:32px;height:32px"><use href="#i-fontes"/></svg><div style="font:500 16px 'Newsreader';margin-top:10px">Fontes</div><code class="code">Source</code></div>
       <div style="padding:18px 12px 14px 0;border-bottom:1px solid var(--fio)"><svg class="ico" style="width:32px;height:32px"><use href="#i-margem"/></svg><div style="font:500 16px 'Newsreader';margin-top:10px">Margem</div><code class="code">Remaining</code></div>
       <div style="padding:18px 12px 14px 0;border-bottom:1px solid var(--fio)"><svg class="ico" style="width:32px;height:32px"><use href="#i-pausa"/></svg><div style="font:500 16px 'Newsreader';margin-top:10px">Anotação pausada</div><code class="code">CaptureState.OFF</code></div>
+      <div style="padding:18px 12px 14px 0;border-bottom:1px solid var(--fio)"><svg class="ico" style="width:32px;height:32px"><use href="#i-previsto"/></svg><div style="font:500 16px 'Newsreader';margin-top:10px">Previsto</div><code class="code">Planned</code></div>
+      <div style="padding:18px 12px 14px 0;border-bottom:1px solid var(--fio)"><svg class="ico" style="width:32px;height:32px"><use href="#i-ligar"/></svg><div style="font:500 16px 'Newsreader';margin-top:10px">Ligar</div><code class="code">link()</code></div>
     </div>
     <div class="cols-2" style="margin-top:20px">
       <p class="cap"><b>Tamanhos</b>24 dp padrão · 20 dp dentro de botões · 18 dp em chips e rubricas · 32 dp em estados vazios (traço sobe para 1,25 para manter o peso visual).</p>
@@ -1168,6 +1233,26 @@ p.tx.serif{font:400 19px/1.6 'Newsreader'}
         <p style="color:var(--tinta-2);margin-top:16px;font-size:15px"><b>Erro ao salvar:</b> “Não deu para salvar agora. Nada se perdeu — tente de novo.”</p>
       </div>
     </div>
+    <h4 class="min">Previsto (8.11)</h4>
+    <div class="cols-2">
+      <div class="box">
+        <div class="rub">Sucesso · lançar previsto</div>
+        <div class="snack" style="margin:20px 0 14px"><span class="t">Lançado: Internet, em Casa. O próximo é 10 nov.</span><span class="btn txt">Desfazer</span></div>
+        <p class="cap" style="margin:0">Diz o nome do previsto, a verba e quando vem o próximo; “Só uma vez” termina em “Lançado: Internet, em Casa.”</p>
+      </div>
+      <div class="tblw" style="margin:0"><table class="tbl">
+        <thead><tr><th>Onde</th><th>Texto</th></tr></thead>
+        <tbody>
+          <tr><td>A caminho, recolhido</td><td>“A caminho · 4 previstos · R$ 539,70” · “1 com recado na Pauta · 1 atrasado” (só as partes que existem)</td></tr>
+          <tr><td>Linha do previsto</td><td>“recado na Pauta” · “esperando desde 5 out” · “Casa · contas, luz · todo mês”</td></tr>
+          <tr><td>Pauta</td><td>“É o previsto Internet” · “Lançar previsto” · “Não é”</td></tr>
+          <tr><td>Lançar recado</td><td>“É um previsto? Ligar” · “Qual previsto é este recado?” · “Ligado à Conta de luz” · “Desligar” · “Em novembro, o recado do SPOTIFY chega ligado.”</td></tr>
+          <tr><td>Novo lançamento</td><td>“Data à frente: vira previsto. Fica em Lançamentos esperando o recado, sem contar na verba.” · “Salvar previsto”</td></tr>
+          <tr><td>Repete</td><td>“Só uma vez” · “Todo mês, dia 12”</td></tr>
+          <tr><td>Folha do previsto</td><td>“Esperando o recado desde 5 de outubro.” · “Ligado a SMARTFIT, do Cartão Ipê.” · “Lançar sem recado” · “Pular este mês” · “Editar previsto” · “Apagar previsto”</td></tr>
+        </tbody>
+      </table></div>
+    </div>
     <p class="cap" style="margin-top:28px"><b>Sem notificações</b>O Margem não envia notificações próprias nem tem tela de boas-vindas: o app abre em Verbas, e quem guia a pessoa são os estados vazios e o aviso de anotação pausada. Para olhar sem abrir o app, existem os widgets (cap. 11).</p>
   </div>
 </section>
@@ -1271,6 +1356,17 @@ p.tx.serif{font:400 19px/1.6 'Newsreader'}
           <div class="act" style="margin-top:10px"><span class="btn txt sm">Lançar mesmo assim</span><span class="btn pri sm"><svg class="ico s18"><use href="#i-riscar"/></svg>Riscar</span></div>
         </div>
         <p class="cap" style="margin:0">Sem valor nem estabelecimento lidos, o recado ganha o selo “Parece propaganda” e o botão de lançar vira “Lançar mesmo assim”. Quem decide é a pessoa.</p>
+      </div>
+      <div class="stack" style="gap:8px">
+        <span class="spec"><span class="lbl">Reconhecido · previsto</span></span>
+        <div class="rec novo">
+          <div class="src"><span>Banco Aurora · débito</span><span class="num">07:30</span></div>
+          <p class="raw">“Débito automático efetuado: R$ 119,90 VIVO FIBRA.”</p>
+          <div class="ex"><span class="mer">VIVO FIBRA</span><span class="amt"><span class="cur">R$</span>119,90</span></div>
+          <div class="liga"><svg class="ico s18"><use href="#i-ligar"/></svg><span class="tx"><b>É o previsto Internet</b>Casa · contas, internet · dia 10</span></div>
+          <div class="act" style="margin-top:8px"><span class="btn txt sm">Não é</span><span class="btn risco sm ic" aria-label="Riscar"><svg class="ico s18"><use href="#i-riscar"/></svg></span><span class="btn pri sm"><svg class="ico s18"><use href="#i-lancar"/></svg>Lançar previsto</span></div>
+        </div>
+        <p class="cap" style="margin:0">Mesma fonte e mesmo texto do banco de um previsto ligado, até 10 dias do dia dele (spec §2.13): a faixa em anil diz qual (o app reconhecendo, não um estado). “Lançar previsto” lança sem formulário, com verba, marcadores e legenda do previsto e o valor do recado; o snackbar traz Desfazer. Tocar no corpo abre o formulário já ligado (8.11). “Não é” tira a faixa enquanto a tela está aberta, sem gravar nada. Riscar vira só o ícone, com rótulo para o TalkBack.</p>
       </div>
     </div>
     <p class="cap"><b>Sem gestos</b>Recado não desliza: lançar (ou registrar estorno) e riscar são sempre os dois botões do cartão. Riscar mostra “Desfazer” por 6 s.</p>
@@ -1379,7 +1475,7 @@ p.tx.serif{font:400 19px/1.6 'Newsreader'}
     </div>
 
     <h3 class="sub"><span class="k">8.9</span>Data e hora</h3>
-    <p class="intro">Data e hora de um lançamento se escolhem num diálogo de papel: a grade do mês, como o calendário de gastos (9.5), e a hora digitada como um valor. Lançamento é gasto feito: dia futuro não se escolhe.</p>
+    <p class="intro">Data e hora de um lançamento se escolhem num diálogo de papel: a grade do mês, como o calendário de gastos (9.5), e a hora digitada como um valor. Lançamento é gasto feito: dia futuro não se escolhe. A exceção é o lançamento manual, onde um dia à frente vira previsto (8.11).</p>
     <div class="dtrow">
         <div class="stage" style="background:var(--scrim);border:0;display:grid;place-items:center;padding:20px 16px">
           <div class="dlg dtp">
@@ -1496,6 +1592,65 @@ p.tx.serif{font:400 19px/1.6 'Newsreader'}
       </div>
     </div>
 
+    <div class="dtrow" style="margin-top:36px">
+        <div class="stage" style="background:var(--scrim);border:0;display:grid;place-items:center;padding:20px 16px">
+          <div class="dlg dtp">
+            <span class="over-r">Data e hora</span>
+            <h4 style="margin:4px 0 6px">segunda, 12 de outubro</h4>
+            <div class="pnav"><span class="ib"><svg class="ico"><use href="#i-voltar"/></svg></span><span class="lb">outubro de 2026</span><span class="ib"><svg class="ico"><use href="#i-avancar"/></svg></span></div>
+            <div class="cal">
+            <div class="wd">SEG</div>
+            <div class="wd">TER</div>
+            <div class="wd">QUA</div>
+            <div class="wd">QUI</div>
+            <div class="wd">SEX</div>
+            <div class="wd">SÁB</div>
+            <div class="wd">DOM</div>
+            <div class="d"></div>
+            <div class="d"></div>
+            <div class="d"></div>
+            <div class="d"><span>1</span></div>
+            <div class="d"><span>2</span></div>
+            <div class="d"><span>3</span></div>
+            <div class="d"><span>4</span></div>
+            <div class="d"><span>5</span></div>
+            <div class="d"><span>6</span></div>
+            <div class="d"><span>7</span></div>
+            <div class="d"><span>8</span></div>
+            <div class="d hoje"><span>9</span></div>
+            <div class="d"><span>10</span></div>
+            <div class="d"><span>11</span></div>
+            <div class="d on"><span>12</span></div>
+            <div class="d"><span>13</span></div>
+            <div class="d"><span>14</span></div>
+            <div class="d"><span>15</span></div>
+            <div class="d"><span>16</span></div>
+            <div class="d"><span>17</span></div>
+            <div class="d"><span>18</span></div>
+            <div class="d"><span>19</span></div>
+            <div class="d"><span>20</span></div>
+            <div class="d"><span>21</span></div>
+            <div class="d"><span>22</span></div>
+            <div class="d"><span>23</span></div>
+            <div class="d"><span>24</span></div>
+            <div class="d"><span>25</span></div>
+            <div class="d"><span>26</span></div>
+            <div class="d"><span>27</span></div>
+            <div class="d"><span>28</span></div>
+            <div class="d"><span>29</span></div>
+            <div class="d"><span>30</span></div>
+            <div class="d"><span>31</span></div>
+            </div>
+            <div class="act"><span class="btn txt">Cancelar</span><span class="btn txt">Pronto</span></div>
+          </div>
+        </div>
+      <div class="stack" style="gap:14px">
+        <p class="cap">Só no lançamento manual (Novo lançamento): os dias depois de hoje ficam em tinta, com toque, e a seta de avançar vale. No Lançar recado e na edição de um lançamento, o seletor continua sem dia futuro.</p>
+        <div class="fld foc"><label>Data</label><div class="in">segunda, 12 de outubro<svg class="ico s20" style="margin-left:auto;color:var(--tinta-3)"><use href="#i-periodo"/></svg></div>
+          <div class="liga" style="margin-top:8px"><svg class="ico s18"><use href="#i-previsto"/></svg><span class="tx">Data à frente: vira <b style="display:inline;font-size:15px">previsto</b>. Fica em Lançamentos esperando o recado, sem contar na verba.</span></div></div>
+        <p class="cap">Com um dia à frente, o campo ganha a faixa “Data à frente” em anil e o botão do formulário vira “Salvar previsto” (8.11). Voltar a hoje ou antes tira a faixa.</p>
+      </div>
+    </div>
     <h3 class="sub"><span class="k">8.10</span>Cabeçalho do teto</h3>
     <p class="intro">O teto (opcional) é o máximo para a <b>soma das cotas</b> do mês: limite de planejamento, não de gasto. Não ganha cartão nem frase própria: a manchete continua sendo do dia, e sob a linha fina o fio do cabeçalho vira a medida — tinta para as cotas, fio duplo de argila no teto, hachura só no que passa. O total não tem margem, ritmo nem estado: nada de musgo, ocre ou selo.</p>
     <div class="cols-2" style="gap:24px;align-items:start">
@@ -1520,6 +1675,86 @@ p.tx.serif{font:400 19px/1.6 'Newsreader'}
     <p class="cap"><b>Leitor de tela</b>“Teto de outubro: R$ 4.100,00. Cotas somam R$ 3.720,00, a R$ 380,00 do teto. Tocar para mudar.” — no teto, “fecham no teto”; acima, “R$ 300,00 além do teto”. Sem teto: “As cotas de outubro somam R$ 3.720,00. Sem teto. Tocar para pôr um teto.” Diz a diferença em reais, nunca porcentagem.</p>
     <p class="cap"><b>Mudar</b>Diálogo “Teto de outubro”, campo “Máximo para a soma das cotas”, começando com o teto do mês (vazio sem teto), com a dica ao digitar: “As cotas de outubro somam R$ 3.720,00: ficam a R$ 680,00 do teto.” / “…: fecham no teto.” / “…: ficariam R$ 220,00 além do teto. Dá para salvar assim.” Salvar fica desabilitado em R$ 0,00. Ação secundária “Tirar teto”, em lacre, só quando o mês tem teto. Salvar pergunta “Vale para quais meses?”, sob o título: <b>De outubro em diante</b> (“Vira o teto dos próximos meses.”) · <b>Só em outubro</b> (“Em novembro, volta a R$ 4.100,00.” ou “volta a não ter teto”); tocar a opção já salva, “Voltar” retorna ao campo com o valor digitado. Tirar pergunta “Tirar o teto de quais meses?”, com as mesmas opções (“De outubro em diante” diz “Os próximos meses ficam sem teto.”). Snackbar com Desfazer, que volta o padrão e o teto do mês ao que eram: “Teto de R$ 4.400,00 só em outubro.” · “Teto de R$ 4.400,00 de outubro em diante.” · “Outubro em diante sem teto.” · “Outubro sem teto.”</p>
     <p class="cap"><b>Nova verba e cota</b>Só quando a cota aumenta a soma do mês e ela fica acima do teto (baixar uma cota ou renomear não avisa). Sob o campo, em lacre, enquanto digita: “Com esta cota, as cotas de outubro somam R$ 4.400,00: R$ 300,00 além do teto.” Ao salvar, o diálogo “Passar do teto?” — “As cotas de outubro somariam R$ 4.400,00, R$ 300,00 além do teto de R$ 4.100,00. O teto é só um limite de planejamento.” — · Voltar · “Criar mesmo assim” (ou “Salvar mesmo assim”), eco de “Lançar mesmo assim”.</p>
+
+    <h3 class="sub"><span class="k">8.11</span>Previsto</h3>
+    <p class="intro">Gasto que a pessoa já sabe que vem, anotado antes com valor, nome, dia, verba e marcadores (spec §2.13). Mora em Lançamentos, no grupo “A caminho”, e não conta em verba nenhuma até ser lançado. Duas regras visuais o carregam: <b>tracejado</b> quer dizer “ainda não aconteceu” (como o ritmo ideal e a projeção, 6.2) e <b>anil</b> é o app reconhecendo (4.2), nunca uma cor de estado.</p>
+
+    <h4 class="min">Folhinha do dia</h4>
+    <div class="spec">
+      <div><span class="lbl">No prazo</span><span class="dia"><small>out</small><b>12</b></span></div>
+      <div><span class="lbl">Atrasado</span><span class="dia late"><small>out</small><b>5</b></span></div>
+    </div>
+    <p class="cap"><b>Forma</b>42 dp de largura, contorno tracejado em fio forte, raio 3: mês em rubrica de 9,5 sp, dia em Newsreader 20 sp com números tabulares. Atrasado (passou do dia sem recado, P10): o dia vai para tinta 3. Sem lacre nem ocre: esperar não é estar fora da margem.</p>
+
+    <h4 class="min">A caminho · recolhido e aberto</h4>
+    <div class="cols-2">
+      <div class="stage t-light" data-twin><div class="acam" role="button"><svg class="ico"><use href="#i-previsto"/></svg><span class="tx"><span class="over-r">A caminho</span><b>4 previstos · <span class="num">R$ 539,70</span></b><small>1 com recado na Pauta · 1 atrasado</small></span><span class="ib"><svg class="ico s20"><use href="#i-avancar"/></svg></span></div><p class="cap" style="margin-top:10px"><b>Recolhido</b>Sempre abre assim (P2, P11): rubrica, quantos e quanto somam, e o que pede atenção (“com recado na Pauta”, “atrasado”, só as partes que existem). Some quando não há previsto.</p></div>
+      <div class="stage t-light" data-twin><div class="acam open" role="button"><svg class="ico"><use href="#i-previsto"/></svg><span class="tx"><span class="over-r">A caminho</span><b>4 previstos · <span class="num">R$ 539,70</span></b><small>1 com recado na Pauta · 1 atrasado</small></span><span class="ib"><svg class="ico s20"><use href="#i-avancar"/></svg></span></div><div class="prow"><span class="dia late"><small>out</small><b>5</b></span><span class="tx"><span class="nm">Academia</span><span class="w late">esperando desde 5 out</span></span><span class="amt"><span class="cur">R$</span>89,90</span></div><div class="prow"><span class="dia"><small>out</small><b>10</b></span><span class="tx"><span class="nm">Internet</span><span class="w lk">recado na Pauta</span></span><span class="amt"><span class="cur">R$</span>119,90</span></div><div class="prow"><span class="dia"><small>out</small><b>12</b></span><span class="tx"><span class="nm">Conta de luz</span><span class="w">Casa · contas, luz · todo mês</span></span><span class="amt"><span class="cur">R$</span>180,00</span></div><div class="prow" style="border-bottom:0"><span class="dia"><small>out</small><b>15</b></span><span class="tx"><span class="nm">Estacionamento</span><span class="w">Transporte · estacionamento · todo mês</span></span><span class="amt"><span class="cur">R$</span>150,00</span></div><p class="cap" style="margin-top:10px"><b>Aberto</b>Pelo dia, o atrasado primeiro. Valor em tinta 2: ainda não é gasto. “recado na Pauta” em anil. Aberto, fica aberto enquanto a tela estiver aberta.</p></div>
+    </div>
+
+    <h4 class="min">Folha do previsto</h4>
+    <div class="cols-2">
+      <div class="stage t-light" data-twin><div class="sheet" style="position:static;box-shadow:none;border:1px solid var(--fio)">
+        <div class="prow" style="border-bottom:0;padding-top:0"><span class="dia late"><small>out</small><b>5</b></span><span class="tx"><span class="nm" style="font-size:20px">Academia</span><span class="w">Lazer · academia · todo mês, dia 5</span></span><span class="amt"><span class="cur">R$</span>89,90</span></div>
+        <p class="dek" style="font-size:14px;margin:2px 0 8px">Esperando o recado desde 5 de outubro. Ligado a SMARTFIT, do Cartão Ipê.</p>
+        <div class="mrow"><svg class="ico"><use href="#i-lancamento"/></svg><span>Lançar sem recado<small>vira um lançamento de 5 out, sem ligação</small></span></div>
+        <div class="mrow"><svg class="ico"><use href="#i-avancar"/></svg><span>Pular este mês<small>some sem lançar; volta em 5 de novembro</small></span></div>
+        <div class="mrow"><svg class="ico"><use href="#i-emenda"/></svg><span>Editar previsto</span></div>
+        <div class="mrow del" style="border-bottom:0"><svg class="ico"><use href="#i-fechar"/></svg><span>Apagar previsto<small>este e os próximos meses</small></span></div>
+      </div></div>
+      <div class="stack" style="gap:14px">
+        <div class="stage t-light" data-twin><div class="sheet" style="position:static;box-shadow:none;border:1px solid var(--fio)">
+          <div class="prow" style="border-bottom:0;padding-top:0"><span class="dia"><small>out</small><b>15</b></span><span class="tx"><span class="nm" style="font-size:20px">Estacionamento</span><span class="w">Transporte · estacionamento · todo mês, dia 15</span></span><span class="amt"><span class="cur">R$</span>150,00</span></div>
+          <p class="dek" style="font-size:14px;margin:2px 0 8px">Ligado a ESTAPAR, do Banco Aurora.</p>
+          <div class="mrow"><svg class="ico"><use href="#i-avancar"/></svg><span>Pular este mês<small>some sem lançar; volta em 15 de novembro</small></span></div>
+          <div class="mrow"><svg class="ico"><use href="#i-emenda"/></svg><span>Editar previsto</span></div>
+          <div class="mrow del" style="border-bottom:0"><svg class="ico"><use href="#i-fechar"/></svg><span>Apagar previsto<small>este e os próximos meses</small></span></div>
+        </div></div>
+        <p class="cap"><b>Antes do dia</b>“Lançar sem recado” só aparece do dia do previsto em diante (R6): antes dele, pagar adiantado se faz pelo “É um previsto? Ligar” do lançamento manual. Apagar pede confirmação num diálogo (8.8), como apagar um lançamento. Sem ligação, a linha de apoio diz só “Esperando o recado desde …” ou nada.</p>
+      </div>
+    </div>
+
+    <h4 class="min">Repete</h4>
+    <div class="cols-2">
+      <div class="stage t-light" data-twin><div class="rb" style="margin-top:0">Repete</div><div class="bos"><span class="bo">Só uma vez</span><span class="bo on">Todo mês, dia 12</span></div></div>
+      <div class="stage t-light" data-twin><div class="rb" style="margin-top:0">Repete</div><div class="bos"><span class="bo">Só uma vez</span><span class="bo on">Todo mês, dia 9</span></div><div class="rhint">Em novembro, o recado do SPOTIFY chega ligado.</div></div>
+    </div>
+    <p class="cap"><b>Sempre à vista</b>No manual, no Lançar recado e na edição, qualquer que seja a data (P4, P4b); só sai com o recado ligado a um previsto (a repetição é a do previsto, dita na faixa). Duas escolhas só (P8); o dia é o da data do formulário, e num mês sem ele (29–31) vale o último. A dica sob “Todo mês” aparece só no Lançar recado. 36 dp desenhados, 48 de toque.</p>
+
+    <h4 class="min">Formulário ligado</h4>
+    <div class="cols-2">
+      <div class="stage t-light" data-twin>
+        <div class="quoteblk"><b>Banco Aurora · qui, 8 out, 18:20</b>“Pagamento de conta: R$ 187,40 ENEL SP.”</div>
+        <div class="addleg"><span class="lk"><svg class="ico"><use href="#i-ligar"/></svg>É um previsto? Ligar</span></div>
+        <p class="cap" style="margin-top:6px"><b>Sem ligação</b>O link fica sob a citação do recado, como o “É um estorno?”; no lançamento manual, sob o nome (R6b).</p>
+      </div>
+      <div class="stage t-light" data-twin>
+        <div class="quoteblk"><b>Banco Aurora · qui, 8 out, 18:20</b>“Pagamento de conta: R$ 187,40 ENEL SP.”</div>
+        <div class="liga"><svg class="ico s18"><use href="#i-ligar"/></svg><span class="tx"><b>Ligado à Conta de luz</b>Todo mês, dia 12. Verba, marcadores e nome vieram do previsto. <a href="#comp">Desligar</a></span></div>
+        <div class="fld money sm"><label>Valor total</label><div class="in"><span class="cur">R$</span>187<span class="cts">,40</span></div></div>
+        <div class="fld lg" style="padding-top:0"><label>Legenda</label><div class="in">Conta de luz<svg class="ico s20 x"><use href="#i-fechar"/></svg></div></div>
+        <div class="fld"><span class="lab" style="margin-bottom:8px">Marcadores</span><div class="chips"><span class="chip on">contas</span><span class="chip on">luz</span><span class="chip add">+ novo</span></div></div>
+      </div>
+    </div>
+    <p class="cap"><b>Ligado</b>A faixa toma o lugar do link. Verba e marcadores vêm cheios (escolha da pessoa, não sugestão: nada tracejado) e o nome do previsto entra como legenda, já aberta (P9). O valor é o do recado, sem marca de emenda e sem o do previsto ao lado (P7). “Desligar” volta ao formulário de antes.</p>
+
+    <h4 class="min">Qual previsto é este recado?</h4>
+    <div class="cols-2">
+      <div class="stage t-light" data-twin><div class="sheet" style="position:static;box-shadow:none;border:1px solid var(--fio)">
+        <h4 style="font:500 22px/1.25 'Newsreader';margin-bottom:4px">Qual previsto é este recado?</h4>
+        <p class="dek" style="font-size:14px;margin-bottom:6px">Só desta vez: nos próximos meses, o recado da ENEL SP chega ligado.</p>
+        <div class="lrow pick on"><span class="check"><svg class="ico s16" style="stroke-width:2.2"><use href="#i-lancar"/></svg></span><span><span class="nm" style="font:500 17px/22px 'Newsreader'">Conta de luz</span><span class="w">dia 12 · Casa · <span class="likely">mais provável</span></span></span><span class="amt"><span class="cur">R$</span>180,00</span></div>
+        <div class="lrow pick"><span class="box0"></span><span><span class="nm" style="font:500 17px/22px 'Newsreader'">Estacionamento</span><span class="w">dia 15 · Transporte</span></span><span class="amt"><span class="cur">R$</span>150,00</span></div>
+        <div class="lrow pick" style="border-bottom:0"><span class="box0"></span><span><span class="nm" style="font:500 17px/22px 'Newsreader'">Academia</span><span class="w">dia 5 · Lazer · atrasado</span></span><span class="amt"><span class="cur">R$</span>89,90</span></div>
+        <span class="btn pri full" style="margin-top:12px"><svg class="ico s20"><use href="#i-ligar"/></svg>Ligar à Conta de luz</span>
+      </div></div>
+      <div class="stack" style="gap:14px">
+        <p class="cap">Todos os previstos em aberto, os mais prováveis no topo (dia perto da data do recado, valor perto), inclusive os já ligados a outro recado. Escolher marca a linha em folha 2 com o quadrado cheio; o botão diz o nome. No manual, o título é o mesmo e a dica some (não há recado para ligar: fecha a ocorrência sem gravar ligação, R6b).</p>
+        <div class="dd"><span class="pill-ok">Faça</span><p class="q">Tracejar só o que ainda vai acontecer.</p><small>A folhinha, não a linha toda: o previsto se lê como um lançamento.</small></div>
+        <div class="dn"><span class="pill-no">Não faça</span><p class="q">Pintar o atrasado de lacre ou ocre.</p><small>Esperar o recado não é estar fora da margem; atraso é tinta 3 e “esperando desde”.</small></div>
+        <div class="dn"><span class="pill-no">Não faça</span><p class="q">Mostrar o valor do previsto ao lado do recado.</p><small>Vale o do recado, sem emenda (P7).</small></div>
+      </div>
+    </div>
   </div>
 </section>
 
@@ -1773,10 +2008,11 @@ p.tx.serif{font:400 19px/1.6 'Newsreader'}
                 <div class="act" style="margin-top:6px"><span class="btn risco sm"><svg class="ico s18"><use href="#i-riscar"/></svg>Riscar</span><span class="btn pri sm">Lançar</span></div>
               </div>
               <div class="rec novo">
-                <div class="src"><span>Banco Aurora · Pix</span><span class="num">07:15</span></div>
-                <p class="raw">“Pix enviado: R$ 86,00 para MERCADINHO BOM PRECO LTDA.”</p>
-                <div class="ex"><span class="mer">Mercadinho Bom Preço</span><span class="amt"><span class="cur">R$</span>86,00</span></div>
-                <div class="act" style="margin-top:6px"><span class="btn risco sm"><svg class="ico s18"><use href="#i-riscar"/></svg>Riscar</span><span class="btn pri sm">Lançar</span></div>
+                <div class="src"><span>Banco Aurora · débito</span><span class="num">07:30</span></div>
+                <p class="raw">“Débito automático efetuado: R$ 119,90 VIVO FIBRA.”</p>
+                <div class="ex"><span class="mer">VIVO FIBRA</span><span class="amt"><span class="cur">R$</span>119,90</span></div>
+                <div class="liga"><svg class="ico s18"><use href="#i-ligar"/></svg><span class="tx"><b>É o previsto Internet</b>Casa · contas, internet · dia 10</span></div>
+                <div class="act" style="margin-top:8px"><span class="btn txt sm">Não é</span><span class="btn risco sm ic" aria-label="Riscar"><svg class="ico s18"><use href="#i-riscar"/></svg></span><span class="btn pri sm"><svg class="ico s18"><use href="#i-lancar"/></svg>Lançar previsto</span></div>
               </div>
             </div>
             <div class="dayh" style="margin:6px 0 8px">Ontem · quinta, 8 de outubro</div>
@@ -1792,7 +2028,7 @@ p.tx.serif{font:400 19px/1.6 'Newsreader'}
           <nav class="navb"><a href="#telas"><svg class="ico"><use href="#i-verba"/></svg>Verbas</a><a class="on" href="#telas"><svg class="ico"><use href="#i-pauta"/></svg>Pauta<span class="bdg">4</span></a><a href="#telas"><svg class="ico"><use href="#i-lancamento"/></svg>Lançamentos</a><a href="#telas"><svg class="ico"><use href="#i-leitura"/></svg>Leitura</a><a href="#telas"><svg class="ico"><use href="#i-ajustes"/></svg>Ajustes</a></nav>
           <div class="gbar"></div>
         </div></div>
-        <figcaption><b>10.2 · Pauta · <span class="cap-tema">claro</span></b>Recados esperando decisão, mais recentes no topo e agrupados por dia, como diário: fonte, hora, valor e estabelecimento lidos. Recados novos — chegaram desde a última vez que a Pauta foi aberta — levam o fio duplo de argila. O texto do banco aparece em itálico, entre aspas — é citação, não dado. “Lançar” abre a tela de lançar; “Riscar” mostra “Desfazer”. Sem gestos de deslizar: só os botões. No recado de estorno, o botão é “Registrar estorno”, que leva à escolha da compra estornada. Sem valor nem estabelecimento lidos, o recado ganha o selo “Parece propaganda” e o botão vira “Lançar mesmo assim”.</figcaption>
+        <figcaption><b>10.2 · Pauta · <span class="cap-tema">claro</span></b>Recados esperando decisão, mais recentes no topo e agrupados por dia, como diário: fonte, hora, valor e estabelecimento lidos. Recados novos — chegaram desde a última vez que a Pauta foi aberta — levam o fio duplo de argila. O texto do banco aparece em itálico, entre aspas — é citação, não dado. “Lançar” abre a tela de lançar; “Riscar” mostra “Desfazer”. Sem gestos de deslizar: só os botões. No recado de estorno, o botão é “Registrar estorno”, que leva à escolha da compra estornada. Sem valor nem estabelecimento lidos, o recado ganha o selo “Parece propaganda” e o botão vira “Lançar mesmo assim”. O recado do VIVO FIBRA bate com o previsto Internet, ligado em setembro (8.11): a faixa em anil e “Lançar previsto”, que lança sem formulário.</figcaption>
       </figure>
 
       <!-- LANÇAR / EDITAR -->
@@ -1848,6 +2084,7 @@ p.tx.serif{font:400 19px/1.6 'Newsreader'}
           <div class="tb"><span class="t" style="padding-left:16px;font-size:24px">Lançamentos</span></div>
           <div class="bd">
             <span class="btn sec full" style="margin-top:2px"><svg class="ico s20"><use href="#i-mais"/></svg>Novo lançamento</span>
+            <div class="acam" role="button"><svg class="ico"><use href="#i-previsto"/></svg><span class="tx"><span class="over-r">A caminho</span><b>4 previstos · <span class="num">R$ 539,70</span></b><small>1 com recado na Pauta · 1 atrasado</small></span><span class="ib"><svg class="ico s20"><use href="#i-avancar"/></svg></span></div>
             <div class="dayh">Hoje · sexta, 9 de outubro</div>
             <div class="lrow" style="padding:8px 0;border-bottom:0"><span style="min-width:0"><span class="mer" style="font-size:17px">Banca Central</span><span class="w"><i class="id" style="background:var(--c4);width:7px;height:7px;margin-right:5px;vertical-align:0"></i>Lazer · revistas</span></span><span class="amt" style="font-size:17px">R$ 12,00</span></div>
             <div class="dayh">Ontem · quinta, 8 de outubro</div>
@@ -1857,12 +2094,11 @@ p.tx.serif{font:400 19px/1.6 'Newsreader'}
             <div class="dayh">Quarta, 7 de outubro</div>
             <div class="lrow" style="padding:8px 0"><span style="min-width:0"><span class="mer" style="font-size:17px">Movelaria Real</span><span class="w"><i class="id" style="background:var(--c5);width:7px;height:7px;margin-right:5px;vertical-align:0"></i>Casa · móveis · <span style="font:600 10.5px 'Source Sans 3';letter-spacing:.1em;text-transform:uppercase;color:var(--tinta-2)">Parcela 1 de 10</span></span></span><span class="amt" style="font-size:17px">R$ 120,00</span></div>
             <div class="lrow" style="padding:8px 0"><span style="min-width:0"><span class="mer" style="font-size:17px">Drogaria Vida</span><span class="w"><i class="id" style="background:var(--c6);width:7px;height:7px;margin-right:5px;vertical-align:0"></i>Farmácia · farmácia · <span style="font:600 10.5px 'Source Sans 3';letter-spacing:.1em;text-transform:uppercase;color:var(--tinta-2)">estornada</span></span><span class="btn txt sm" style="min-height:30px;padding:0;margin-top:2px">Desfazer estorno</span></span><span class="amt" style="font-size:17px;color:var(--tinta-3)"><s>R$ 32,00</s></span></div>
-            <div class="lrow" style="padding:8px 0"><span style="min-width:0"><span class="mer" style="font-size:17px">Cine Paraíso</span><span class="w"><i class="id" style="background:var(--c4);width:7px;height:7px;margin-right:5px;vertical-align:0"></i>Lazer · cinema</span></span><span class="amt" style="font-size:17px">R$ 56,00</span></div>
           </div>
           <nav class="navb"><a href="#telas"><svg class="ico"><use href="#i-verba"/></svg>Verbas</a><a href="#telas"><svg class="ico"><use href="#i-pauta"/></svg>Pauta<span class="bdg">4</span></a><a class="on" href="#telas"><svg class="ico"><use href="#i-lancamento"/></svg>Lançamentos</a><a href="#telas"><svg class="ico"><use href="#i-leitura"/></svg>Leitura</a><a href="#telas"><svg class="ico"><use href="#i-ajustes"/></svg>Ajustes</a></nav>
           <div class="gbar"></div>
         </div></div>
-        <figcaption><b>10.5 · Lançamentos</b>Todos os lançamentos, mais recentes no topo: estabelecimento, valor, verba, marcadores. O estorno não é lançamento e não tem linha própria: só a compra estornada aparece, com a marca “estornada” e o valor riscado — não soma na verba nem na Leitura. “Desfazer estorno”, na própria linha, faz a compra voltar a contar e devolve o recado de estorno à Pauta. Parcelado mostra qual parcela conta neste mês (R$ 1.200,00 em 10×). Tocar abre a edição; “Novo lançamento” cria um lançamento manual, com as mesmas exigências.</figcaption>
+        <figcaption><b>10.5 · Lançamentos</b>Todos os lançamentos, mais recentes no topo: estabelecimento, valor, verba, marcadores. O estorno não é lançamento e não tem linha própria: só a compra estornada aparece, com a marca “estornada” e o valor riscado — não soma na verba nem na Leitura. “Desfazer estorno”, na própria linha, faz a compra voltar a contar e devolve o recado de estorno à Pauta. Parcelado mostra qual parcela conta neste mês (R$ 1.200,00 em 10×). Tocar abre a edição; “Novo lançamento” cria um lançamento manual, com as mesmas exigências. No topo, “A caminho”: os previstos, sempre recolhidos numa linha ao abrir a tela; tocar abre a lista no lugar (8.11). A soma não conta em verba nenhuma.</figcaption>
       </figure>
 
       <!-- LEITURA -->
@@ -2107,6 +2343,8 @@ p.tx.serif{font:400 19px/1.6 'Newsreader'}
         <tr><td class="serif"><b>Apelido</b></td><td><code>MerchantAlias</code></td><td>Nome amigável que substitui o texto do banco neste e nos próximos lançamentos.</td><td>“Padaria do Zé”, com sublinhado pontilhado em argila.</td><td class="evitar">nickname, alias, nome customizado</td></tr>
         <tr><td class="serif"><b>Parcela</b></td><td><code>Installment</code></td><td>Uma das partes de uma compra parcelada. A pessoa informa o valor total e o número de parcelas; a parcela k conta na verba no k-ésimo mês a partir do mês da compra, e a última absorve os centavos. À vista = 1 parcela.</td><td>“Parcela 3 de 10 · R$ 120,00”</td><td class="evitar">prestação</td></tr>
         <tr><td class="serif"><b>Registrar estorno</b></td><td><code>registerRefund()</code></td><td>Ação no recado de estorno, no lugar de Lançar: escolher a compra estornada.</td><td>Botão “Registrar estorno”.</td><td class="evitar">lançar estorno, reembolsar</td></tr>
+        <tr><td class="serif"><b>Previsto</b></td><td><code>Planned</code></td><td>Gasto que a pessoa já sabe que vem, anotado antes de acontecer com valor, nome, dia, verba e marcadores, à espera de um recado. Não conta na verba até ser lançado. Nasce do lançamento manual com data à frente ou de “Repete · Todo mês”. Fica em Lançamentos, no grupo “A caminho”; sem recado depois do dia, fica esperando (“atrasado”).</td><td>“A caminho · 4 previstos”; botão “Salvar previsto”; “esperando desde 5 out”.</td><td class="evitar">agendado, compromisso, conta fixa, recorrente, transação futura</td></tr>
+        <tr><td class="serif"><b>Ligar</b></td><td><code>link()</code></td><td>Dizer qual recado é um previsto. A ligação guarda fonte e texto do banco; nos meses seguintes, o recado que bate (até 10 dias do dia) é reconhecido e lança com um toque: “Lançar previsto”.</td><td>“É um previsto? Ligar”; “Ligado à Conta de luz”; “É o previsto Internet”.</td><td class="evitar">vincular, associar, conciliar, confirmar</td></tr>
         <tr><td class="serif"><b>Estorno</b></td><td><code>Refund</code></td><td>Não é lançamento: registro de que uma compra não é somada na verba nem na Leitura (parcelada: todas as parcelas). Registrar = escolher a compra: um lançamento, ou um recado ainda não lançado. Pode ser desfeito (Desfazer na hora, ou Desfazer estorno na compra). Não pede verba nem marcador.</td><td>“Estorno · a compra de 2 out não conta mais”</td><td class="evitar">reembolso, crédito, cashback, valor negativo</td></tr>
         <tr><td class="serif"><b>Verba</b></td><td><code>Budget</code></td><td>Limite de gasto criado pela pessoa: nome + cota mensal. Cada lançamento pertence a exatamente uma verba.</td><td>“Nova verba”, “Verba Mercado”.</td><td class="evitar">orçamento, envelope, categoria, pote</td></tr>
         <tr><td class="serif"><b>Cota</b></td><td><code>MonthlyLimit</code></td><td>Quanto a verba permite gastar no mês. Mudar vale do mês atual em diante; cada mês guarda a sua.</td><td>“Cota de R$ 600,00 por mês.”</td><td class="evitar">meta, teto, limite (na interface)</td></tr>
@@ -2145,7 +2383,7 @@ p.tx.serif{font:400 19px/1.6 'Newsreader'}
   /* versões noturnas das telas e widgets: mesmo layout, tokens escuros */
   document.querySelectorAll('[data-twin]').forEach(function(n){
     var c=n.cloneNode(true);c.removeAttribute('data-twin');
-    c.querySelectorAll('.t-light').forEach(function(e){e.classList.remove('t-light');e.classList.add('t-dark')});
+    [c].concat([].slice.call(c.querySelectorAll('.t-light'))).filter(function(e){return e.classList.contains('t-light')}).forEach(function(e){e.classList.remove('t-light');e.classList.add('t-dark')});
     c.querySelectorAll('.cap-tema').forEach(function(e){e.textContent='escuro'});
     c.querySelectorAll('[id]').forEach(function(e){e.removeAttribute('id')});
     n.parentNode.insertBefore(c,n.nextSibling);
