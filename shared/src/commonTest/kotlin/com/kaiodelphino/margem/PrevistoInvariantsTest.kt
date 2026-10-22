@@ -322,6 +322,12 @@ private class PrevistoInvariantRun(val db: Db, val seed: Int, val startDay: Int)
 
     // ---- reads with their invariants ----
 
+    /**
+     * Triage 2026-10-22 (user's decision, D59): a read with today lists an open occurrence only once it is due by
+     * today + 10 (its day may have been edited further away). Unknown to the model: assumed due.
+     */
+    fun due(o: OccurrenceId): Boolean = occIds[o]?.let { (p, m) -> pvinvOccDate(m, p.day) <= today.pvinvDays(10) } ?: true
+
     /** Marks the occurrences planned(today)/pending(today) create: dated up to today + 10 (R1), ONCE only its first. */
     fun markCreated() {
         val horizon = today.pvinvDays(10)
@@ -442,6 +448,9 @@ private class PrevistoInvariantRun(val db: Db, val seed: Int, val startDay: Int)
                 if (o.state != PvInvState.OPEN) continue
                 // Ambiguity: after "Todo mês" → "Só uma vez", the rows already created for later months may go either way.
                 if (p.stopped && m != p.first) continue
+                // Triage 2026-10-22 (user's decision, D59): every read with today lists only what is due by today + 10,
+                // so a month whose day was edited past that window waits, open, until it is due.
+                if (pvinvOccDate(m, p.day) > today.pvinvDays(10)) continue
                 assertTrue(
                     o.id.v != 0L && rows.any { it.occurrence == o.id },
                     "$p month $m is open (dated ${pvinvOccDate(m, p.day)}, due by today + 10) but missing from planned(today)",
@@ -923,7 +932,7 @@ private class PrevistoInvariantRun(val db: Db, val seed: Int, val startDay: Int)
         }
         val reopened = dropTx(t)
         if (t.notice.v != 0L) assertEquals(NoticeStatus.PENDING, db.notice(t.notice).status, "spec §2.8: its recado is back in the Pauta")
-        if (reopened != null) {
+        if (reopened != null && due(reopened)) {
             assertTrue(
                 readPlanned().any { it.occurrence == reopened },
                 "S1: deleting the lançamento of a previsto reopens occurrence ${reopened.v} (the same one) in A caminho",
@@ -1058,7 +1067,7 @@ private class PrevistoInvariantRun(val db: Db, val seed: Int, val startDay: Int)
         val reopened = txs.values.filter { it.budget == id }.mapNotNull { dropTx(it) }
         if (reopened.isNotEmpty()) {
             val rows = readPlanned()
-            for (o in reopened) assertTrue(rows.any { it.occurrence == o }, "S1: the lançamento deleted with its verba reopens occurrence ${o.v}")
+            for (o in reopened.filter(::due)) assertTrue(rows.any { it.occurrence == o }, "S1: the lançamento deleted with its verba reopens occurrence ${o.v}")
         }
         if (budgets.size < 2) createBudgetAction()
     }
@@ -1095,7 +1104,7 @@ private class PrevistoInvariantRun(val db: Db, val seed: Int, val startDay: Int)
         }
         if (reopened.isNotEmpty()) {
             val rows = readPlanned()
-            for (o in reopened) assertTrue(rows.any { it.occurrence == o }, "S1: the lançamento deleted with its last marcador reopens occurrence ${o.v}")
+            for (o in reopened.filter(::due)) assertTrue(rows.any { it.occurrence == o }, "S1: the lançamento deleted with its last marcador reopens occurrence ${o.v}")
         }
     }
 

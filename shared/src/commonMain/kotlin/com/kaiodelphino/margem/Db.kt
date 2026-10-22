@@ -846,7 +846,8 @@ class Db(
 
     /**
      * "A caminho", the previsto sheet and "Qual previsto é este recado?": every open occurrence (not skipped,
-     * not closed by a lançamento), oldest date first (ties: occurrence id), [Planned.late] against [today] and
+     * not closed by a lançamento) dated up to [today] + 10 days (R1: a later one, even a first one saved
+     * with a far date, shows from 10 days before its day), oldest date first (ties: occurrence id), [Planned.late] against [today] and
      * [Planned.noticeInPauta] like [pending]. First creates the occurrences dated up to [today] + 10 days (R1),
      * without bumping [version]: a ONCE previsto never gets a second one, a month that has its row (open,
      * closed or skipped) never gets another. Previstos never count in spent, pace, Leitura or widgets.
@@ -1224,7 +1225,8 @@ class Db(
 
     /**
      * Open occurrences (not skipped, no lançamento) with their previsto, [where] over `p` (planned), oldest
-     * date first then id; `late` against [today] (never with NO_DATE). noticeInPauta is left false.
+     * date first then id, dated up to [today] + 10 (all with NO_DATE); `late` against [today] (never with
+     * NO_DATE). noticeInPauta is left false.
      */
     private fun plannedRows(c: SQLiteConnection, today: LocalDate, where: String): List<Planned> {
         val rows = c.query(
@@ -1241,7 +1243,7 @@ class Db(
             Planned(
                 occurrence = OccurrenceId(it.getLong(0)), planned = PlannedId(it.getLong(1)), name = it.getText(2),
                 budget = BudgetId(it.getLong(3)), budgetName = it.getText(4), cents = Cents(it.getLong(5)), day = day, repeats = repeats,
-                date = date, next = if (repeats == Repeats.MONTHLY && month < LAST_MONTH) occurrenceDate(month.plusMonth(), day) else NO_DATE,
+                date = date, next = if (repeats == Repeats.MONTHLY) occurrenceDate(month.plusMonth(), day) else NO_DATE,
                 linked = linked, linkText = if (linked) it.getText(10) else "", linkSource = if (linked) it.getText(11) else "",
                 late = today != NO_DATE && date < today,
             )
@@ -1251,7 +1253,10 @@ class Db(
         c.query("SELECT l.planned_id, g.name FROM planned_tags l JOIN tags g ON g.id = l.tag_id ORDER BY g.name") {
             tags.getOrPut(it.getLong(0)) { ArrayList() }.add(it.getText(1))
         }
-        return rows.map { it.copy(tags = tags[it.planned.v] ?: emptyList()) }.sortedWith(compareBy<Planned> { it.date }.thenBy { it.occurrence.v })
+        // R1 (2026-10-22): with a today, only what is due by today + 10 shows, a far Salvar previsto included.
+        val until = if (today == NO_DATE) LAST_DATE else LocalDate.fromEpochDays(minOf(today.toEpochDays() + 10, LAST_DATE.toEpochDays()))
+        return rows.filter { it.date <= until }.map { it.copy(tags = tags[it.planned.v] ?: emptyList()) }
+            .sortedWith(compareBy<Planned> { it.date }.thenBy { it.occurrence.v })
     }
 
     /**

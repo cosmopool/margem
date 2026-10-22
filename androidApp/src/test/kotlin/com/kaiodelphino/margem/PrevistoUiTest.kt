@@ -293,8 +293,9 @@ class PrevistoUiTest {
         openTransactions()
 
         waitFor(TransactionTags.ON_THE_WAY)
-        assertShows(TransactionTags.ON_THE_WAY, "A caminho")
-        // Σ Planned.cents: 89,90 + 119,90 + 180,00 + 150,00 = 539,80 (book 8.11 prints 539,70 for these same four).
+        // Triage: a rubric is drawn in capitals (book 8.11, like TransactionTags.DAY), so its text is matched ignoring case.
+        assertTrue(texts(TransactionTags.ON_THE_WAY).any { it.contains("A caminho", ignoreCase = true) })
+        // Σ Planned.cents: 89,90 + 119,90 + 180,00 + 150,00 = 539,80.
         assertShows(TransactionTags.ON_THE_WAY, "4 previstos · ${money(Cents(53980))}")
         assertShows(TransactionTags.ON_THE_WAY, "1 com recado na Pauta · 1 atrasado")
         assertEquals("sempre abre recolhido", 0, count("${TransactionTags.ON_THE_WAY}.open"))
@@ -610,7 +611,7 @@ class PrevistoUiTest {
         assertEquals("sem Todo mês, sem dica", 0, count(TransactionTags.FORM_REPEATS_HINT))
         click(TransactionTags.FORM_REPEATS_MONTHLY)
         waitFor(TransactionTags.FORM_REPEATS_HINT)
-        assertShows(TransactionTags.FORM_REPEATS_HINT, "Em novembro, o recado do SPOTIFY chega ligado.")
+        assertShows(TransactionTags.FORM_REPEATS_HINT, "Em novembro, o recado “SPOTIFY” chega ligado.")
         click(TransactionTags.FORM_REPEATS_ONCE)
         waitGone(TransactionTags.FORM_REPEATS_HINT)
     }
@@ -774,7 +775,7 @@ class PrevistoUiTest {
         click(TransactionTags.FORM_LINK_OPEN)
         waitFor(TransactionTags.LINK_SHEET)
         assertShows(TransactionTags.LINK_SHEET, "Qual previsto é este recado?")
-        assertShows(TransactionTags.LINK_SHEET, "Só desta vez: nos próximos meses, o recado da ENEL SP chega ligado.")
+        assertShows(TransactionTags.LINK_SHEET, "Só desta vez: nos próximos meses, o recado “ENEL SP” chega ligado.")
         val l = TransactionTags.LINK_CANDIDATE + luz.v
         val e = TransactionTags.LINK_CANDIDATE + estacionamento.v
         waitFor(l)
@@ -782,8 +783,9 @@ class PrevistoUiTest {
         assertEquals("um candidato por previsto em aberto", 2, countPrefix(TransactionTags.LINK_CANDIDATE))
         assertTrue("dia mais perto primeiro (12 antes de 15, recado de 9)", top(l) < top(e))
         assertShows(l, "Conta de luz")
-        assertShows(l, "mais provável")
-        assertNotShows(e, "mais provável")
+        // Triage: "mais provável" is a rubric, drawn in capitals (book 8.11 `.likely`): matched ignoring case.
+        assertTrue(texts(l).any { it.contains("mais provável", ignoreCase = true) })
+        assertTrue(texts(e).none { it.contains("mais provável", ignoreCase = true) })
         compose.onNodeWithTag(TransactionTags.LINK_SUBMIT).assertIsNotEnabled()
 
         click(l)

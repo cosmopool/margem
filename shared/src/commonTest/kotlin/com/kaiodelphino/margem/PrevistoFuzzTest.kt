@@ -833,7 +833,13 @@ private suspend fun pfSweep(db: Db, what: String, w: PfWorld) {
     assertEquals(w.pending.toSet(), p.map { it.id }.toSet(), "$what: pending() ids against the model")
     pfSanePending(what, p, a)
     val pt = pfNoThrow("$what: pending(today)") { db.pending(PF_TODAY) }
-    assertEquals(p.map { it.id to it.planned.occurrence }, pt.map { it.id to it.planned.occurrence }, "$what: pending(today) and pending() recognize differently")
+    // Triage 2026-10-22 (user's decision, D59): with a today, an occurrence dated past today + 10 isn't shown, so
+    // pending(today) can't recognize it; pending() (no today) still does. Same otherwise.
+    val due = LocalDate.fromEpochDays(PF_TODAY.toEpochDays() + 10)
+    assertEquals(
+        p.map { it.id to if (it.planned.date > due) OccurrenceId(0) else it.planned.occurrence }, pt.map { it.id to it.planned.occurrence },
+        "$what: pending(today) and pending() recognize differently",
+    )
     assertEquals(w.txs.keys, db.transactions().map { it.id }.toSet(), "$what: transactions() ids against the model")
     for (n in w.accepted.takeLast(3) + p.take(3).map { it.id }) {
         assertEquals(Planned(), db.notice(n).planned, "$what: NoticeRow.planned of notice(${n.v}) must be zero (only pending() fills it)")

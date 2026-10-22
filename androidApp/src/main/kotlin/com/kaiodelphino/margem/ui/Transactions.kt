@@ -176,7 +176,7 @@ object TransactionTags {
 
     /**
      * The "A caminho" line, first in [LIST], absent when there is no open previsto. "A caminho", "4 previstos ·
-     * R$ 539,70" ("1 previsto"; Σ Planned.cents) and, only the parts that exist, "1 com recado na Pauta"
+     * R$ 539,80" ("1 previsto"; Σ Planned.cents) and, only the parts that exist, "1 com recado na Pauta"
      * (Planned.noticeInPauta) and "1 atrasado" / "2 atrasados" (Planned.late) joined by " · ". Always opens
      * collapsed (P11); click toggles it. "$ON_THE_WAY.open" is present while it is open: then one [PLANNED_ROW]
      * per open occurrence follows it, before the day groups. Stays open while the screen is open.
@@ -373,7 +373,7 @@ object TransactionTags {
     const val FORM_REPEATS_MONTHLY = "txForm.repeats.monthly"
 
     /**
-     * Lançar, with Todo mês and a non-empty bank text: "Em novembro, o recado do SPOTIFY chega ligado." (the
+     * Lançar, with Todo mês and a non-empty bank text: "Em novembro, o recado “SPOTIFY” chega ligado." (the
      * month after the date's, the bank text). Absent otherwise.
      */
     const val FORM_REPEATS_HINT = "txForm.repeats.hint"
@@ -392,7 +392,7 @@ object TransactionTags {
     const val FORM_LINK_OPEN = "txForm.link"
 
     /**
-     * The sheet "Qual previsto é este recado?" (Lançar; "Só desta vez: nos próximos meses, o recado da ENEL SP
+     * The sheet "Qual previsto é este recado?" (Lançar; "Só desta vez: nos próximos meses, o recado “ENEL SP”
      * chega ligado." under it, the bank text) or "Qual previsto é este lançamento?" (manual). One
      * [LINK_CANDIDATE] per Db.planned(today), closest date to the form's first, then closest value; the first
      * reads "mais provável". [LINK_SUBMIT] "Ligar à Conta de luz" (disabled until one is chosen) links the form.
@@ -655,7 +655,7 @@ private fun LinkSheet(rows: List<Planned>, notice: NoticeRow, date: LocalDate, t
         val isPost = notice.id.v != 0L
         Text(if (isPost) "Qual previsto é este recado?" else "Qual previsto é este lançamento?", serif(22, 500, 28))
         if (isPost && notice.parsed.merchant.isNotEmpty()) Text(
-            "Só desta vez: nos próximos meses, o recado do ${notice.parsed.merchant} chega ligado.", sans(14f, 400, 20f),
+            "Só desta vez: nos próximos meses, o recado “${notice.parsed.merchant}” chega ligado.", sans(14f, 400, 20f),
             Modifier.padding(top = 4.dp, bottom = 6.dp), c.inkSecondary,
         )
         sorted.forEachIndexed { i, p ->
@@ -1097,7 +1097,7 @@ private fun TxForm(
                     BudgetOption("Todo mês, dia ${day.day}", monthly, Modifier.testTag(TransactionTags.FORM_REPEATS_MONTHLY)) { monthly = true }
                 }
                 if (isPost && monthly && merchant.isNotBlank()) Text(
-                    "Em ${monthLong(day.yearMonth.plusMonth().month)}, o recado do ${merchant.trim()} chega ligado.", sans(13.5f, 400, 18f),
+                    "Em ${monthLong(day.yearMonth.plusMonth().month)}, o recado “${merchant.trim()}” chega ligado.", sans(13.5f, 400, 18f),
                     Modifier.padding(top = 6.dp).testTag(TransactionTags.FORM_REPEATS_HINT), c.inkTertiary,
                 )
             }

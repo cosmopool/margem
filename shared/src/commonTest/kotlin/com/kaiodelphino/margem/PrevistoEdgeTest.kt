@@ -331,7 +331,8 @@ class PrevistoEdgeTest {
         }
         // 31 dez + 10 = 10 jan 2027: 5 dez (open, late) and 5 jan; read back on an earlier today too.
         assertEquals(listOf(d(12, 5), d(1, 5, 2027)), db.planned(d(12, 31)).map { it.date })
-        assertEquals(listOf(d(12, 5), d(1, 5, 2027)), db.planned(TODAY).map { it.date })
+        // Triage 2026-10-22 (user's decision, architecture D59): a read with today shows only what is due by today + 10.
+        assertEquals(emptyList(), db.planned(TODAY).map { it.date })
         assertEquals(Planned(), db.seen(d(11, 6), "VIVO FIBRA", d(12, 31)), "5 nov skipped; 5 dez is 29 days away")
     }
 
@@ -356,7 +357,9 @@ class PrevistoEdgeTest {
         )
         assertEquals(Saved(planned = dec.planned), db.addManual(edit, today = d(11, 26)))
 
-        val moved = db.planned(d(11, 26)).single()
+        // Triage 2026-10-22 (user's decision, D59): 20 dez shows from 10 dez on, not on 26 nov.
+        assertEquals(emptyList(), db.planned(d(11, 26)))
+        val moved = db.planned(d(12, 10)).single()
         assertEquals(dec.occurrence, moved.occurrence, "the same open occurrence")
         assertEquals(20, moved.day)
         assertEquals(d(12, 20) to d(1, 20, 2027), moved.date to moved.next)
@@ -842,7 +845,8 @@ class PrevistoEdgeTest {
         val r2 = db.purchase(d(10, 6), "VIVO FIBRA")
 
         db.deleteBudget(casa)
-        assertEquals(listOf("Cinema"), db.planned(TODAY).map { it.name })
+        // Triage 2026-10-22 (user's decision, D59): Cinema (20 out) is due from 10 out on.
+        assertEquals(listOf("Cinema"), db.planned(d(10, 10)).map { it.name })
         assertEquals(listOf("Cinema"), db.planned(d(10, 26)).map { it.name }, "5 nov never comes")
         val pend = db.pending(d(10, 26))
         assertEquals(3, pend.size, "the Sept lançamento's recado, the launched one and the plain one")
