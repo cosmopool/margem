@@ -20,7 +20,7 @@ Vocabulário do app, alinhado ao [spec](spec.md). Fonte visual: [design_system.h
 | Lançamento | `Transaction` | Gasto confirmado (estorno não é lançamento), com valor, estabelecimento, data, uma verba e ao menos um marcador. | “Lançamentos da semana” | transação, movimentação, despesa, registro |
 | Lançamento manual | `ManualTransaction` | Lançamento criado sem recado (dinheiro, Pix de outro celular), com as mesmas exigências. | Botão “Novo lançamento”. | gasto avulso, entrada manual |
 | Marcador | `Tag` | Rótulo livre, em caixa-baixa, criado pela pessoa. Um lançamento pode ter vários. | Chip “padaria”. | categoria, etiqueta, label |
-| Marcador sugerido | `SuggestedTag` | Marcador do último lançamento do mesmo estabelecimento, pré-selecionado (junto com a verba dele) ao lançar; tracejado até ser confirmado. | Chip tracejado “café”. | categoria automática, IA |
+| Marcador sugerido | `SuggestedTag` | Marcador do último lançamento do mesmo estabelecimento, pré-selecionado ao lançar junto com a verba dele (também tracejada). Tracejado, já conta; um toque o tira. | Chip tracejado “café”. | categoria automática, IA |
 | Valor sugerido | `ParsedFields` | O que o app leu do texto do recado: valor, estabelecimento e data, antes de qualquer emenda. | Campo “Valor” pré-preenchido com R$ 92,00. | valor detectado, extraído |
 | Emenda · emendado | `Correction` · `isCorrected` | Alteração feita pela pessoa no valor, estabelecimento ou data sugeridos. O original fica guardado. | “‸ emendado · o recado dizia R$ 92,00” | editado, ajuste manual, override |
 | Texto do banco | `RawMerchantText` | Nome do estabelecimento como chega na notificação. | “No banco: PAG*JOSEDASILVA 0231” | descritor, string do merchant |

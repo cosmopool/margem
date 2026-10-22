@@ -457,6 +457,34 @@ p.tx.serif{font:400 19px/1.6 'Newsreader'}
 .bos{display:flex;flex-wrap:wrap;gap:8px;margin-top:6px}
 .bo{display:inline-flex;align-items:center;height:36px;padding:0 13px;border:1px solid var(--fio-forte);border-radius:4px;font:600 14.5px 'Source Sans 3';color:var(--tinta);background:var(--folha);white-space:nowrap}
 .bo.on{background:var(--tinta);color:var(--papel);border-color:var(--tinta)}
+/* 8.12 · campo de escolha (verba), folha de verbas, busca de marcadores */
+.fld.pick .in{gap:9px;cursor:pointer}
+.fld.pick .vm{margin-left:auto;font:400 13.5px 'Source Sans 3';color:var(--tinta-3);white-space:nowrap;font-variant-numeric:lining-nums tabular-nums}
+.fld.pick .vm.ov{color:var(--lacre)}
+.fld.pick .chev{color:var(--tinta-3);display:flex}
+.fld.pick .ph-t+.chev{margin-left:auto}
+.fld.pick .sg{border:1px dashed var(--fio-forte);border-radius:3px;padding:1px 8px;color:var(--tinta-2)}
+.fld .in.sb{font:400 16px/1.2 'Source Sans 3'}
+.fld .in.sb .ico{color:var(--tinta-3)}
+.fld .in.sb .ph-t{font-family:'Source Sans 3';font-style:normal}
+.chips.mk{display:flex;flex-wrap:wrap;gap:8px;margin:6px 0 2px}
+.vrow{display:flex;align-items:center;gap:12px;min-height:56px;border-bottom:1px solid var(--fio);padding:0 4px}
+.vrow.on{background:var(--folha-2)}
+.vrow .nm{flex:1;font:500 19px/1.2 'Newsreader'}
+.vrow .mg2{font:400 14px 'Source Sans 3';color:var(--tinta-2);font-variant-numeric:lining-nums tabular-nums}
+.vrow .mg2.ov{color:var(--lacre)}
+.vrow .ck{width:20px;color:var(--tinta);flex:none}
+.vrow.nova{border-bottom:0;color:var(--anil);font:600 15px 'Source Sans 3'}
+.res{margin-top:6px;border:1px solid var(--fio);border-radius:6px;background:var(--folha);overflow:hidden}
+.rr{display:flex;align-items:center;gap:10px;min-height:48px;padding:0 14px;border-bottom:1px solid var(--fio);font:500 16px/1.2 'Source Sans 3';color:var(--tinta-2)}
+.rr:last-child{border-bottom:0}
+.rr .nm{flex:1}
+.rr .nm b{color:var(--tinta);text-decoration:underline;text-decoration-color:var(--argila);text-decoration-thickness:2px;text-underline-offset:3px}
+.rr .w{font:13px 'Source Sans 3';color:var(--tinta-3);font-variant-numeric:tabular-nums}
+.rr.more{min-height:36px;font:13.5px 'Source Sans 3';color:var(--tinta-3)}
+.rr.new{border-top:1px dashed var(--fio-forte);color:var(--anil)}
+.rr.new .nm{font-weight:600}
+.rr.none{min-height:40px;font:13.5px 'Source Sans 3';color:var(--tinta-3)}
 .rhint{font:13.5px/1.35 'Source Sans 3';color:var(--tinta-3);margin-top:6px}
 /* folhinha do dia: tracejada = ainda vai acontecer (mesma regra do ritmo ideal e da projeção) */
 .dia{width:42px;flex:none;border:1px dashed var(--fio-forte);border-radius:3px;text-align:center;padding:3px 0 4px;align-self:center}
@@ -1310,11 +1338,11 @@ p.tx.serif{font:400 19px/1.6 'Newsreader'}
       <div><span class="lbl">Selecionado</span><span class="chip on">mercado</span></div>
       <div><span class="lbl">Sugerido</span><span class="chip sug">padaria</span></div>
       <div><span class="lbl">Foco</span><span class="chip is-focus">café</span></div>
-      <div><span class="lbl">Novo</span><span class="chip add">+ novo marcador</span></div>
       <div><span class="lbl">Indisponível</span><span class="chip dis">viagem</span></div>
       <div><span class="lbl">Removível</span><span class="chip on">café <span class="x">✕</span></span></div>
+      <div><span class="lbl">Sugerido removível</span><span class="chip sug">padaria <span class="x">✕</span></span></div>
     </div>
-    <p class="cap"><b>Forma</b>Etiqueta de papel com furo: raio 3, contorno em fio forte, o “furo” é um círculo de 7 dp. Selecionado vira tinta cheia. Sugerido — vindo do último lançamento do mesmo estabelecimento — tem contorno tracejado até a pessoa confirmar. Altura 32 dp desenhada, 48 dp de toque. Marcadores são sempre em caixa-baixa, como escritos à mão.</p>
+    <p class="cap"><b>Forma</b>Etiqueta de papel com furo: raio 3, contorno em fio forte, o “furo” é um círculo de 7 dp. Selecionado vira tinta cheia. Sugerido — vindo do último lançamento do mesmo estabelecimento — tem contorno tracejado: já conta, o tracejado só diz de onde veio, e um toque o tira como a um cheio (spec §2.5). Altura 32 dp desenhada, 48 dp de toque. Marcadores são sempre em caixa-baixa, como escritos à mão. No formulário, criar um marcador é a última linha da busca (8.12), não um chip “+ novo”.</p>
 
     <h3 class="sub"><span class="k">8.4</span>Recado (cartão da pauta)</h3>
     <div class="cols-2">
@@ -1756,6 +1784,44 @@ p.tx.serif{font:400 19px/1.6 'Newsreader'}
         <div class="dn"><span class="pill-no">Não faça</span><p class="q">Mostrar o valor do previsto ao lado do recado.</p><small>Vale o do recado, sem emenda (P7).</small></div>
       </div>
     </div>
+
+    <h3 class="sub"><span class="k">8.12</span>Escolher verba e marcadores</h3>
+    <p class="intro">O formulário mede a compra, não o catálogo (spec §7.3): a verba é um campo que abre uma folha, e dos marcadores só se veem os escolhidos, com uma busca embaixo. Com 10 ou 100 verbas, 45 ou 450 marcadores, a altura do formulário é a mesma. Tracejado continua sendo “veio da sugestão” (8.3), na verba também.</p>
+
+    <h4 class="min">Campo de verba</h4>
+    <div class="cols-3">
+      <div class="fld pick"><label>Verba</label><div class="in"><span class="ph-t">Escolher a verba</span><span class="chev"><svg class="ico s20"><use href="#i-avancar"/></svg></span></div><div class="hint">Vazio</div></div>
+      <div class="fld pick"><label>Verba</label><div class="in"><i class="id" style="background:var(--c4)"></i>Lazer<span class="vm">margem R$ 34,00</span><span class="chev"><svg class="ico s20"><use href="#i-avancar"/></svg></span></div><div class="hint">Escolhida</div></div>
+      <div class="fld pick"><label>Verba</label><div class="in"><span class="sg">Lazer</span><span class="vm">margem R$ 34,00</span><span class="chev"><svg class="ico s20"><use href="#i-avancar"/></svg></span></div><div class="hint">Sugerida: já conta; escolher na folha a deixa cheia</div></div>
+    </div>
+    <p class="cap"><b>Componente novo</b>Campo do sistema (8.2) com a margem da verba à direita e a seta. A margem é a do mês da data do formulário, igual à da prévia; passou, vai em lacre com “além”. Tocar abre a folha. TalkBack: “Verba, Lazer, margem R$ 34,00, sugerida, botão”.</p>
+
+    <h4 class="min">Folha de verbas</h4>
+    <div class="cols-2">
+      <div class="stage t-light" data-twin><div class="sheet" style="position:static;box-shadow:none;border:1px solid var(--fio)">
+        <span class="over-r">Verba</span>
+        <h4 class="hl" style="font-size:22px;margin:2px 0 6px">Em qual verba entra?</h4>
+        <div class="fld" style="padding-top:0"><div class="in sb"><svg class="ico s20"><use href="#i-lupa"/></svg><span class="ph-t">Buscar verba</span></div></div>
+        <div class="vrow"><span class="ck"></span><span class="nm">Mercado</span><span class="mg2">R$ 212,40</span></div>
+        <div class="vrow"><span class="ck"></span><span class="nm">Restaurantes</span><span class="mg2">R$ 58,00</span></div>
+        <div class="vrow on"><svg class="ico s20 ck"><use href="#i-lancar"/></svg><span class="nm">Lazer</span><span class="mg2">R$ 34,00</span></div>
+        <div class="vrow"><span class="ck"></span><span class="nm">Presentes</span><span class="mg2 ov">R$ 23,50 além</span></div>
+        <div class="vrow nova"><svg class="ico s20"><use href="#i-mais"/></svg>Nova verba</div>
+      </div></div>
+      <div><p class="cap" style="margin:0"><b>Regras</b>Busca no topo, sempre, sem diferença de maiúsculas e acentos. As verbas na ordem da aba Verbas, cada uma com a margem atual: o efeito deste valor fica na prévia, não aqui. Um toque escolhe e fecha. “Nova verba”, em anil, leva à tela de criação; de volta, a verba criada vem escolhida.</p><p class="cap"><b>Toque e leitura</b>Linhas de 56 dp. A folha é um grupo de rádio: “Lazer, margem R$ 34,00, selecionada, 3 de 10”.</p></div>
+    </div>
+
+    <h4 class="min">Busca de marcadores</h4>
+    <div class="cols-3">
+      <div class="stage t-light" data-twin><div class="fld"><span class="lab">Marcadores</span><div class="chips mk"><span class="chip sug">bar <span class="x">✕</span></span><span class="chip on">amigos <span class="x">✕</span></span></div><div class="in sb"><svg class="ico s20"><use href="#i-lupa"/></svg><span class="ph-t">Buscar ou criar marcador</span></div></div><p class="cap" style="margin-top:10px"><b>Repouso</b>Só os escolhidos, que quebram linha sem limite. Um toque em qualquer um o tira.</p></div>
+      <div class="stage t-light" data-twin><div class="fld foc"><span class="lab">Marcadores</span><div class="chips mk"><span class="chip on">amigos <span class="x">✕</span></span></div><div class="in sb"><svg class="ico s20"><use href="#i-lupa"/></svg><span class="caret"></span></div></div><span class="over-r" style="display:block;margin:8px 0 6px">Mais usados</span><div class="chips mk"><span class="chip">mercado</span><span class="chip">café</span><span class="chip">uber</span><span class="chip">farmácia</span><span class="chip">padaria</span><span class="chip">feira</span><span class="chip">bar</span><span class="chip">luz</span></div><p class="cap" style="margin-top:10px"><b>Foco, sem texto</b>Os 8 mais usados no geral, fora os já escolhidos. Um toque marca.</p></div>
+      <div class="stage t-light" data-twin><div class="fld foc"><span class="lab">Marcadores</span><div class="in sb"><svg class="ico s20"><use href="#i-lupa"/></svg>ca<span class="caret"></span></div></div><div class="res"><div class="rr"><span class="nm"><b>ca</b>fé</span><span class="w">33 lançamentos</span></div><div class="rr"><span class="nm"><b>ca</b>rro</span><span class="w">17 lançamentos</span></div><div class="rr"><span class="nm"><b>ca</b>belo</span><span class="w">6 lançamentos</span></div><div class="rr"><span class="nm">manuten<b>çã</b>o</span><span class="w">4 lançamentos</span></div><div class="rr more">mais 1: continue digitando</div><div class="rr new"><svg class="ico s20"><use href="#i-mais"/></svg><span class="nm">Criar “ca”</span><span class="w">novo, só é gravado ao lançar</span></div></div><p class="cap" style="margin-top:10px"><b>Digitando</b>Sem diferença de maiúsculas e acentos: os que começam com o texto primeiro, depois os mais usados; até 4 linhas. “Criar” é sempre a última e some quando o texto é o nome de um marcador.</p></div>
+    </div>
+    <div class="cols-3" style="margin-top:24px">
+      <div class="stage t-light" data-twin><div class="fld foc"><span class="lab">Marcadores</span><div class="in sb"><svg class="ico s20"><use href="#i-lupa"/></svg>Pizzaria<span class="caret"></span></div></div><div class="res"><div class="rr none">Nenhum marcador com “pizzaria”.</div><div class="rr new"><svg class="ico s20"><use href="#i-mais"/></svg><span class="nm">Criar “pizzaria”</span><span class="w">novo, só é gravado ao lançar</span></div></div><p class="cap" style="margin-top:10px"><b>Sem achado</b>Só a linha de criar, com o texto já em minúsculas e sem espaços nas pontas. “Pronto” no teclado faz o mesmo; com um nome existente, marca o existente.</p></div>
+      <div><p class="cap" style="margin:0"><b>Depois de tocar</b>O resultado vira chip cheio, o texto se limpa e o foco fica, para marcar vários seguidos. Um marcador criado só é gravado ao lançar; até lá, é um chip como os outros.</p><p class="cap"><b>Teclado</b>Com o teclado aberto na busca, o rodapé (Riscar / Lançar) fica atrás dele, e sobra lugar para os resultados.</p></div>
+      <div><p class="cap" style="margin:0"><b>Componente novo</b>Linha de resultado: linha de lista de 48 dp, o trecho achado em negrito com o sublinhado de argila, e à direita quantos lançamentos o marcador tem. A de criar vem em anil, com fio tracejado em cima.</p><p class="cap"><b>TalkBack</b>Chip: “bar, sugerido, toque para tirar”. A busca anuncia “3 resultados” a cada mudança.</p></div>
+    </div>
   </div>
 </section>
 
@@ -2043,16 +2109,16 @@ p.tx.serif{font:400 19px/1.6 'Newsreader'}
             <div class="fld"><label>Estabelecimento</label><div class="in"><span class="mer alias">Bar do Ponto</span><svg class="ico s20" style="margin-left:auto;color:var(--argila)"><use href="#i-apelido"/></svg></div><div class="hint">No banco: BAR E REST PONTO CERTO</div></div>
             <div class="fld"><label>Data</label><div class="in">quinta, 8 de outubro · <span class="num">23:10</span><svg class="ico s20" style="margin-left:auto;color:var(--tinta-3)"><use href="#i-periodo"/></svg></div></div>
             <div style="display:grid;grid-template-columns:minmax(0,1.7fr) minmax(0,1fr);gap:16px">
-              <div class="fld"><label>Verba</label><div class="in"><i class="id" style="background:var(--c4)"></i>Lazer<svg class="ico s20" style="margin-left:auto;color:var(--tinta-3)"><use href="#i-avancar"/></svg></div></div>
+              <div class="fld pick"><label>Verba</label><div class="in"><span class="sg">Lazer</span><span class="vm">R$ 34,00</span><span class="chev"><svg class="ico s20"><use href="#i-avancar"/></svg></span></div></div>
               <div class="fld"><label>Parcelas</label><div class="in"><span class="num">1×</span><svg class="ico s20" style="margin-left:auto;color:var(--tinta-3)"><use href="#i-avancar"/></svg></div></div>
             </div>
-            <div class="fld"><span class="lab" style="margin-bottom:8px">Marcadores</span><div class="chips"><span class="chip on">bar</span><span class="chip on">amigos</span><span class="chip">restaurante</span><span class="chip add">+ novo</span></div></div>
+            <div class="fld"><span class="lab" style="margin-bottom:8px">Marcadores</span><div class="chips"><span class="chip sug">bar <span class="x">✕</span></span><span class="chip on">amigos <span class="x">✕</span></span></div><div class="in sb"><svg class="ico s20"><use href="#i-lupa"/></svg><span class="ph-t">Buscar ou criar marcador</span></div></div>
             <div class="prev" style="margin-top:4px;padding:9px 12px"><svg class="ico s20" style="color:var(--c4)"><use href="#i-verba"/></svg><span><b>Lazer</b>: margem R$ 34,00 → R$ 12,00 além</span></div>
           </div>
           <div class="dock" style="bottom:22px"><span class="btn risco"><svg class="ico s20"><use href="#i-riscar"/></svg>Riscar</span><span class="btn pri" style="flex:2"><svg class="ico s20"><use href="#i-lancar"/></svg>Lançar R$ 46,00</span></div>
           <div class="gbar" style="position:absolute;bottom:0;left:0;right:0"></div>
         </div></div>
-        <figcaption><b>10.3 · Lançar e emendar</b>Exatamente uma verba e pelo menos um marcador. Parcelado: a pessoa informa o valor total e o número de parcelas, e o campo mostra a prévia (“10 × R$ 120,00”). Sem lançamento anterior no Bar do Ponto, nada veio marcado — quando há, verba e marcadores do último lançamento do estabelecimento vêm pré-selecionados, os marcadores tracejados até a pessoa confirmar. O valor foi emendado (a conta foi dividida): o original fica riscado ao lado, com desfazer. O apelido substitui o texto do banco em todo lugar. A prévia mostra o efeito na verba antes de lançar (“Lazer: margem R$ 34,00 → R$ 12,00 além”). A mesma tela edita um lançamento e cria o lançamento manual.</figcaption>
+        <figcaption><b>10.3 · Lançar e emendar</b>Exatamente uma verba e pelo menos um marcador. Parcelado: a pessoa informa o valor total e o número de parcelas, e o campo mostra a prévia (“10 × R$ 120,00”). Verba e marcadores do último lançamento do Bar do Ponto vieram pré-selecionados e tracejados (“bar”; “amigos” a pessoa marcou pela busca): tracejado já conta, e um toque tira. A verba abre a folha de verbas; dos marcadores só se veem os escolhidos, com a busca embaixo (8.12). O valor foi emendado (a conta foi dividida): o original fica riscado ao lado, com desfazer. O apelido substitui o texto do banco em todo lugar. A prévia mostra o efeito na verba antes de lançar (“Lazer: margem R$ 34,00 → R$ 12,00 além”). A mesma tela edita um lançamento e cria o lançamento manual.</figcaption>
       </figure>
 
       <!-- LANÇAR ESTORNO -->
