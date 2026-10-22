@@ -252,10 +252,12 @@ sealed interface Screen {
     data class Budget(val id: BudgetId, val month: YearMonth) : Screen
     data object NewBudget : Screen                        // Nova verba
     data class EditBudget(val id: BudgetId) : Screen      // nome, cota, apagar
-    data class Post(val notice: NoticeId) : Screen        // lançar um recado
+    data class Post(val notice: NoticeId, val linked: OccurrenceId) : Screen  // lançar um recado; linked ≠ 0: já ligado (D62)
     data class Refund(val estorno: NoticeId) : Screen     // registrar estorno (escolher a compra)
     data class Edit(val id: TransactionId) : Screen       // editar lançamento
     data object NewTransaction : Screen                   // lançamento manual
+    data class FromPlanned(val occurrence: OccurrenceId) : Screen  // Lançar sem recado (R6)
+    data class EditPlanned(val occurrence: OccurrenceId) : Screen  // Editar previsto (D64)
     data object Dismissed : Screen                        // Riscados
     data object Sources : Screen                          // Ajustes › Fontes
     data object Tags : Screen                             // Ajustes › Marcadores
@@ -289,10 +291,10 @@ Pacote Kotlin `com.kaiodelphino.margem` nos dois módulos. Namespace Android: `c
 
 | Arquivo | Conteúdo |
 |---|---|
-| `Db.kt` | Escritor + leitores (D29), schema, migrações, `write { }`, `read { }`, `version`, `onWrite`, `ensureMonths`, todas as consultas e escritas, exportar/importar (D14). Verbas (bloco 3): `createBudget`, `renameBudget`, `setLimit`, `limitDropsEdits`, `deleteBudget`, `reorderBudgets`, `setStep`, `clearStep`, `budgetsOverview`, `budgetDetail` (com `lines` e `firstMonth`), `previewBudget`. Ciclo do recado (bloco 4): `transactions(today)` com `TransactionRow.now` (a parcela do mês de hoje), `previewRefund`. Ajustes (bloco 5): `startDropsEdits` (D41). Teto: `ceiling`, `setCeiling`, `previewCeiling` (D58). |
+| `Db.kt` | Escritor + leitores (D29), schema, migrações, `write { }`, `read { }`, `version`, `onWrite`, `ensureMonths`, todas as consultas e escritas, exportar/importar (D14). Verbas (bloco 3): `createBudget`, `renameBudget`, `setLimit`, `limitDropsEdits`, `deleteBudget`, `reorderBudgets`, `setStep`, `clearStep`, `budgetsOverview`, `budgetDetail` (com `lines` e `firstMonth`), `previewBudget`. Ciclo do recado (bloco 4): `transactions(today)` com `TransactionRow.now` (a parcela do mês de hoje), `previewRefund`. Ajustes (bloco 5): `startDropsEdits` (D41). Teto: `ceiling`, `setCeiling`, `previewCeiling` (D58). Previsto (D59–D64): `pending(today)` com `NoticeRow.planned`, `planned(today)`, `skipOccurrence`, `deletePlanned`, `addManual(form, today): Saved`; ocorrências criadas até hoje + 10 numa escrita sem `version`. |
 | `Types.kt` | Value classes, `RawNotice`, `Parsed`, `PaceStatus`, ajustes e linhas de leitura. |
 | `Capture.kt` | `capture(db, raw)`, dedupe (usado também pela importação, D4), SHA-256 (D32), `importCobudget(db, path)` (D3, D40). |
-| `Extract.kt` | Leitura de valor/estabelecimento/data (`internal`); `parseBrl` (público). |
+| `Extract.kt` | Leitura de valor/estabelecimento/data (`internal`); `parseBrl`, `fold` e `MerchantKey` (públicos, D61). |
 | `Month.kt` | `budgetMonth()`, janela do mês, limite da edição de passo, ordem por risco (`internal`). |
 
 **`androidApp/src/main/kotlin/com/kaiodelphino/margem/`**
@@ -303,9 +305,9 @@ Pacote Kotlin `com.kaiodelphino.margem` nos dois módulos. Namespace Android: `c
 | `NoticeListener.kt` | `NotificationListenerService`: `StatusBarNotification` → `RawNotice` → `capture()`. |
 | `Backup.kt` | Cópia entre um `Uri` do SAF e um arquivo local: exportar (`exportTo` num arquivo temporário → `Uri`), importar o backup e o `.db` do cobudget (`Uri` → arquivo temporário → `importFrom` / `importCobudget`). |
 | `ui/MainActivity.kt` | Activity, `Screen`, navegação, `query()`. |
-| `ui/Budgets.kt` · `ui/Inbox.kt` · `ui/Transactions.kt` · `ui/Insights.kt` · `ui/Settings.kt` | Uma por aba, com suas sub-telas. `Inbox.kt`: Pauta e Registrar estorno (`InboxTags`). `Transactions.kt`: Lançamentos e o formulário único de lançar/editar/manual (`TransactionTags`). `Settings.kt`: Ajustes e as sub-telas Fontes, Riscados, Marcadores, Início do mês e da semana, Backup e Importar do cobudget (`SettingsTags`). |
+| `ui/Budgets.kt` · `ui/Inbox.kt` · `ui/Transactions.kt` · `ui/Insights.kt` · `ui/Settings.kt` | Uma por aba, com suas sub-telas. `Inbox.kt`: Pauta e Registrar estorno (`InboxTags`). `Transactions.kt`: Lançamentos com "A caminho" e a folha do previsto, o formulário único de lançar/editar/manual/editar previsto e "Qual previsto é este recado?" (`TransactionTags`). `Settings.kt`: Ajustes e as sub-telas Fontes, Riscados, Marcadores, Início do mês e da semana, Backup e Importar do cobudget (`SettingsTags`). |
 | `ui/HomeWidgets.kt` | Os dois widgets de home screen (Glance). |
-| `widgets/Theme.kt` · `widgets/Components.kt` | Tokens e componentes do book. |
+| `widgets/Theme.kt` · `widgets/Components.kt` | Tokens e componentes do book; do previsto (8.11): `InfoBand`, `DayStamp`, `BottomSheet`. |
 
 **`iosApp/`**: não existe na v1 (D26).
 
