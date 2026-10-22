@@ -1,6 +1,6 @@
 # Margem — spec do produto
 
-Status: **decidido** em 2026-10-09; revisado em 2026-10-14 (bloco 4, ciclo do recado: §2.5, §2.8, §2.10, §7.3, §7.4; bloco 5, Ajustes e importação: §4, §7.6; teto: §3, §7.1, §10; início do mês sem sumir verba: §3); em 2026-10-16 (legenda do lançamento: §2.10, §2.12, §7.1, §7.3, §7.4, §7.5; bloco 6, Leitura: §7.5; cabeçalho do teto: §7.1, §10; teto, T1–T10: §3, §7.1); em 2026-10-20 (legenda: quebras de linha em §2.12, nome da prévia em §7.3; apelidos iguais no ranking: §7.5). O que está em §10 espera resposta, uma por vez.
+Status: **decidido** em 2026-10-09; revisado em 2026-10-14 (bloco 4, ciclo do recado: §2.5, §2.8, §2.10, §7.3, §7.4; bloco 5, Ajustes e importação: §4, §7.6; teto: §3, §7.1, §10; início do mês sem sumir verba: §3); em 2026-10-16 (legenda do lançamento: §2.10, §2.12, §7.1, §7.3, §7.4, §7.5; bloco 6, Leitura: §7.5; cabeçalho do teto: §7.1, §10; teto, T1–T10: §3, §7.1); em 2026-10-20 (legenda: quebras de linha em §2.12, nome da prévia em §7.3; apelidos iguais no ranking: §7.5); em 2026-10-22 (previsto, P1–P11 de [previsto-plan.md](previsto-plan.md): §2.12, §2.13, §7.2, §7.3, §7.4; S1; acentos no ranking, §7.5). O que está em §10 espera resposta, uma por vez.
 Escopo: só produto (o quê e por quê). Implementação: [architecture.md](architecture.md).
 Vocabulário: [glossary.md](glossary.md). Identidade visual: [design_system.html](design_system.html).
 
@@ -35,6 +35,16 @@ O estorno não é crédito: é só o registro de que uma compra não conta (§6)
     - Na edição, apagar o texto tira a legenda (diferente do apelido, §2.10).
     - Apagar o lançamento (ou Desfazer logo depois de lançar) apaga a legenda junto: o recado volta à Pauta sem ela, sem aviso a mais.
     - Aparece no formulário (§7.3), em Lançamentos (§7.4), no detalhe da verba (§7.1) e na escolha da compra estornada (§7.3). Recados (Pauta, Riscados, widget da Pauta) não têm legenda; snackbars e diálogos não a mostram.
+    - Lançamento de um previsto (§2.13) nasce com o nome do previsto como legenda.
+13. **Previsto**: gasto que a pessoa já sabe que vem (aluguel, internet, conta de luz), anotado antes de acontecer com valor, nome, dia, verba e marcadores, à espera de um recado. Não é lançamento: **não conta** em verba, Leitura nem widget até ser lançado. Desenho: [previsto-mocks.html](../previsto-mocks.html).
+    - **Criar**: lançamento manual com data à frente vira previsto (§7.3). Mesmas exigências de lançar: uma verba e ao menos um marcador.
+    - **Repete**: "Só uma vez" ou "Todo mês". Todo mês mantém o dia; num mês sem ele (29–31), vale o último dia. Sem data de fim: para parar, apaga-se o previsto ou muda-se para "Só uma vez". "Repete" aparece sempre no formulário — lançamento manual (com qualquer data), Lançar recado e edição. Num lançamento de hoje ou do passado, "Todo mês" lança agora e cria os previstos a partir do mês seguinte; no Lançar recado e na edição de um lançamento com recado, o previsto nasce **já ligado** à fonte e ao texto do banco desse recado, com o nome do lançamento (legenda, senão apelido, senão texto do banco).
+    - **Ligar**: dizer qual recado é o previsto. A primeira vez é à mão, no Lançar do recado ("É um previsto? Ligar", §7.3). A ligação guarda a **fonte e o texto do banco** do recado.
+    - **Reconhecer**: da segunda vez em diante, recado da mesma fonte com o mesmo texto do banco (sem diferença de maiúsculas e acentos), chegado até **10 dias antes ou depois** do dia do previsto, é reconhecido como dele; o valor pode variar. Dois previstos para o mesmo recado: fica o de dia mais próximo. Fora da janela, é um recado comum, que pode ser ligado à mão. Recado sem texto do banco (ex.: Pix enviado sem estabelecimento lido) **nunca liga nem é reconhecido**: pode ser lançado com o previsto escolhido à mão, que fecha a ocorrência sem gravar ligação (R2).
+    - **Lançar previsto**: o recado reconhecido lança direto da Pauta (§7.2), sem formulário: verba, marcadores e nome (como legenda) vêm do previsto; valor, estabelecimento e data vêm do recado.
+    - **Valor diferente**: vale o do recado. Não é emenda (sem "‸ emendado") e o valor do previsto não aparece ao lado. O previsto do mês seguinte continua com o valor dele; só editar o previsto o muda.
+    - **Sem recado**: o previsto **fica esperando**, depois do dia e da virada ("esperando desde 5 out"); a ocorrência do mês seguinte aparece no dia dela mesmo assim. Na folha do previsto (§7.4): **Lançar sem recado** (abre o lançamento manual preenchido, na data do previsto, sem ligação; só aparece quando o dia da ocorrência já chegou, R6), **Pular este mês** (some sem lançar; o mês seguinte continua), **Editar previsto** e **Apagar previsto** (este e os próximos meses; pede confirmação num diálogo).
+    - Desfazer logo depois de lançar um previsto, ou apagar esse lançamento mais tarde, devolve o recado à Pauta e a ocorrência do previsto a "A caminho", esperando e ligada, como estavam (S1, 2026-10-22).
 
 ## 3. Verba e cota
 
@@ -129,6 +139,7 @@ Cinco abas: **Verbas** (início) · **Pauta** · **Lançamentos** · **Leitura**
 - Recados esperando decisão, mais recentes no topo: fonte, valor e estabelecimento lidos, hora.
 - Ações: Lançar (abre a tela de lançar; no recado de estorno, **Registrar estorno**) e Riscar (com Desfazer). Sem gestos de deslizar.
 - Recados **novos** (§2.11) ficam destacados.
+- **Recado reconhecido** de um previsto (§2.13): o cartão ganha a faixa "É o previsto Internet" (verba · marcadores · dia) e as ações **Não é** (tira a faixa enquanto a tela está aberta, sem gravar nada; reaberta a Pauta, o recado volta reconhecido), Riscar e **Lançar previsto** (lança direto). Tocar no corpo do cartão abre o Lançar já ligado. Snackbar: "Lançado: Internet, em Casa. O próximo é 10 nov." com Desfazer ("O próximo …" só em "Todo mês").
 - **Parece propaganda**: recado do qual não se leu valor nem estabelecimento ganha esse selo, e o botão vira "Lançar mesmo assim".
 - Aviso de **anotação pausada** quando o acesso às notificações está desligado.
 - Vazio: "Pauta limpa."
@@ -140,7 +151,9 @@ Cinco abas: **Verbas** (início) · **Pauta** · **Lançamentos** · **Leitura**
   - O ✕ esvazia o campo e o recolhe. Na edição, até Salvar, mostra "legenda tirada: ~~Bolo do aniversário da Ana~~ Desfazer" (o desenho da emenda, sem "‸").
   - Perto do limite, a contagem aparece à direita da dica ("72/80"); em 80 o campo para de aceitar.
   - Desenho: [legenda recolhida](mockups/descricao-b-recolhida.html).
-- **Data e hora** por um seletor próprio (book 8.9): grade do mês com a semana começando no dia dos Ajustes, hoje marcado, dias futuros desabilitados (lançamento é gasto feito) e hora HH:MM.
+- **Data e hora** por um seletor próprio (book 8.9): grade do mês com a semana começando no dia dos Ajustes, hoje marcado, dias futuros desabilitados (lançamento é gasto feito) e hora HH:MM. **Exceção**: no lançamento manual, dias futuros são aceitos, e escolher um faz do lançamento um previsto (§2.13): a faixa "Data à frente: vira previsto. Fica em Lançamentos esperando o recado, sem contar na verba." e o botão "Salvar previsto".
+- **Repete** (§2.13): "Só uma vez" · "Todo mês, dia 12", sempre à vista. No Lançar recado com "Todo mês", a dica "Em novembro, o recado do SPOTIFY chega ligado."; com o recado ligado a um previsto, o campo sai (a repetição é a do previsto, dita na faixa).
+- **Ligar a um previsto**: no Lançar de um recado comum e no lançamento manual (R6b: pago antes do dia; fecha a ocorrência sem gravar ligação, que o manual não tem texto do banco), o link "É um previsto? Ligar" (sob a citação, como "É um estorno?") abre "Qual previsto é este recado?", com todos os previstos em aberto, os mais prováveis no topo (dia perto da data do recado, valor perto), e o botão "Ligar à Conta de luz". Ligado, a faixa "Ligado à Conta de luz · Todo mês, dia 12. Verba, marcadores e nome vieram do previsto. Desligar" toma o lugar do link; verba e marcadores vêm cheios (não tracejados) e o nome entra como legenda. "Desligar" volta a tela ao que era.
 - Mostra o texto original do recado e marca o que foi emendado.
 - Enquanto falta verba ou marcador, o botão de lançar fica desabilitado e a tela diz o que falta.
 - **Prévia**: mostra o efeito na verba antes de confirmar ("Mercado: margem R$ 300,00 → R$ 254,00"). O nome é sempre o da verba; a legenda não entra aqui (2026-10-20).
@@ -153,6 +166,7 @@ Cinco abas: **Verbas** (início) · **Pauta** · **Lançamentos** · **Leitura**
 - Se o recado deixou de estar na Pauta enquanto a tela estava aberta (lançado ou riscado por outro caminho), lançar é recusado: a tela avisa e volta.
 
 ### 7.4 Lançamentos
+- **A caminho** (§2.13): os previstos ficam no topo, num grupo que **sempre abre recolhido** (não lembra; aberto, fica aberto enquanto a tela estiver aberta), para a lista abrir nos lançamentos feitos. Recolhido, é uma linha: rubrica "A caminho", "4 previstos · R$ 539,70" (soma dos valores; não conta em verba) e "1 com recado na Pauta · 1 atrasado" (só as partes que existem, em tinta 2, sem cor de estado). Sem previsto, a linha não existe. O previsto do mês seguinte entra em "A caminho" 10 dias antes do dia dele (quando o recado dele já pode chegar, §2.13). Aberto, os previstos pelo dia, o atrasado primeiro: folhinha do dia tracejada (em tinta 3 no atrasado), nome, "verba · marcadores · todo mês", "recado na Pauta" (anil) ou "esperando desde 5 out", e o valor em tinta 2. Tocar num previsto abre a folha dele (§2.13).
 - Todos os lançamentos, mais recentes no topo, **agrupados por dia** como a Pauta: estabelecimento, valor, verba, marcadores; "‸ emendado" quando foi emendado; compras estornadas riscadas como "estornada" (o estorno não tem linha própria).
 - **Com legenda** (§2.12): a legenda é o nome, em itálico, até 2 linhas ("…" se passar); embaixo, "em Padaria do Zé" (apelido, senão texto do banco; sem estabelecimento, essa linha não existe); depois a linha de sempre. Estornada: legenda e "em …" em tinta 3, sem risco; só o valor riscado, como o nome hoje.
 - Parcelada mostra a parcela do mês atual ("Parcela 3 de 10", com o valor dela); sem parcela no mês atual, mostra o total e "10×".
@@ -166,7 +180,7 @@ Cinco abas: **Verbas** (início) · **Pauta** · **Lançamentos** · **Leitura**
   - Mês atual: o resto do mês sombreado e em branco; frase "+ R$ 51,10 sobre o ritmo ideal. No passo atual, o mês fecharia em R$ 796." (abaixo do ritmo: "R$ 20,00 abaixo do ritmo ideal. …"; fora da margem: "R$ 12,00 além da cota. …"; sem projeção quando o ritmo ideal de hoje é R$ 0,00, §5, ou quando nada foi gasto no mês).
   - Mês passado: o mês inteiro, sem sombra e sem projeção; frase "Fechou em R$ 1.180,00, R$ 60,00 dentro da cota." ou "… R$ 12,00 além da cota."
 - **Verbas por mês**: a verba escolhida nos 6 meses até o mês do topo, gasto × cota de cada mês (a cota de cada mês, §3), excesso em hachura com o valor. Meses antes do primeiro mês da verba ficam no lugar, vazios. Frase: "Dois meses fora da margem." / "Nenhum mês fora da margem."
-- **Marcadores e estabelecimentos**: ranking **por valor** no mês do topo, com a contagem ao lado (estabelecimentos pelo apelido; o mesmo apelido é o mesmo lugar, sem diferença de maiúsculas; a legenda não entra).
+- **Marcadores e estabelecimentos**: ranking **por valor** no mês do topo, com a contagem ao lado (estabelecimentos pelo apelido; o mesmo apelido é o mesmo lugar, sem diferença de maiúsculas e acentos; a legenda não entra).
   - Seletor "Marcadores · Estabelecimentos" numa seção só; 6 linhas e depois "Ver todos (n)", que abre o resto no lugar. A escolha fica enquanto a tela está aberta.
   - Um lançamento com vários marcadores conta inteiro em cada um; a tela avisa que a soma dos marcadores pode passar do total.
   - Frase: "feira puxa a fila."
