@@ -28,9 +28,6 @@ fun parseBrl(text: String): Cents {
     return Cents(int.replace(".", "").toLong() * 100 + dec.padEnd(2, '0').toLong())
 }
 
-/** Same merchant across spacing and case: "DL *UberRides" and "dl*uberrides" share a key. */
-internal fun merchantKey(merchant: String): String = merchant.filterNot(Char::isWhitespace).lowercase()
-
 /**
  * The one text fold of the app (D61): what compares texts ignoring case and accents — keys ([MerchantKey])
  * and the estorno search. One pass per char, the same on every target:
@@ -43,7 +40,32 @@ internal fun merchantKey(merchant: String): String = merchant.filterNot(Char::is
  *   script outside Latin are only lowercased: a documented limit.
  * So `fold(fold(x)) == fold(x)` and an NFC text folds like its NFD form. Never throws; lone surrogates pass.
  */
-fun fold(s: String): String = TODO()
+fun fold(s: String): String {
+    val out = StringBuilder(s.length)
+    for (ch in s) {
+        if (ch in '\u0300'..'\u036F') continue
+        // The table first (İ lowercases differently per target), then again after lowercasing (ẞ → ß).
+        val c = latin(ch).let { if (it != ch) it else ch.lowercaseChar() }
+        when (c) {
+            'ß' -> out.append("ss")
+            'ı' -> out.append('i')
+            else -> out.append(latin(c))
+        }
+    }
+    return out.toString()
+}
+
+/** U+00C0–U+017F: the base letter of each one that decomposes to a letter + combining marks; '.' = not folded. */
+private const val LATIN =
+    "aaaaaa.ceeeeiiii.nooooo..uuuuy.." +
+        "aaaaaa.ceeeeiiii.nooooo..uuuuy.y" +
+        "aaaaaaccccccccdd..eeeeeeeeeegggg" +
+        "gggghh..iiiiiiiii...jjkk.llllll." +
+        "...nnnnnn...oooooo..rrrrrrssssss" +
+        "sstttt..uuuuuuuuuuuuwwyyyzzzzzz."
+
+private fun latin(c: Char): Char =
+    if (c in '\u00C0'..'\u017F') LATIN[c - '\u00C0'].let { if (it == '.') c else it } else c
 
 /**
  * Same merchant across spacing, case and accents (D61): "VIVO  FIBRA", "vivo fibra" and "VÍVO FIBRA" share
@@ -52,7 +74,7 @@ fun fold(s: String): String = TODO()
 @JvmInline value class MerchantKey private constructor(val v: String) {
     companion object {
         /** [fold] of [text] without the chars of `isEdgeSpace` (whitespace, controls, the NBSP family), anywhere in it. */
-        fun of(text: String): MerchantKey = TODO()
+        fun of(text: String): MerchantKey = MerchantKey(fold(text).filterNot(::isEdgeSpace))
     }
 }
 

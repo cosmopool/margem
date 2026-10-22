@@ -364,6 +364,18 @@ class MutationKillTest {
         assertTrue(capture(db, bank("e", T, "Estorno de R$ 10,00")))
         assertTrue(db.registerRefund(db.pending().single().id, refunded))
         db.ensureMonths(YearMonth(2026, 12))
+        // Previstos (D59): one of the deleted budget whose occurrence a kept transaction closed, one only
+        // tagged "solo", one deleted by itself after a lançamento, one that stays.
+        fun ahead(budget: BudgetId, name: String, tags: List<String>) =
+            form(budget, name, LocalDate(2026, 10, 20), tags = tags).copy(repeats = Repeats.MONTHLY)
+        db.addManual(ahead(gone, "P1", listOf("x")), OCT_6)
+        db.addManual(ahead(kept, "P2", listOf("solo")), OCT_6)
+        val p3 = db.addManual(ahead(kept, "P3", listOf("x")), OCT_6).planned
+        val p4 = db.addManual(ahead(kept, "P4", listOf("x", "solo")), OCT_6).planned
+        for (p in db.planned(OCT_6).filter { it.name == "P1" || it.name == "P3" }) {
+            db.addManual(form(kept, p.name, p.date, tags = listOf("x")).copy(occurrence = p.occurrence))
+        }
+        db.deletePlanned(p3)
 
         db.deleteBudget(gone)
         db.deleteTransaction(single)
@@ -382,7 +394,16 @@ class MutationKillTest {
                 "tag links of a deleted transaction" to "SELECT COUNT(*) FROM transaction_tags WHERE transaction_id NOT IN (SELECT id FROM transactions)",
                 "tag links of a deleted tag" to "SELECT COUNT(*) FROM transaction_tags WHERE tag_id NOT IN (SELECT id FROM tags)",
                 "estornos of a deleted transaction" to "SELECT COUNT(*) FROM refunds WHERE transaction_id <> 0 AND transaction_id NOT IN (SELECT id FROM transactions)",
+                "previstos of a deleted budget" to "SELECT COUNT(*) FROM planned WHERE budget_id NOT IN (SELECT id FROM budgets)",
+                "previsto tags of a deleted previsto" to "SELECT COUNT(*) FROM planned_tags WHERE planned_id NOT IN (SELECT id FROM planned)",
+                "previsto tags of a deleted tag" to "SELECT COUNT(*) FROM planned_tags WHERE tag_id NOT IN (SELECT id FROM tags)",
+                "occurrences of a deleted previsto" to "SELECT COUNT(*) FROM planned_dates WHERE planned_id NOT IN (SELECT id FROM planned)",
+                "origin pointing at a deleted occurrence" to
+                    "SELECT COUNT(*) FROM transactions WHERE occurrence_id <> 0 AND occurrence_id NOT IN (SELECT id FROM planned_dates)",
+                "previstos left without tags" to "SELECT COUNT(*) FROM planned WHERE id NOT IN (SELECT planned_id FROM planned_tags)",
             )) assertEquals(0L, c.long(sql), what)
+            assertEquals(1L, c.long("SELECT COUNT(*) FROM planned_tags WHERE planned_id = ?", p4.v))
+            assertEquals(1L, c.long("SELECT COUNT(*) FROM planned_dates WHERE planned_id = ?", p4.v))
             // What stays is still there: the checks above aren't passing on an empty file.
             assertEquals(3L, c.long("SELECT COUNT(*) FROM budget_months WHERE budget_id = ?", kept.v))
             assertEquals(3L, c.long("SELECT COUNT(*) FROM installments WHERE transaction_id = ?", survivor.v))

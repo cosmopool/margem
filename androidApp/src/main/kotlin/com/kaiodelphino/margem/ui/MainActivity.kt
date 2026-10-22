@@ -41,6 +41,7 @@ import com.kaiodelphino.margem.BudgetId
 import com.kaiodelphino.margem.Db
 import com.kaiodelphino.margem.MargemApp
 import com.kaiodelphino.margem.NoticeId
+import com.kaiodelphino.margem.OccurrenceId
 import com.kaiodelphino.margem.Theme
 import com.kaiodelphino.margem.TransactionId
 import com.kaiodelphino.margem.isAccessGranted
@@ -72,10 +73,15 @@ sealed interface Screen {
     data class Budget(val id: BudgetId, val month: YearMonth) : Screen
     data object NewBudget : Screen
     data class EditBudget(val id: BudgetId) : Screen
-    data class Post(val notice: NoticeId) : Screen
+    /** Lançar recado; [linked] ≠ 0 opens it already linked to that occurrence (the recognized card's body, D62). */
+    data class Post(val notice: NoticeId, val linked: OccurrenceId = OccurrenceId(0)) : Screen
     data class Refund(val estorno: NoticeId) : Screen
     data class Edit(val id: TransactionId) : Screen
     data object NewTransaction : Screen
+    /** Lançar sem recado (R6): Novo lançamento filled from the open [occurrence]. */
+    data class FromPlanned(val occurrence: OccurrenceId) : Screen
+    /** Editar previsto: the manual form of the previsto of [occurrence] (TransactionForm.planned). */
+    data class EditPlanned(val occurrence: OccurrenceId) : Screen
     data object Dismissed : Screen
     data object Sources : Screen
     data object Tags : Screen
@@ -93,10 +99,12 @@ private fun encode(s: Screen): String = when (s) {
     is Screen.Budget -> "budget:${s.id.v}:${s.month}"
     Screen.NewBudget -> "newBudget"
     is Screen.EditBudget -> "editBudget:${s.id.v}"
-    is Screen.Post -> "post:${s.notice.v}"
+    is Screen.Post -> "post:${s.notice.v}:${s.linked.v}"
     is Screen.Refund -> "refund:${s.estorno.v}"
     is Screen.Edit -> "edit:${s.id.v}"
     Screen.NewTransaction -> "new"
+    is Screen.FromPlanned -> "fromPlanned:${s.occurrence.v}"
+    is Screen.EditPlanned -> "editPlanned:${s.occurrence.v}"
     Screen.Dismissed -> "dismissed"
     Screen.Sources -> "sources"
     Screen.Tags -> "tags"
@@ -116,10 +124,12 @@ private fun decode(s: String): Screen {
         "budget" -> Screen.Budget(BudgetId(p[1].toLong()), YearMonth.parse(p[2]))
         "newBudget" -> Screen.NewBudget
         "editBudget" -> Screen.EditBudget(BudgetId(p[1].toLong()))
-        "post" -> Screen.Post(NoticeId(p[1].toLong()))
+        "post" -> Screen.Post(NoticeId(p[1].toLong()), OccurrenceId(p.getOrNull(2)?.toLong() ?: 0))
         "refund" -> Screen.Refund(NoticeId(p[1].toLong()))
         "edit" -> Screen.Edit(TransactionId(p[1].toLong()))
         "new" -> Screen.NewTransaction
+        "fromPlanned" -> Screen.FromPlanned(OccurrenceId(p[1].toLong()))
+        "editPlanned" -> Screen.EditPlanned(OccurrenceId(p[1].toLong()))
         "dismissed" -> Screen.Dismissed
         "sources" -> Screen.Sources
         "tags" -> Screen.Tags
@@ -137,7 +147,7 @@ private val StackSaver = Saver<List<Screen>, ArrayList<String>>(
 
 private fun tabOf(s: Screen): Tab = when (s) {
     Screen.Inbox, is Screen.Post, is Screen.Refund -> Tab.INBOX
-    Screen.Transactions, is Screen.Edit, Screen.NewTransaction -> Tab.TRANSACTIONS
+    Screen.Transactions, is Screen.Edit, Screen.NewTransaction, is Screen.FromPlanned, is Screen.EditPlanned -> Tab.TRANSACTIONS
     Screen.Insights -> Tab.INSIGHTS
     Screen.Settings, Screen.Dismissed, Screen.Sources, Screen.Tags, Screen.StartDays, Screen.Backup, Screen.Cobudget -> Tab.SETTINGS
     Screen.Budgets, is Screen.Budget, Screen.NewBudget, is Screen.EditBudget -> Tab.BUDGETS
@@ -221,6 +231,7 @@ fun App(db: Db, tabRequest: Screen?, onTabOpened: () -> Unit) {
     BackHandler(stack.size > 1 || screen != Screen.Budgets, back)
     // Forms (lançar, editar, novo) take the whole page; everything else keeps the tab bar.
     val tabs = screen !is Screen.Post && screen !is Screen.Refund && screen !is Screen.Edit && screen != Screen.NewTransaction &&
+        screen !is Screen.FromPlanned && screen !is Screen.EditPlanned &&
         screen != Screen.NewBudget && screen !is Screen.EditBudget
 
     Column(Modifier.fillMaxSize().background(Margem.colors.paper).windowInsetsPadding(WindowInsets.statusBars).imePadding()) {
@@ -235,10 +246,12 @@ fun App(db: Db, tabRequest: Screen?, onTabOpened: () -> Unit) {
                 is Screen.Budget -> BudgetDetailScreen(db, screen.id, screen.month, go, { stack = stack.dropLast(1) + Screen.Budget(screen.id, it) }, back)
                 Screen.NewBudget -> NewBudget(db, back)
                 is Screen.EditBudget -> EditBudget(db, screen.id, back, home)
-                is Screen.Post -> PostScreen(db, screen.notice, snack, go, replace, back)
+                is Screen.Post -> PostScreen(db, screen.notice, snack, go, replace, back, screen.linked)
                 is Screen.Refund -> RefundScreen(db, screen.estorno, snack, replace, back)
                 is Screen.Edit -> EditTransaction(db, screen.id, snack, go, back)
                 Screen.NewTransaction -> NewTransaction(db, snack, go, back)
+                is Screen.FromPlanned -> NewTransaction(db, snack, go, back, from = screen.occurrence)
+                is Screen.EditPlanned -> EditPlanned(db, screen.occurrence, snack, go, back)
                 Screen.Dismissed -> Dismissed(db, back)
                 Screen.Tags -> Tags(db, back)
                 Screen.StartDays -> StartDays(db, back)

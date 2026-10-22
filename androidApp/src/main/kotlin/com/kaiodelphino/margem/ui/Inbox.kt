@@ -33,10 +33,12 @@ import androidx.compose.ui.semantics.semantics
 import androidx.compose.ui.unit.dp
 import com.kaiodelphino.margem.Cents
 import com.kaiodelphino.margem.Db
+import com.kaiodelphino.margem.fold
 import com.kaiodelphino.margem.NO_MONTH
 import com.kaiodelphino.margem.NO_TIME
 import com.kaiodelphino.margem.NoticeId
 import com.kaiodelphino.margem.NoticeRow
+import com.kaiodelphino.margem.Planned
 import com.kaiodelphino.margem.NoticeStatus
 import com.kaiodelphino.margem.R
 import com.kaiodelphino.margem.RefundCandidate
@@ -241,7 +243,10 @@ object InboxTags {
 fun Inbox(db: Db, granted: Boolean, snack: SnackHost, go: (Screen) -> Unit) {
     val context = LocalContext.current
     val scope = rememberCoroutineScope()
-    val pending = query(db) { it.pending() }
+    val today = LocalToday.current()
+    val pending = query(db, today) { it.pending(today) }
+    // "Não é" (D60): sets the band aside while the Pauta is open; nothing is written.
+    var notIt by remember { mutableStateOf(setOf<Long>()) }
     // Notices posted since the last visit stay "new" while the person is here: the visit is marked seen
     // on opening (no write on leaving), and the new marks use the previous visit, kept across recreation.
     val openedAt = rememberSaveable { Clock.System.now().toEpochMilliseconds() }
@@ -250,7 +255,6 @@ fun Inbox(db: Db, granted: Boolean, snack: SnackHost, go: (Screen) -> Unit) {
         if (seenBefore < 0) seenBefore = db.settings().pautaSeenAt
         db.markPautaSeen(openedAt)
     }
-    val today = LocalToday.current()
     val zone = TimeZone.currentSystemDefault()
     Column {
         TopBar("Pauta")
@@ -276,11 +280,29 @@ fun Inbox(db: Db, granted: Boolean, snack: SnackHost, go: (Screen) -> Unit) {
                 item(key = "day-$day") { DayHeader(dayTitle(day, today), Modifier.testTag(InboxTags.DAY + day).semantics(mergeDescendants = true) {}) }
                 items(notices, key = { it.id.v }) { row ->
                     val n = row.copy(isNew = row.raw.postedAt > seenBefore)
+                    val p = if (n.id.v in notIt) Planned() else n.planned
+                    val recognized = p.occurrence.v != 0L
                     NoticeCard(
-                        n, onAccept = { go(if (n.parsed.isRefund && !n.looksLikeAd) Screen.Refund(n.id) else Screen.Post(n.id)) },
+                        n,
+                        onAccept = {
+                            when {
+                                // Lançar previsto (P5): no form, the previsto's budget, tags and name with the recado's values.
+                                recognized -> scope.launch {
+                                    val id = db.accept(n.id, formFrom(p, n))
+                                    if (id.v == 0L) snack.show(Snack(InboxTags.GONE_TEXT))
+                                    else snack.show(Snack(launchedText(p, p.budgetName), "Desfazer") { db.deleteTransaction(id) })
+                                }
+                                n.parsed.isRefund && !n.looksLikeAd -> go(Screen.Refund(n.id))
+                                else -> go(Screen.Post(n.id))
+                            }
+                        },
                         onDismiss = { scope.launch { riscar(db, n.id, snack) } },
                         modifier = Modifier.testTag(InboxTags.CARD + n.id.v).semantics(mergeDescendants = true) {},
-                        acceptTag = InboxTags.ACCEPT + n.id.v, dismissTag = InboxTags.DISMISS + n.id.v, newTag = InboxTags.NEW + n.id.v,
+                        acceptTag = (if (recognized) InboxTags.PLANNED_LAUNCH else InboxTags.ACCEPT) + n.id.v,
+                        dismissTag = InboxTags.DISMISS + n.id.v, newTag = InboxTags.NEW + n.id.v,
+                        planned = p, onNotIt = { notIt = notIt + n.id.v },
+                        bandTag = InboxTags.PLANNED_BAND + n.id.v, notItTag = InboxTags.PLANNED_NOT_IT + n.id.v,
+                        onBody = if (recognized) ({ go(Screen.Post(n.id, p.occurrence)) }) else null,
                     )
                 }
             }
@@ -474,7 +496,3 @@ fun dayTitle(day: LocalDate, today: LocalDate): String = when (day) {
     today.minus(DatePeriod(days = 1)) -> "Ontem · ${dateLong(day)}"
     else -> dateLong(day).replaceFirstChar { it.uppercase() }
 }
-
-/** D56: the estorno search ignores case and accents ("estação" finds LOJA ESTACAO): NFD, no combining marks, lowercase. */
-private fun fold(s: String): String =
-    java.text.Normalizer.normalize(s, java.text.Normalizer.Form.NFD).replace(Regex("\\p{M}"), "").lowercase()

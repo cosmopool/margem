@@ -10,6 +10,7 @@ import androidx.compose.foundation.layout.ExperimentalLayoutApi
 import androidx.compose.foundation.layout.FlowRow
 import androidx.compose.foundation.layout.PaddingValues
 import androidx.compose.foundation.layout.Row
+import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.heightIn
@@ -33,29 +34,39 @@ import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.drawBehind
+import androidx.compose.ui.draw.rotate
 import androidx.compose.ui.geometry.Offset
+import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.platform.testTag
 import androidx.compose.ui.semantics.Role
 import androidx.compose.ui.semantics.selected
 import androidx.compose.ui.semantics.semantics
 import androidx.compose.ui.semantics.stateDescription
+import androidx.compose.ui.semantics.testTag
 import androidx.compose.ui.text.SpanStyle
 import androidx.compose.ui.text.buildAnnotatedString
+import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextDecoration
 import androidx.compose.ui.text.withStyle
 import androidx.compose.ui.unit.dp
+import androidx.compose.ui.unit.sp
 import com.kaiodelphino.margem.BudgetId
 import com.kaiodelphino.margem.BudgetOrder
 import com.kaiodelphino.margem.BudgetSummary
 import com.kaiodelphino.margem.Cents
 import com.kaiodelphino.margem.Db
 import com.kaiodelphino.margem.MAX_CAPTION
+import com.kaiodelphino.margem.NO_DATE
+import com.kaiodelphino.margem.NO_MONTH
+import com.kaiodelphino.margem.NO_TIME
 import com.kaiodelphino.margem.NoticeId
 import com.kaiodelphino.margem.NoticeRow
 import com.kaiodelphino.margem.NoticeStatus
-import com.kaiodelphino.margem.NO_MONTH
+import com.kaiodelphino.margem.OccurrenceId
 import com.kaiodelphino.margem.Planned
+import com.kaiodelphino.margem.PlannedId
 import com.kaiodelphino.margem.R
+import com.kaiodelphino.margem.Repeats
 import com.kaiodelphino.margem.Suggestion
 import com.kaiodelphino.margem.TransactionDetail
 import com.kaiodelphino.margem.TransactionForm
@@ -63,19 +74,22 @@ import com.kaiodelphino.margem.TransactionId
 import com.kaiodelphino.margem.TransactionRow
 import com.kaiodelphino.margem.widgets.AliasText
 import com.kaiodelphino.margem.widgets.Amount
+import com.kaiodelphino.margem.widgets.BottomSheet
 import com.kaiodelphino.margem.widgets.Button
 import com.kaiodelphino.margem.widgets.ButtonKind
 import com.kaiodelphino.margem.widgets.ChipState
 import com.kaiodelphino.margem.widgets.CreditLine
 import com.kaiodelphino.margem.widgets.DateTimeDialog
 import com.kaiodelphino.margem.widgets.DayHeader
+import com.kaiodelphino.margem.widgets.DayStamp
 import com.kaiodelphino.margem.widgets.Emenda
 import com.kaiodelphino.margem.widgets.EmptyState
 import com.kaiodelphino.margem.widgets.Field
 import com.kaiodelphino.margem.widgets.Icon
 import com.kaiodelphino.margem.widgets.IconButton
-import com.kaiodelphino.margem.widgets.MargemDialog
+import com.kaiodelphino.margem.widgets.InfoBand
 import com.kaiodelphino.margem.widgets.Margem
+import com.kaiodelphino.margem.widgets.MargemDialog
 import com.kaiodelphino.margem.widgets.MoneyField
 import com.kaiodelphino.margem.widgets.Snack
 import com.kaiodelphino.margem.widgets.SnackHost
@@ -86,6 +100,9 @@ import com.kaiodelphino.margem.widgets.TopBar
 import com.kaiodelphino.margem.widgets.dateLong
 import com.kaiodelphino.margem.widgets.dateShort
 import com.kaiodelphino.margem.widgets.money
+import com.kaiodelphino.margem.widgets.monthLong
+import com.kaiodelphino.margem.widgets.monthShort
+import com.kaiodelphino.margem.widgets.plannedLine
 import com.kaiodelphino.margem.widgets.sans
 import com.kaiodelphino.margem.widgets.serif
 import com.kaiodelphino.margem.widgets.time
@@ -94,7 +111,10 @@ import kotlinx.datetime.DayOfWeek
 import kotlinx.datetime.LocalDate
 import kotlinx.datetime.LocalTime
 import kotlinx.datetime.TimeZone
+import kotlinx.datetime.plusMonth
 import kotlinx.datetime.toLocalDateTime
+import kotlinx.datetime.yearMonth
+import kotlin.math.abs
 import kotlin.time.Clock
 
 /**
@@ -410,12 +430,17 @@ fun Transactions(db: Db, snack: SnackHost, go: (Screen) -> Unit) {
     val today = LocalToday.current()
     val scope = rememberCoroutineScope()
     val rows = query(db, today) { it.transactions(today) }
+    val planned = query(db, today) { it.planned(today) }
+    // P11: always opens collapsed; open while this screen is.
+    var open by rememberSaveable { mutableStateOf(false) }
+    var sheet by rememberSaveable { mutableLongStateOf(0L) }
     Column {
         TopBar("Lançamentos") {
             Button("Novo lançamento", { go(Screen.NewTransaction) }, Modifier.testTag(TransactionTags.NEW), kind = ButtonKind.TEXT, icon = R.drawable.i_mais)
         }
         LazyColumn(Modifier.testTag(TransactionTags.LIST), contentPadding = PaddingValues(start = Margem.space.page, end = Margem.space.page, bottom = 32.dp)) {
             if (rows == null) return@LazyColumn
+            if (!planned.isNullOrEmpty()) item(key = "onTheWay") { OnTheWay(planned, today, open, { open = !open }) { sheet = it.occurrence.v } }
             if (rows.isEmpty()) item {
                 EmptyState(
                     R.drawable.i_lancamento, "Nenhum lançamento ainda.",
@@ -433,6 +458,8 @@ fun Transactions(db: Db, snack: SnackHost, go: (Screen) -> Unit) {
             }
         }
     }
+    // A skipped, launched or deleted occurrence leaves the list, and its sheet with it.
+    planned?.firstOrNull { it.occurrence.v == sheet }?.let { PlannedSheet(db, it, today, go) { sheet = 0L } }
 }
 
 /** Book 10.5 `.lrow`: name, "Lazer · bar, amigos · ‸ emendado · Parcela 1 de 10", the value; refunded: struck, with Desfazer estorno. */
@@ -476,51 +503,249 @@ private fun TransactionLine(t: TransactionRow, onClick: () -> Unit, onUndoRefund
 
 // ---- A caminho and the previsto sheet ----
 
+/** "Todo mês, dia 12" / "Só uma vez, dia 12". */
+private fun repeatsText(p: Planned) = (if (p.repeats == Repeats.MONTHLY) "Todo mês" else "Só uma vez") + ", dia ${p.day}"
+
+/** "5 out" */
+private fun dayMonth(d: LocalDate) = "${d.day} ${monthShort(d.month)}"
+
+/** The snack of a lançado previsto (book 7.3): "Lançado: Internet, em Casa. O próximo é 10 nov." */
+fun launchedText(p: Planned, budgetName: String): String =
+    "Lançado: ${p.name}, em $budgetName." + if (p.next != NO_DATE) " O próximo é ${dayMonth(p.next)}." else ""
+
 /** Book 8.11: the "A caminho" line and, open, its rows. Tags: [TransactionTags.ON_THE_WAY], [TransactionTags.PLANNED_ROW]. */
 @Composable
-private fun OnTheWay(rows: List<Planned>, today: LocalDate, open: Boolean, toggle: () -> Unit, pick: (Planned) -> Unit): Unit = TODO()
+private fun OnTheWay(rows: List<Planned>, today: LocalDate, open: Boolean, toggle: () -> Unit, pick: (Planned) -> Unit) {
+    val c = Margem.colors
+    val inPauta = rows.count { it.noticeInPauta }
+    val late = rows.count { it.late }
+    val notes = listOfNotNull(
+        if (inPauta > 0) "$inPauta com recado na Pauta" else null,
+        if (late > 0) "$late ${if (late == 1) "atrasado" else "atrasados"}" else null,
+    ).joinToString(" · ")
+    Column {
+        Row(
+            Modifier.padding(top = 4.dp, bottom = 2.dp).fillMaxWidth().heightIn(min = 60.dp).testTag(TransactionTags.ON_THE_WAY)
+                .background(c.surfaceSunken, RoundedCornerShape(6.dp)).semantics(mergeDescendants = true) { stateDescription = if (open) "aberto" else "recolhido" }
+                .clickable(role = Role.Button, onClick = toggle).padding(start = 12.dp, end = 4.dp, top = 8.dp, bottom = 8.dp),
+            verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(10.dp),
+        ) {
+            Icon(R.drawable.i_previsto, tint = c.inkSecondary)
+            Column(Modifier.weight(1f)) {
+                Text("A CAMINHO", sans(11f, 600, 14f, 0.12f), color = c.inkTertiary)
+                Text(
+                    "${rows.size} ${if (rows.size == 1) "previsto" else "previstos"} · ${money(Cents(rows.sumOf { it.cents.v }))}",
+                    serif(17, 500, 22, tabular = true),
+                )
+                if (notes.isNotEmpty()) Text(notes, sans(13f, 400, 17f), color = c.inkSecondary)
+            }
+            Box(Modifier.size(40.dp), contentAlignment = Alignment.Center) {
+                Icon(R.drawable.i_avancar, Modifier.rotate(if (open) 90f else 0f), size = 20.dp)
+            }
+        }
+        if (open) {
+            Spacer(Modifier.size(0.dp).semantics { testTag = TransactionTags.ON_THE_WAY + ".open" })
+            for (p in rows.sortedWith(compareByDescending<Planned> { it.late }.thenBy { it.date }.thenBy { it.occurrence.v })) {
+                val sub = when {
+                    p.late -> "esperando desde ${dayMonth(p.date)}"
+                    p.noticeInPauta -> "recado na Pauta"
+                    else -> listOf(plannedLine(p), if (p.repeats == Repeats.MONTHLY) "todo mês" else "só uma vez").filter(String::isNotEmpty).joinToString(" · ")
+                }
+                Row(
+                    Modifier.fillMaxWidth().testTag(TransactionTags.PLANNED_ROW + p.occurrence.v).semantics(mergeDescendants = true) {}
+                        .clickable { pick(p) }
+                        .drawBehind { drawLine(c.rule, Offset(0f, size.height - 0.5f), Offset(size.width, size.height - 0.5f), 1.dp.toPx()) }
+                        .padding(vertical = 9.dp),
+                    verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(12.dp),
+                ) {
+                    DayStamp(p.date, p.late)
+                    Column(Modifier.weight(1f)) {
+                        Text(p.name, serif(17, 500, 22), maxLines = 2)
+                        Text(
+                            sub, sans(13f, if (p.noticeInPauta && !p.late) 600 else 400, 17f),
+                            color = when {
+                                p.late -> c.inkSecondary
+                                p.noticeInPauta -> c.info
+                                else -> c.inkTertiary
+                            },
+                            maxLines = 1,
+                        )
+                    }
+                    Amount(p.cents, size = 17, color = c.inkSecondary)
+                }
+            }
+        }
+    }
+}
+
+/** A line of the previsto sheet: icon, label and a small line under it. */
+@Composable
+private fun SheetAction(icon: Int, label: String, sub: String, tag: String, color: Color = Color.Unspecified, onClick: () -> Unit) {
+    val c = Margem.colors
+    val ink = if (color == Color.Unspecified) c.ink else color
+    Row(
+        Modifier.fillMaxWidth().heightIn(min = 52.dp).testTag(tag).semantics(mergeDescendants = true) {}.clickable(role = Role.Button, onClick = onClick)
+            .drawBehind { drawLine(c.rule, Offset(0f, size.height - 0.5f), Offset(size.width, size.height - 0.5f), 1.dp.toPx()) },
+        verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(14.dp),
+    ) {
+        Icon(icon, tint = if (color == Color.Unspecified) c.inkSecondary else color)
+        Column {
+            Text(label, sans(15.5f, 500, 20f), color = ink)
+            if (sub.isNotEmpty()) Text(sub, sans(13f, 400, 17f), color = c.inkTertiary)
+        }
+    }
+}
 
 /** Book 8.11: the previsto sheet with its actions. Tags: [TransactionTags.PLANNED_SHEET]. */
 @Composable
-private fun PlannedSheet(db: Db, p: Planned, today: LocalDate, go: (Screen) -> Unit, close: () -> Unit): Unit = TODO()
+private fun PlannedSheet(db: Db, p: Planned, today: LocalDate, go: (Screen) -> Unit, close: () -> Unit) {
+    val c = Margem.colors
+    val scope = rememberCoroutineScope()
+    var ask by rememberSaveable { mutableStateOf(false) }
+    BottomSheet(close, Modifier.testTag(TransactionTags.PLANNED_SHEET)) {
+        Row(verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(12.dp)) {
+            DayStamp(p.date, p.late)
+            Column(Modifier.weight(1f)) {
+                Text(p.name, serif(20, 500, 26), maxLines = 2)
+                Text(
+                    listOf(plannedLine(p), repeatsText(p).replaceFirstChar { it.lowercase() }).filter(String::isNotEmpty).joinToString(" · "),
+                    sans(13f, 400, 17f), color = c.inkTertiary,
+                )
+            }
+            Amount(p.cents, size = 17, color = c.inkSecondary)
+        }
+        val about = listOfNotNull(
+            if (p.late) "Esperando o recado desde ${p.date.day} de ${monthLong(p.date.month)}." else null,
+            if (p.linked) "Ligado a ${p.linkText}, do ${p.linkSource}." else null,
+        ).joinToString(" ")
+        if (about.isNotEmpty()) Text(about, sans(14f, 400, 20f), Modifier.padding(top = 2.dp, bottom = 8.dp), c.inkSecondary)
+        // R6: lançar sem recado only from the occurrence's day on.
+        if (p.date <= today) SheetAction(
+            R.drawable.i_lancamento, "Lançar sem recado", "vira um lançamento de ${dayMonth(p.date)}, sem ligação", TransactionTags.PLANNED_LAUNCH_NO_NOTICE,
+        ) {
+            close()
+            go(Screen.FromPlanned(p.occurrence))
+        }
+        SheetAction(
+            R.drawable.i_avancar, "Pular este mês",
+            if (p.next != NO_DATE) "some sem lançar; volta em ${p.next.day} de ${monthLong(p.next.month)}" else "some sem lançar",
+            TransactionTags.PLANNED_SKIP,
+        ) { scope.launch { db.skipOccurrence(p.occurrence); close() } }
+        SheetAction(R.drawable.i_emenda, "Editar previsto", "", TransactionTags.PLANNED_EDIT) {
+            close()
+            go(Screen.EditPlanned(p.occurrence))
+        }
+        SheetAction(R.drawable.i_fechar, "Apagar previsto", "este e os próximos meses", TransactionTags.PLANNED_DELETE, c.overrun) { ask = true }
+    }
+    if (ask) MargemDialog(
+        "Apagar o previsto ${p.name}?", "Este e os próximos meses somem. O que já foi lançado continua.", "Apagar", {
+            ask = false
+            scope.launch { db.deletePlanned(p.planned); close() }
+        }, { ask = false }, tag = TransactionTags.PLANNED_DELETE_DIALOG,
+    )
+}
 
 /** Book 8.11: "Qual previsto é este recado?". Tags: [TransactionTags.LINK_SHEET]. */
 @Composable
-private fun LinkSheet(rows: List<Planned>, notice: NoticeRow, date: LocalDate, total: Cents, link: (Planned) -> Unit, close: () -> Unit): Unit = TODO()
+private fun LinkSheet(rows: List<Planned>, notice: NoticeRow, date: LocalDate, total: Cents, link: (Planned) -> Unit, close: () -> Unit) {
+    val c = Margem.colors
+    val sorted = rows.sortedWith(compareBy<Planned> { abs(it.date.toEpochDays() - date.toEpochDays()) }.thenBy { abs(it.cents.v - total.v) })
+    var chosen by rememberSaveable { mutableLongStateOf(0L) }
+    BottomSheet(close, Modifier.testTag(TransactionTags.LINK_SHEET)) {
+        val isPost = notice.id.v != 0L
+        Text(if (isPost) "Qual previsto é este recado?" else "Qual previsto é este lançamento?", serif(22, 500, 28))
+        if (isPost && notice.parsed.merchant.isNotEmpty()) Text(
+            "Só desta vez: nos próximos meses, o recado do ${notice.parsed.merchant} chega ligado.", sans(14f, 400, 20f),
+            Modifier.padding(top = 4.dp, bottom = 6.dp), c.inkSecondary,
+        )
+        sorted.forEachIndexed { i, p ->
+            val on = p.occurrence.v == chosen
+            Row(
+                Modifier.fillMaxWidth().testTag(TransactionTags.LINK_CANDIDATE + p.occurrence.v).semantics(mergeDescendants = true) { selected = on }
+                    .clickable(role = Role.RadioButton) { chosen = p.occurrence.v }.background(if (on) c.surfaceSunken else Color.Transparent)
+                    .padding(horizontal = 4.dp, vertical = 10.dp),
+                verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(12.dp),
+            ) {
+                Box(
+                    Modifier.size(20.dp).background(if (on) c.ink else Color.Transparent, RoundedCornerShape(3.dp))
+                        .border(1.dp, if (on) c.ink else c.ruleStrong, RoundedCornerShape(3.dp)),
+                    contentAlignment = Alignment.Center,
+                ) { if (on) Icon(R.drawable.i_lancar, tint = c.paper, size = 16.dp) }
+                Column(Modifier.weight(1f)) {
+                    Text(p.name, serif(17, 500, 22), maxLines = 1)
+                    Text(
+                        buildAnnotatedString {
+                            append(listOfNotNull("dia ${p.day}", p.budgetName, if (p.late) "atrasado" else null).joinToString(" · "))
+                            if (p.linked) append(" · ligado a ${p.linkText}")
+                            if (i == 0) {
+                                append(" · ")
+                                withStyle(SpanStyle(color = c.info, fontWeight = FontWeight.SemiBold, letterSpacing = 1.sp)) { append("MAIS PROVÁVEL") }
+                            }
+                        },
+                        sans(13f, 400, 17f), color = c.inkTertiary,
+                    )
+                }
+                Amount(p.cents, size = 17)
+            }
+        }
+        val pick = sorted.firstOrNull { it.occurrence.v == chosen }
+        Button(
+            if (pick != null) "Ligar à ${pick.name}" else "Ligar", { pick?.let(link) },
+            Modifier.padding(top = 12.dp).fillMaxWidth().testTag(TransactionTags.LINK_SUBMIT), icon = R.drawable.i_ligar, enabled = pick != null,
+        )
+    }
+}
 
 /**
  * D62: the one form of a previsto with a recado (Lançar previsto, Lançar já ligado, "É um previsto? Ligar")
  * or without one ([notice] zero: "Lançar sem recado", R6b): budget and tags of the previsto, caption = its
  * name, total / bank text / date / time of the recado (else the occurrence's value and date at 00:00), occurrence.
  */
-fun formFrom(planned: Planned, notice: NoticeRow): TransactionForm = TODO()
+fun formFrom(planned: Planned, notice: NoticeRow): TransactionForm =
+    if (notice.id.v == 0L) TransactionForm(
+        planned.budget, planned.tags, planned.cents, 1, "", planned.date, NO_TIME, caption = planned.name, occurrence = planned.occurrence,
+    ) else TransactionForm(
+        planned.budget, planned.tags, notice.parsed.cents, 1, notice.parsed.merchant, notice.parsed.date, notice.parsed.time,
+        caption = planned.name, occurrence = planned.occurrence,
+    )
 
 /** D55: the caption input takes at most [MAX_CAPTION] UTF-16 units and never leaves a lone high surrogate at the cut. */
 private fun cutCaption(s: String): String =
     if (s.length <= MAX_CAPTION) s
     else s.take(MAX_CAPTION).let { if (it.last().isHighSurrogate()) it.dropLast(1) else it }
 
-/** Lançar recado (book 10.3) for the pending notice [notice]. [replace] swaps this screen (Registrar estorno). */
+/**
+ * Lançar recado (book 10.3) for the pending notice [notice]. [replace] swaps this screen (Registrar estorno).
+ * [linked] ≠ 0 opens it already linked to that open occurrence (D62).
+ */
 @Composable
-fun PostScreen(db: Db, notice: NoticeId, snack: SnackHost, go: (Screen) -> Unit, replace: (Screen) -> Unit, back: () -> Unit) =
-    TxForm(db, notice, TransactionId(0), snack, go, replace, back)
+fun PostScreen(
+    db: Db, notice: NoticeId, snack: SnackHost, go: (Screen) -> Unit, replace: (Screen) -> Unit, back: () -> Unit, linked: OccurrenceId = OccurrenceId(0),
+) = TxForm(db, notice, TransactionId(0), snack, go, replace, back, from = linked)
 
 /** Editar lançamento: the same form, with Apagar and Desfazer estorno. */
 @Composable
 fun EditTransaction(db: Db, id: TransactionId, snack: SnackHost, go: (Screen) -> Unit, back: () -> Unit) =
     TxForm(db, NoticeId(0), id, snack, go, {}, back)
 
-/** Novo lançamento: the manual form. */
+/** Novo lançamento: the manual form; [from] ≠ 0 fills it from that occurrence (Lançar sem recado, R6). */
 @Composable
-fun NewTransaction(db: Db, snack: SnackHost, go: (Screen) -> Unit, back: () -> Unit) =
-    TxForm(db, NoticeId(0), TransactionId(0), snack, go, {}, back)
+fun NewTransaction(db: Db, snack: SnackHost, go: (Screen) -> Unit, back: () -> Unit, from: OccurrenceId = OccurrenceId(0)) =
+    TxForm(db, NoticeId(0), TransactionId(0), snack, go, {}, back, from = from)
+
+/** Editar previsto (D64): the manual form of the previsto of [occurrence]. */
+@Composable
+fun EditPlanned(db: Db, occurrence: OccurrenceId, snack: SnackHost, go: (Screen) -> Unit, back: () -> Unit) =
+    TxForm(db, NoticeId(0), TransactionId(0), snack, go, {}, back, editPlanned = occurrence)
+
+private const val GONE_PLANNED = "Este previsto não existe mais."
 
 private const val GONE_TX = "Este lançamento não existe mais."
 
 /** What the form reads once and again on every write: the notice or transaction, budgets, tags, week start. */
 private class FormData(
     val notice: NoticeRow, val detail: TransactionDetail, val budgets: List<BudgetSummary>, val tags: List<String>,
-    val weekStart: DayOfWeek, val suggestion: Suggestion,
+    val weekStart: DayOfWeek, val suggestion: Suggestion, val planned: List<Planned>,
 )
 
 /** A chip's state in the form: S = suggested (counts, dashed), C = confirmed (counts), O = off. Saved as "S:name". */
@@ -543,12 +768,15 @@ private fun missingText(items: List<String>): String = when (items.size) {
 @Composable
 private fun TxForm(
     db: Db, notice: NoticeId, edit: TransactionId, snack: SnackHost, go: (Screen) -> Unit, replace: (Screen) -> Unit, back: () -> Unit,
+    from: OccurrenceId = OccurrenceId(0), editPlanned: OccurrenceId = OccurrenceId(0),
 ) {
     val c = Margem.colors
     val today = LocalToday.current()
     val scope = rememberCoroutineScope()
     val isPost = notice.v != 0L
     val isEdit = edit.v != 0L
+    val isEditPlanned = editPlanned.v != 0L
+    val isManual = !isPost && !isEdit
     val data = query(db, notice, edit, today) {
         val month = it.monthOf(today)
         it.ensureMonths(month)
@@ -556,7 +784,7 @@ private fun TxForm(
         val d = if (isEdit) it.transaction(edit) else TransactionDetail()
         FormData(
             n, d, it.budgetsOverview(month, today, BudgetOrder.MANUAL), it.tags().map { t -> t.name }, it.settings().weekStart,
-            if (isPost) it.suggestion(n.parsed.merchant) else Suggestion(),
+            if (isPost) it.suggestion(n.parsed.merchant) else Suggestion(), if (isEdit) emptyList() else it.planned(today),
         )
     }
     var loaded by rememberSaveable { mutableStateOf(false) }
@@ -576,6 +804,35 @@ private fun TxForm(
     var picking by rememberSaveable { mutableStateOf(false) }
     var askDelete by rememberSaveable { mutableStateOf(false) }
     var busy by remember { mutableStateOf(false) }
+    // Previsto (D62, D64): the linked occurrence, Repete, and what Desligar puts back.
+    var linked by rememberSaveable { mutableLongStateOf(0L) }
+    var monthly by rememberSaveable { mutableStateOf(false) }
+    var linking by rememberSaveable { mutableStateOf(false) }
+    var preBudget by rememberSaveable { mutableLongStateOf(0L) }
+    var preChips by rememberSaveable { mutableStateOf(ArrayList<String>()) }
+    var preCaption by rememberSaveable { mutableStateOf("") }
+    var preCaptionOpen by rememberSaveable { mutableStateOf(false) }
+
+    fun link(p: Planned) {
+        preBudget = budget
+        preChips = chips
+        preCaption = caption
+        preCaptionOpen = captionOpen
+        if (data?.budgets?.any { it.id == p.budget } == true) budget = p.budget.v
+        chips = chipList(p.tags.associateWith { 'C' })
+        caption = cutCaption(p.name)
+        captionOpen = true
+        linked = p.occurrence.v
+        linking = false
+    }
+
+    fun unlink() {
+        budget = preBudget
+        chips = preChips
+        caption = preCaption
+        captionOpen = preCaptionOpen
+        linked = 0L
+    }
 
     LaunchedEffect(data) {
         if (data == null || loaded) return@LaunchedEffect
@@ -615,10 +872,33 @@ private fun TxForm(
                 installments = r.installments
                 chips = chipList(r.tags.associateWith { 'C' })
             }
+            isEditPlanned -> {
+                val p = data.planned.firstOrNull { it.occurrence == editPlanned }
+                if (p == null) {
+                    snack.show(Snack(GONE_PLANNED))
+                    back()
+                    return@LaunchedEffect
+                }
+                total = p.cents.v
+                merchant = p.name
+                date = p.date.toString()
+                budget = p.budget.v
+                chips = chipList(p.tags.associateWith { 'C' })
+                monthly = p.repeats == Repeats.MONTHLY
+            }
             else -> {
                 val now = Clock.System.now().toLocalDateTime(TimeZone.currentSystemDefault()).time
                 hour = time(LocalTime(now.hour, now.minute))
             }
+        }
+        // Opened from a previsto: the card's body (linked Lançar) or Lançar sem recado (the occurrence's value and date).
+        data.planned.firstOrNull { it.occurrence == from && from.v != 0L }?.let { p ->
+            if (!isPost) {
+                total = p.cents.v
+                date = p.date.toString()
+                hour = time(NO_TIME)
+            }
+            link(p)
         }
         loaded = true
     }
@@ -641,7 +921,15 @@ private fun TxForm(
         if (selectedTags.isEmpty()) add("um marcador")
     }
 
-    fun form() = TransactionForm(BudgetId(budget), selectedTags, Cents(total), installments, merchant, day, at, alias, caption)
+    val linkedPlanned = data?.planned?.firstOrNull { it.occurrence.v == linked }
+    // Data à frente (spec §7.3): only a new manual one becomes a previsto.
+    val ahead = isManual && !isEditPlanned && day > today
+    val plannedId = if (isEditPlanned) data?.planned?.firstOrNull { it.occurrence == editPlanned }?.planned ?: PlannedId(0) else PlannedId(0)
+
+    fun form() = TransactionForm(
+        BudgetId(budget), selectedTags, Cents(total), installments, merchant, day, at, alias, caption,
+        occurrence = OccurrenceId(linked), repeats = if (monthly && linked == 0L) Repeats.MONTHLY else Repeats.ONCE, planned = plannedId,
+    )
 
     fun submit() {
         if (busy || missing.isNotEmpty()) return
@@ -649,12 +937,24 @@ private fun TxForm(
         scope.launch {
             val f = form()
             val margin = db.previewAccept(f.budget, f.date, f.total, f.installments, today, edit).after
+            val p = linkedPlanned
             when {
                 isEdit -> {
                     if (!db.edit(edit, f)) snack.show(Snack(GONE_TX))
                 }
+                isEditPlanned -> {
+                    if (db.addManual(f, today).planned.v == 0L) snack.show(Snack(GONE_PLANNED))
+                }
+                ahead -> {
+                    if (db.addManual(f, today).planned.v == 0L) snack.show(Snack(GONE_TX))
+                }
+                p != null -> {
+                    val id = if (isPost) db.accept(notice, f) else db.addManual(f, today).transaction
+                    if (id.v == 0L) snack.show(Snack(InboxTags.GONE_TEXT))
+                    else snack.show(Snack(launchedText(p, budgetName), "Desfazer") { db.deleteTransaction(id) })
+                }
                 else -> {
-                    val id = if (isPost) db.accept(notice, f) else db.addManual(f).transaction
+                    val id = if (isPost) db.accept(notice, f) else db.addManual(f, today).transaction
                     if (id.v == 0L) snack.show(Snack(InboxTags.GONE_TEXT))
                     else snack.show(Snack("Lançado em $budgetName. Margem: ${marginText(margin)}.", "Desfazer") { db.deleteTransaction(id) })
                 }
@@ -679,12 +979,33 @@ private fun TxForm(
 
     Column(Modifier.fillMaxSize()) {
         TopBar(
-            if (isPost) "Lançar recado" else if (isEdit) "Editar lançamento" else "Novo lançamento",
+            when {
+                isPost -> "Lançar recado"
+                isEdit -> "Editar lançamento"
+                isEditPlanned -> "Editar previsto"
+                else -> "Novo lançamento"
+            },
             Modifier.testTag(TransactionTags.FORM_TITLE).semantics(mergeDescendants = true) {}, onBack = back, close = true,
         )
         if (data == null || !loaded) return@Column
         Column(Modifier.weight(1f).verticalScroll(rememberScrollState()).padding(start = Margem.space.page, end = Margem.space.page, bottom = 24.dp)) {
             if (source != null) NoticeQuote(source, Modifier.testTag(TransactionTags.FORM_NOTICE).semantics(mergeDescendants = true) {})
+
+            @Composable
+            fun LinkLine() {
+                if (linkedPlanned != null) InfoBand(
+                    R.drawable.i_ligar, "Ligado à ${linkedPlanned.name}", "${repeatsText(linkedPlanned)}. Verba, marcadores e nome vieram do previsto.",
+                    Modifier.padding(top = 10.dp).testTag(TransactionTags.FORM_LINKED), "Desligar", ::unlink, TransactionTags.FORM_UNLINK,
+                ) else if (data.planned.isNotEmpty()) Row(
+                    Modifier.fillMaxWidth().heightIn(min = 44.dp).testTag(TransactionTags.FORM_LINK_OPEN).semantics(mergeDescendants = true) {}
+                        .clickable(role = Role.Button) { linking = true },
+                    verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(3.dp),
+                ) {
+                    Icon(R.drawable.i_ligar, tint = c.info, size = 18.dp)
+                    Text("É um previsto? Ligar", sans(14.5f, 600, 20f), color = c.info)
+                }
+            }
+            if (isPost) LinkLine()
             MoneyField(Cents(total), { total = it.v }, "Valor total", size = 40, tag = TransactionTags.FORM_TOTAL)
             if (parsed != null && Cents(total) != parsed.cents) Emenda(parsed.cents, { total = parsed.cents.v }, TransactionTags.FORM_TOTAL_EMENDA)
 
@@ -705,6 +1026,7 @@ private fun TxForm(
                 }, TransactionTags.FORM_BANK_EMENDA)
             } else {
                 Field(merchant, { merchant = it }, "Estabelecimento", placeholder = "Feira, por exemplo", tag = TransactionTags.FORM_NAME)
+                if (!isEditPlanned) LinkLine()
             }
 
             // Legenda (spec §2.12, D57): behind the link while folded, the field while open or set.
@@ -762,6 +1084,23 @@ private fun TxForm(
                 date = parsed.date.toString()
                 hour = time(parsed.time)
             }, TransactionTags.FORM_DATE_EMENDA)
+            if (ahead) InfoBand(
+                R.drawable.i_previsto, "", "Data à frente: vira previsto. Fica em Lançamentos esperando o recado, sem contar na verba.",
+                Modifier.padding(top = 8.dp).testTag(TransactionTags.FORM_FUTURE),
+            )
+
+            // Repete (spec §2.13, P4, P4b): always there, but for a linked form (the previsto's own repetition).
+            if (linked == 0L) {
+                Text("REPETE", sans(11f, 600, 14f, 0.12f), Modifier.padding(top = 18.dp), c.inkTertiary)
+                FlowRow(Modifier.padding(top = 6.dp).testTag(TransactionTags.FORM_REPEATS), horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+                    BudgetOption("Só uma vez", !monthly, Modifier.testTag(TransactionTags.FORM_REPEATS_ONCE)) { monthly = false }
+                    BudgetOption("Todo mês, dia ${day.day}", monthly, Modifier.testTag(TransactionTags.FORM_REPEATS_MONTHLY)) { monthly = true }
+                }
+                if (isPost && monthly && merchant.isNotBlank()) Text(
+                    "Em ${monthLong(day.yearMonth.plusMonth().month)}, o recado do ${merchant.trim()} chega ligado.", sans(13.5f, 400, 18f),
+                    Modifier.padding(top = 6.dp).testTag(TransactionTags.FORM_REPEATS_HINT), c.inkTertiary,
+                )
+            }
 
             Text("VERBA", sans(11f, 600, 14f, 0.12f), Modifier.padding(top = 18.dp), c.inkTertiary)
             if (data.budgets.isEmpty()) Column(Modifier.testTag(TransactionTags.BUDGETS_EMPTY).padding(top = 6.dp)) {
@@ -804,7 +1143,7 @@ private fun TxForm(
                 Button("Adicionar", ::addTag, Modifier.testTag(TransactionTags.TAG_ADD), kind = ButtonKind.TEXT)
             }
 
-            if (preview != null && preview.month != NO_MONTH) Text(
+            if (preview != null && preview.month != NO_MONTH && !ahead && !isEditPlanned) Text(
                 "$budgetName: margem ${marginText(preview.before)} → ${marginText(preview.after)}", sans(15f, 500, 20f, tabular = true),
                 Modifier.padding(top = 18.dp).testTag(TransactionTags.FORM_PREVIEW), if (preview.after.v < 0) c.overrun else c.ink,
             )
@@ -841,15 +1180,21 @@ private fun TxForm(
                 }
             }, Modifier.weight(1f).testTag(TransactionTags.FORM_DISMISS), kind = ButtonKind.DISMISS, icon = R.drawable.i_riscar)
             Button(
-                if (isEdit) "Salvar" else "Lançar ${money(Cents(total))}", ::submit,
-                Modifier.weight(1.4f).testTag(TransactionTags.FORM_SUBMIT), icon = if (isEdit) 0 else R.drawable.i_lancar, enabled = missing.isEmpty(),
+                when {
+                    isEdit || isEditPlanned -> "Salvar"
+                    ahead -> "Salvar previsto"
+                    else -> "Lançar ${money(Cents(total))}"
+                },
+                ::submit, Modifier.weight(1.4f).testTag(TransactionTags.FORM_SUBMIT),
+                icon = if (isEdit || isEditPlanned || ahead) 0 else R.drawable.i_lancar, enabled = missing.isEmpty(),
             )
         }
     }
     if (picking && data != null) DateTimeDialog(day, at, today, data.weekStart, { d, t ->
         date = d.toString()
         hour = time(t)
-    }, { picking = false })
+    }, { picking = false }, future = isManual)
+    if (linking && data != null) LinkSheet(data.planned, data.notice, day, Cents(total), ::link) { linking = false }
     if (askDelete && data != null) {
         val r = data.detail.row
         val text = when {

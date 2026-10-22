@@ -20,10 +20,13 @@ import kotlinx.datetime.LocalTime
 import kotlinx.datetime.TimeZone
 import kotlinx.datetime.YearMonth
 import kotlinx.datetime.isoDayNumber
+import kotlinx.datetime.onDay
 import kotlinx.datetime.plusMonth
+import kotlinx.datetime.yearMonth
 import kotlinx.io.buffered
 import kotlinx.io.files.Path
 import kotlinx.io.files.SystemFileSystem
+import kotlin.math.abs
 
 private const val MAX_INSTALLMENTS = 400
 
@@ -310,8 +313,12 @@ class Db(
      * recognized and `late` is false.
      */
     suspend fun pending(today: LocalDate = NO_DATE): List<NoticeRow> {
-        if (today != NO_DATE) TODO()
-        return read { c -> notices(c, "WHERE status = 0 ORDER BY posted_at DESC, id DESC") }
+        if (today != NO_DATE) write(bump = false) { c -> fillPlanned(c, today) }
+        return read { c ->
+            val rows = notices(c, "WHERE status = 0 ORDER BY posted_at DESC, id DESC")
+            val found = recognize(c, rows, plannedRows(c, today, "WHERE p.link_key != ''"))
+            rows.map { n -> found[n.id.v]?.let { n.copy(planned = it.copy(noticeInPauta = true)) } ?: n }
+        }
     }
 
     suspend fun pendingCount(): Int = read { c -> c.long("SELECT COUNT(*) FROM ($NOTICES) WHERE status = 0").toInt() }
@@ -334,10 +341,10 @@ class Db(
         c.changes() > 0
     }
 
-    /** Budget and tags of the latest transaction whose merchant has the same key (spacing and case ignored). */
+    /** Budget and tags of the latest transaction whose merchant has the same key ([MerchantKey]: spacing, case and accents ignored). */
     suspend fun suggestion(merchant: String): Suggestion = read { c ->
-        val key = merchantKey(merchant)
-        if (key.isEmpty()) return@read Suggestion()
+        val key = MerchantKey.of(merchant)
+        if (key.v.isEmpty()) return@read Suggestion()
         val last = c.query(
             "SELECT id, budget_id FROM transactions WHERE merchant_key = ? ORDER BY date DESC, time DESC, id DESC LIMIT 1", key,
         ) { it.getLong(0) to it.getLong(1) }.firstOrNull() ?: return@read Suggestion()
@@ -368,7 +375,7 @@ class Db(
      */
     suspend fun accept(notice: NoticeId, form: TransactionForm): TransactionId = write { c ->
         if (c.long("SELECT COUNT(*) FROM ($NOTICES) WHERE id = ? AND status = 0", notice.v) == 0L) return@write TransactionId(0)
-        TransactionId(saveTransaction(c, 0, notice.v, form))
+        TransactionId(saveTransaction(c, 0, notice.v, form, NO_DATE).transaction.v)
     }
 
     /**
@@ -384,10 +391,7 @@ class Db(
      *   occurrence without writing a link (R6b); with MONTHLY also the new previsto (first occurrence next
      *   month), Saved(transaction, planned).
      */
-    suspend fun addManual(form: TransactionForm, today: LocalDate = NO_DATE): Saved = write { c ->
-        if (form.planned.v != 0L || (today != NO_DATE && form.date > today)) TODO()
-        Saved(TransactionId(saveTransaction(c, 0, 0, form)))
-    }
+    suspend fun addManual(form: TransactionForm, today: LocalDate = NO_DATE): Saved = write { c -> saveTransaction(c, 0, 0, form, today) }
 
     /**
      * Replaces every field, installment and tag of a transaction; same rules as [accept]. corrected
@@ -400,7 +404,7 @@ class Db(
     suspend fun edit(id: TransactionId, form: TransactionForm): Boolean = write { c ->
         val notice = c.query("SELECT notice_id FROM transactions WHERE id = ?", id.v) { it.getLong(0) }.firstOrNull()
             ?: return@write false
-        saveTransaction(c, id.v, notice, form) != 0L
+        saveTransaction(c, id.v, notice, form.copy(planned = PlannedId(0)), NO_DATE) != Saved()
     }
 
     /**
@@ -532,10 +536,10 @@ class Db(
     suspend fun refundCandidates(estorno: NoticeId): List<RefundCandidate> = read { c ->
         val e = notice(c, estorno.v)
         if (e.id.v == 0L) return@read emptyList()
-        val key = merchantKey(e.parsed.merchant)
+        val key = MerchantKey.of(e.parsed.merchant)
         fun likely(pkg: String, cents: Long, merchant: String, postedAt: Long) =
             e.parsed.cents.v > 0 && pkg == e.raw.packageName && cents == e.parsed.cents.v &&
-                (key.isEmpty() || merchantKey(merchant) == key) && postedAt <= e.raw.postedAt
+                (key.v.isEmpty() || MerchantKey.of(merchant) == key) && postedAt <= e.raw.postedAt
 
         class Ranked(val candidate: RefundCandidate, val time: LocalTime)
         val ranked = ArrayList<Ranked>()
@@ -640,6 +644,7 @@ class Db(
     /** Deletes the budget, its transactions (notices back to the Pauta), limits, step edits and previstos (D59). */
     suspend fun deleteBudget(id: BudgetId): Unit = write { c ->
         deleteTransactions(c, "budget_id = ?", id.v)
+        deletePlanned(c, "budget_id = ?", id.v)
         c.exec("DELETE FROM budget_months WHERE budget_id = ?", id.v)
         c.exec("DELETE FROM week_steps WHERE budget_id = ?", id.v)
         c.exec("DELETE FROM budgets WHERE id = ?", id.v)
@@ -819,6 +824,8 @@ class Db(
         if (from == into || c.long("SELECT COUNT(*) FROM tags WHERE id IN (?, ?)", from.v, into.v) != 2L) return@write false
         c.exec("INSERT OR IGNORE INTO transaction_tags(transaction_id, tag_id) SELECT transaction_id, ? FROM transaction_tags WHERE tag_id = ?", into.v, from.v)
         c.exec("DELETE FROM transaction_tags WHERE tag_id = ?", from.v)
+        c.exec("INSERT OR IGNORE INTO planned_tags(planned_id, tag_id) SELECT planned_id, ? FROM planned_tags WHERE tag_id = ?", into.v, from.v)
+        c.exec("DELETE FROM planned_tags WHERE tag_id = ?", from.v)
         c.exec("DELETE FROM tags WHERE id = ?", from.v)
         true
     }
@@ -831,6 +838,8 @@ class Db(
         c.exec("DELETE FROM transaction_tags WHERE tag_id = ?", id.v)
         c.exec("DELETE FROM tags WHERE id = ?", id.v)
         deleteTransactions(c, "id NOT IN (SELECT transaction_id FROM transaction_tags)")
+        c.exec("DELETE FROM planned_tags WHERE tag_id = ?", id.v)
+        deletePlanned(c, "id NOT IN (SELECT planned_id FROM planned_tags)")
     }
 
     // ---- Previstos (spec §2.13, D59–D64) ----
@@ -842,23 +851,34 @@ class Db(
      * without bumping [version]: a ONCE previsto never gets a second one, a month that has its row (open,
      * closed or skipped) never gets another. Previstos never count in spent, pace, Leitura or widgets.
      */
-    suspend fun planned(today: LocalDate): List<Planned> = TODO()
+    suspend fun planned(today: LocalDate): List<Planned> {
+        write(bump = false) { c -> fillPlanned(c, today) }
+        return read { c ->
+            val rows = plannedRows(c, today, "")
+            val pending = notices(c, "WHERE status = 0")
+            val inPauta = recognize(c, pending, rows.filter { it.linked }).values.map { it.occurrence }.toSet()
+            rows.map { if (it.occurrence in inPauta) it.copy(noticeInPauta = true) else it }
+        }
+    }
 
     /** Pular este mês (P10): the open occurrence won't come back; the next month's still does. False when not open. */
-    suspend fun skipOccurrence(id: OccurrenceId): Boolean = TODO()
+    suspend fun skipOccurrence(id: OccurrenceId): Boolean = write { c ->
+        c.exec("UPDATE planned_dates SET skipped = 1 WHERE id = ? AND skipped = 0 AND id NOT IN (SELECT occurrence_id FROM transactions)", id.v)
+        c.changes() > 0
+    }
 
     /**
      * Apagar previsto: the rule, its tags and every occurrence; its lançamentos stay and keep counting, with
      * no origin (occurrence 0). Unknown: nothing changes.
      */
-    suspend fun deletePlanned(id: PlannedId): Unit = TODO()
+    suspend fun deletePlanned(id: PlannedId): Unit = write { c -> deletePlanned(c, "id = ?", id.v) }
 
     // ---- Aliases ----
 
-    /** Names the merchant (key: spacing and case ignored) everywhere; a blank alias removes it. Blank merchant: ignored. */
+    /** Names the merchant (key: [MerchantKey], spacing, case and accents ignored) everywhere; a blank alias removes it. Blank merchant: ignored. */
     suspend fun setAlias(merchant: String, alias: String) {
-        val key = merchantKey(merchant)
-        if (key.isEmpty()) return
+        val key = MerchantKey.of(merchant)
+        if (key.v.isEmpty()) return
         write { c -> saveAlias(c, key, alias) }
     }
 
@@ -890,7 +910,7 @@ class Db(
     }
 
     /**
-     * Same, by merchant (spec §7.5): merchants with the same alias (ignoring ASCII case) are one row,
+     * Same, by merchant (spec §7.5): merchants with the same alias (ignoring case and accents: the alias key, D61) are one row,
      * named by the alias; merchants without one are grouped by key and named by the bank text.
      */
     suspend fun merchantRanking(from: LocalDate, to: LocalDate): List<RankRow> = read { c ->
@@ -898,7 +918,7 @@ class Db(
             "SELECT COALESCE(MAX(a.alias), MAX(t.merchant)), SUM(i.cents), COUNT(DISTINCT t.id) FROM installments i " +
                 "JOIN transactions t ON t.id = i.transaction_id LEFT JOIN merchant_aliases a ON a.merchant_key = t.merchant_key " +
                 "WHERE i.date BETWEEN ? AND ? AND $NOT_REFUNDED " +
-                "GROUP BY CASE WHEN a.alias IS NULL THEN 'k' || t.merchant_key ELSE 'a' || LOWER(a.alias) END ORDER BY 2 DESC, 1",
+                "GROUP BY CASE WHEN a.alias IS NULL THEN 'k' || t.merchant_key ELSE 'a' || a.alias_key END ORDER BY 2 DESC, 1",
             from.low(), to.high(),
         ) { RankRow(it.getText(0), Cents(it.getLong(1)), it.getInt(2)) }
     }
@@ -1034,7 +1054,7 @@ class Db(
                 id = NoticeId(it.getLong(0)),
                 raw = raw,
                 parsed = parsed,
-                alias = aliases[merchantKey(parsed.merchant)] ?: "",
+                alias = aliases[MerchantKey.of(parsed.merchant)] ?: "",
                 status = NoticeStatus.entries[it.getInt(14)],
                 isNew = raw.postedAt > seen,
                 looksLikeAd = parsed.cents.v == 0L && parsed.merchant.isEmpty(),
@@ -1042,7 +1062,17 @@ class Db(
         }
     }
 
-    private fun aliases(c: SQLiteConnection) = c.query("SELECT merchant_key, alias FROM merchant_aliases") { it.getText(0) to it.getText(1) }.toMap()
+    /** Deletes the previstos matching [where] (over `planned`) with their tags and occurrences; their lançamentos lose their origin (D59). */
+    private fun deletePlanned(c: SQLiteConnection, where: String, vararg args: Any) {
+        val ids = "SELECT id FROM planned WHERE $where"
+        c.exec("UPDATE transactions SET occurrence_id = 0 WHERE occurrence_id IN (SELECT id FROM planned_dates WHERE planned_id IN ($ids))", *args)
+        c.exec("DELETE FROM planned_dates WHERE planned_id IN ($ids)", *args)
+        c.exec("DELETE FROM planned_tags WHERE planned_id IN ($ids)", *args)
+        c.exec("DELETE FROM planned WHERE $where", *args)
+    }
+
+    private fun aliases(c: SQLiteConnection) =
+        c.query("SELECT merchant_key, alias FROM merchant_aliases") { MerchantKey.of(it.getText(0)) to it.getText(1) }.toMap()
 
     private fun tagNames(c: SQLiteConnection, transaction: Long) =
         c.query("SELECT g.name FROM transaction_tags l JOIN tags g ON g.id = l.tag_id WHERE l.transaction_id = ? ORDER BY g.name", transaction) { it.getText(0) }
@@ -1074,27 +1104,62 @@ class Db(
 
     /**
      * Parses [form] and writes the transaction [id] (0 = new) of [notice] (0 = manual) with its
-     * installments and tags. Returns its id, or 0 with nothing written when the form is refused.
+     * installments and tags, and the previsto it creates or edits (D64), all or nothing: every check
+     * comes before the first write. [today] (NO_DATE = none) makes a later date a previsto only.
+     * Returns what was written, or Saved() with nothing written when the form is refused.
      */
-    private fun saveTransaction(c: SQLiteConnection, id: Long, notice: Long, form: TransactionForm): Long {
-        if (form.occurrence.v != 0L || form.repeats != Repeats.ONCE) TODO()
+    private fun saveTransaction(c: SQLiteConnection, id: Long, notice: Long, form: TransactionForm, today: LocalDate): Saved {
         val tags = form.tags.map { it.trim().lowercase() }.filter(String::isNotEmpty).distinct()
-        if (tags.isEmpty() || form.total.v !in 1..MAX_CENTS || form.installments !in 1..MAX_INSTALLMENTS) return 0
-        if (c.long("SELECT COUNT(*) FROM budgets WHERE id = ?", form.budget.v) == 0L) return 0
+        if (tags.isEmpty() || form.total.v !in 1..MAX_CENTS || form.installments !in 1..MAX_INSTALLMENTS) return Saved()
+        if (c.long("SELECT COUNT(*) FROM budgets WHERE id = ?", form.budget.v) == 0L) return Saved()
         val day = settings(c).monthStartDay
         val dates = (1..form.installments).map { installmentDate(form.date, it, day) }
-        if (dates.any { it !in FIRST_DATE..LAST_DATE }) return 0
+        if (dates.any { it !in FIRST_DATE..LAST_DATE }) return Saved()
         val merchant = storable(form.merchant.trim())
-        val caption = storable(CLEAN_BREAKS.replace(form.caption, " ").trim(::isEdgeSpace))
-        if (caption.length > MAX_CAPTION) return 0
-        val corrected = notice != 0L && extract(notice(c, notice).raw, timeZone).let {
+        val caption = cleanCaption(form.caption)
+        if (caption.length > MAX_CAPTION) return Saved()
+        val key = MerchantKey.of(merchant)
+
+        // Previsto only (D64): Editar previsto, or a manual date ahead of today.
+        val editing = id == 0L && notice == 0L && form.planned.v != 0L
+        val ahead = id == 0L && notice == 0L && today != NO_DATE && form.date > today
+        if (editing || ahead) {
+            val name = cleanCaption(caption.ifEmpty { merchant })
+            if (name.length > MAX_CAPTION) return Saved()
+            if (editing) {
+                if (c.long("SELECT COUNT(*) FROM planned WHERE id = ?", form.planned.v) == 0L) return Saved()
+                c.exec(
+                    "UPDATE planned SET name = ?, budget_id = ?, cents = ?, day = ?, repeats = ? WHERE id = ?",
+                    name, form.budget.v, form.total.v, form.date.day, form.repeats.ordinal, form.planned.v,
+                )
+                c.exec("DELETE FROM planned_tags WHERE planned_id = ?", form.planned.v)
+                for (t in tags) c.exec("INSERT OR IGNORE INTO planned_tags(planned_id, tag_id) VALUES (?, ?)", form.planned.v, tagId(c, t))
+                return Saved(planned = form.planned)
+            }
+            return Saved(planned = PlannedId(insertPlanned(c, name, form, tags, form.date.yearMonth, "", MerchantKey.of(""), "")))
+        }
+
+        // The recado's own bank text links the previsto (D62, R2): never the amended form.merchant.
+        val raw = if (notice != 0L) notice(c, notice).raw else RawNotice()
+        val bank = if (notice != 0L) extract(raw, timeZone).merchant else ""
+        val linkKey = MerchantKey.of(bank)
+        val occurrence = if (id == 0L) form.occurrence.v else 0L
+        val occurrencePlanned = if (occurrence == 0L) 0L else c.query(
+            "SELECT planned_id FROM planned_dates WHERE id = ? AND skipped = 0 AND id NOT IN (SELECT occurrence_id FROM transactions)", occurrence,
+        ) { it.getLong(0) }.firstOrNull() ?: return Saved()
+        val monthlyName = if (form.repeats == Repeats.MONTHLY) {
+            val alias = form.alias.trim().ifEmpty { aliases(c)[key].orEmpty() }
+            cleanCaption(caption.ifEmpty { alias.ifEmpty { merchant } }).also { if (it.length > MAX_CAPTION) return Saved() }
+        } else ""
+
+        val corrected = notice != 0L && extract(raw, timeZone).let {
             it.cents != form.total || it.merchant != merchant || it.date != form.date || it.time != form.time
         }
-        val key = merchantKey(merchant)
         val txId = if (id == 0L) {
             c.exec(
-                "INSERT INTO transactions(notice_id, budget_id, merchant, merchant_key, date, time, total_cents, corrected, caption) VALUES (?,?,?,?,?,?,?,?,?)",
-                notice, form.budget.v, merchant, key, form.date.toString(), form.time.toString(), form.total.v, corrected, caption,
+                "INSERT INTO transactions(notice_id, budget_id, merchant, merchant_key, date, time, total_cents, corrected, caption, occurrence_id) " +
+                    "VALUES (?,?,?,?,?,?,?,?,?,?)",
+                notice, form.budget.v, merchant, key, form.date.toString(), form.time.toString(), form.total.v, corrected, caption, occurrence,
             )
             c.lastId()
         } else {
@@ -1113,8 +1178,103 @@ class Db(
             c.exec("INSERT INTO installments(transaction_id, k, date, cents) VALUES (?, ?, ?, ?)", txId, k, dates[k - 1].toString(), cents)
         }
         for (name in tags) c.exec("INSERT OR IGNORE INTO transaction_tags(transaction_id, tag_id) VALUES (?, ?)", txId, tagId(c, name))
-        if (form.alias.isNotBlank() && key.isNotEmpty()) saveAlias(c, key, form.alias)
-        return txId
+        if (form.alias.isNotBlank() && key.v.isNotEmpty()) saveAlias(c, key, form.alias)
+        if (occurrencePlanned != 0L && linkKey.v.isNotEmpty()) {
+            c.exec("UPDATE planned SET link_package = ?, link_key = ?, link_text = ? WHERE id = ?", raw.packageName, linkKey, bank, occurrencePlanned)
+        }
+        val planned = if (form.repeats == Repeats.MONTHLY) {
+            val pkg = if (linkKey.v.isEmpty()) "" else raw.packageName
+            insertPlanned(c, monthlyName, form, tags, form.date.yearMonth.plusMonth(), pkg, linkKey, if (linkKey.v.isEmpty()) "" else bank)
+        } else 0L
+        return Saved(TransactionId(txId), PlannedId(planned))
+    }
+
+    /** A new previsto from [form] (budget, value, day of its date, repeats) named [name], with its first occurrence in [first]. */
+    private fun insertPlanned(
+        c: SQLiteConnection, name: String, form: TransactionForm, tags: List<String>, first: YearMonth, pkg: String, key: MerchantKey, text: String,
+    ): Long {
+        c.exec(
+            "INSERT INTO planned(name, budget_id, cents, day, repeats, link_package, link_key, link_text) VALUES (?,?,?,?,?,?,?,?)",
+            name, form.budget.v, form.total.v, form.date.day, form.repeats.ordinal, pkg, key, text,
+        )
+        val id = c.lastId()
+        for (t in tags) c.exec("INSERT OR IGNORE INTO planned_tags(planned_id, tag_id) VALUES (?, ?)", id, tagId(c, t))
+        c.exec("INSERT INTO planned_dates(planned_id, month) VALUES (?, ?)", id, first.toString())
+        return id
+    }
+
+    /**
+     * R1: every Todo mês previsto gets its occurrences dated up to [today] + 10 days, from its latest row on
+     * (like [ensureMonth]); a row that exists is never created again, Só uma vez never gets a second one.
+     */
+    private fun fillPlanned(c: SQLiteConnection, today: LocalDate) {
+        val until = LocalDate.fromEpochDays(minOf(today.toEpochDays() + 10, LAST_DATE.toEpochDays()))
+        val rules = c.query(
+            "SELECT p.id, p.day, MAX(d.month) FROM planned p JOIN planned_dates d ON d.planned_id = p.id WHERE p.repeats = ? GROUP BY p.id",
+            Repeats.MONTHLY.ordinal,
+        ) { Triple(it.getLong(0), it.getInt(1), YearMonth.parse(it.getText(2))) }
+        for ((id, day, last) in rules) {
+            var m = last
+            while (m < LAST_MONTH && occurrenceDate(m.plusMonth(), day) <= until) {
+                m = m.plusMonth()
+                c.exec("INSERT OR IGNORE INTO planned_dates(planned_id, month) VALUES (?, ?)", id, m.toString())
+            }
+        }
+    }
+
+    /**
+     * Open occurrences (not skipped, no lançamento) with their previsto, [where] over `p` (planned), oldest
+     * date first then id; `late` against [today] (never with NO_DATE). noticeInPauta is left false.
+     */
+    private fun plannedRows(c: SQLiteConnection, today: LocalDate, where: String): List<Planned> {
+        val rows = c.query(
+            "SELECT d.id, p.id, p.name, p.budget_id, b.name, p.cents, p.day, p.repeats, d.month, p.link_key, p.link_text, " +
+                "COALESCE(s.label, p.link_package) FROM planned_dates d JOIN planned p ON p.id = d.planned_id JOIN budgets b ON b.id = p.budget_id " +
+                "LEFT JOIN sources s ON s.package = p.link_package " +
+                "${if (where.isEmpty()) "WHERE" else "$where AND"} d.skipped = 0 AND d.id NOT IN (SELECT occurrence_id FROM transactions)",
+        ) {
+            val day = it.getInt(6)
+            val month = YearMonth.parse(it.getText(8))
+            val repeats = Repeats.entries[it.getInt(7)]
+            val date = occurrenceDate(month, day)
+            val linked = it.getText(9).isNotEmpty()
+            Planned(
+                occurrence = OccurrenceId(it.getLong(0)), planned = PlannedId(it.getLong(1)), name = it.getText(2),
+                budget = BudgetId(it.getLong(3)), budgetName = it.getText(4), cents = Cents(it.getLong(5)), day = day, repeats = repeats,
+                date = date, next = if (repeats == Repeats.MONTHLY && month < LAST_MONTH) occurrenceDate(month.plusMonth(), day) else NO_DATE,
+                linked = linked, linkText = if (linked) it.getText(10) else "", linkSource = if (linked) it.getText(11) else "",
+                late = today != NO_DATE && date < today,
+            )
+        }
+        if (rows.isEmpty()) return rows
+        val tags = HashMap<Long, MutableList<String>>()
+        c.query("SELECT l.planned_id, g.name FROM planned_tags l JOIN tags g ON g.id = l.tag_id ORDER BY g.name") {
+            tags.getOrPut(it.getLong(0)) { ArrayList() }.add(it.getText(1))
+        }
+        return rows.map { it.copy(tags = tags[it.planned.v] ?: emptyList()) }.sortedWith(compareBy<Planned> { it.date }.thenBy { it.occurrence.v })
+    }
+
+    /**
+     * D60: for each recado, the linked open occurrence of the same fonte and key whose date is at most 10 days
+     * from the recado's; the closest wins, then the earlier date, then the lower id. A loop, not a join: the
+     * recado's merchant only exists after `extract`. Keyed by notice id; absent = not recognized.
+     */
+    private fun recognize(c: SQLiteConnection, notices: List<NoticeRow>, open: List<Planned>): Map<Long, Planned> {
+        if (open.isEmpty() || notices.isEmpty()) return emptyMap()
+        val links = c.query("SELECT id, link_package, link_key FROM planned WHERE link_key != ''") {
+            it.getLong(0) to (it.getText(1) to MerchantKey.of(it.getText(2)))
+        }.toMap()
+        val byLink = HashMap<Pair<String, MerchantKey>, MutableList<Planned>>()
+        for (p in open) links[p.planned.v]?.let { byLink.getOrPut(it) { ArrayList() }.add(p) }
+        val found = HashMap<Long, Planned>()
+        for (n in notices) {
+            val key = MerchantKey.of(n.parsed.merchant)
+            if (key.v.isEmpty()) continue
+            val best = byLink[n.raw.packageName to key]?.filter { abs(it.date.toEpochDays() - n.parsed.date.toEpochDays()) <= 10 }
+                ?.minWithOrNull(compareBy<Planned> { abs(it.date.toEpochDays() - n.parsed.date.toEpochDays()) }.thenBy { it.date }.thenBy { it.occurrence.v })
+            if (best != null) found[n.id.v] = best
+        }
+        return found
     }
 
     /** The tag named [name] (already clean), created if new. */
@@ -1124,9 +1284,11 @@ class Db(
         return c.lastId()
     }
 
-    private fun saveAlias(c: SQLiteConnection, key: String, alias: String) {
+    private fun saveAlias(c: SQLiteConnection, key: MerchantKey, alias: String) {
         if (alias.isBlank()) c.exec("DELETE FROM merchant_aliases WHERE merchant_key = ?", key)
-        else c.exec("INSERT OR REPLACE INTO merchant_aliases(merchant_key, alias) VALUES (?, ?)", key, alias.trim())
+        else c.exec(
+            "INSERT OR REPLACE INTO merchant_aliases(merchant_key, alias, alias_key) VALUES (?, ?, ?)", key, alias.trim(), MerchantKey.of(alias),
+        )
     }
 
     /** Deletes the transactions matching [where] with their installments, tag links and estornos (spec §2.8). */
@@ -1310,6 +1472,14 @@ internal fun SQLiteConnection.long(sql: String, vararg args: Any): Long =
         st.bindAll(args)
         if (st.step() && !st.isNull(0)) st.getLong(0) else 0L
     }
+
+/** A legenda (and a previsto's name) as stored (spec §2.12, D53, D62): breaks to spaces, edges trimmed, storable. */
+private fun cleanCaption(s: String): String = storable(CLEAN_BREAKS.replace(s, " ").trim(::isEdgeSpace))
+
+/** An occurrence's date (P8): [day] in [month], or the month's last day when it has none. */
+private fun occurrenceDate(month: YearMonth, day: Int): LocalDate = month.onDay(minOf(day, month.numberOfDays))
+
+private val LAST_MONTH = YearMonth(9999, 12)
 
 /** The range of storable dates: ISO text sorts as dates only for years 0001..9999. */
 private val FIRST_DATE = LocalDate(1, 1, 1)

@@ -1,0 +1,9 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!-- #i-previsto from docs/design_system.html; the dashed frame (stroke-dasharray 2.2) drawn as dashes: vectors have no dash. -->
+<vector xmlns:android="http://schemas.android.com/apk/res/android"
+    android:width="24dp" android:height="24dp"
+    android:viewportWidth="24" android:viewportHeight="24">
+    <path android:strokeColor="#FF000000" android:strokeWidth="1.5" android:strokeLineCap="round" android:strokeLineJoin="round" android:pathData="M4 6h2.2M8.4 6h2.2M12.8 6h2.2M17.2 6h2.8v1.4M20 9.6v2.2M20 14v2.2M20 18.4v1.6h-0.6M17.2 20h-2.2M12.8 20h-2.2M8.4 20h-2.2M4 20v-1.6M4 16.2v-2.2M4 11.8v-2.2M4 7.4v-1.4"/>
+    <path android:strokeColor="#FF000000" android:strokeWidth="1.5" android:strokeLineCap="round" android:strokeLineJoin="round" android:pathData="M8 3.5V7.5M16 3.5V7.5"/>
+    <path android:strokeColor="#FF000000" android:strokeWidth="1.5" android:strokeLineCap="round" android:strokeLineJoin="round" android:pathData="M9 13.5l2 2 4-4.5"/>
+</vector>

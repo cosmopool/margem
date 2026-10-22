@@ -31,6 +31,7 @@ import androidx.compose.foundation.layout.navigationBars
 import androidx.compose.foundation.layout.offset
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
+import androidx.compose.foundation.layout.ColumnScope
 import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.layout.widthIn
 import androidx.compose.foundation.layout.windowInsetsPadding
@@ -96,6 +97,7 @@ import androidx.compose.ui.window.DialogWindowProvider
 import com.kaiodelphino.margem.BudgetMonth
 import com.kaiodelphino.margem.Ceiling
 import com.kaiodelphino.margem.Cents
+import com.kaiodelphino.margem.Planned
 import com.kaiodelphino.margem.NoticeRow
 import com.kaiodelphino.margem.PaceStatus
 import com.kaiodelphino.margem.R
@@ -601,9 +603,11 @@ fun NoticeCard(
     time: String = noticeTime(notice.raw.postedAt), acceptEnabled: Boolean = true,
     acceptTag: String = "", dismissTag: String = "", newTag: String = "",
     onRestore: (() -> Unit)? = null, restoreTag: String = "",
+    planned: Planned = Planned(), onNotIt: () -> Unit = {}, bandTag: String = "", notItTag: String = "", onBody: (() -> Unit)? = null,
 ) {
     val c = Margem.colors
     val ad = notice.looksLikeAd
+    val recognized = planned.occurrence.v != 0L
     val refund = notice.parsed.isRefund
     val shape = RoundedCornerShape(8.dp)
     Column(
@@ -615,6 +619,7 @@ fun NoticeCard(
                 val top = 14.dp.toPx(); val bottom = size.height - 14.dp.toPx()
                 for (x in listOf(8.5f, 12.5f)) drawLine(c.brand, Offset(x.dp.toPx(), top), Offset(x.dp.toPx(), bottom), 1.dp.toPx())
             }
+            .then(if (onBody != null) Modifier.clickable(onClick = onBody) else Modifier)
             .padding(start = if (notice.isNew) 24.dp else 16.dp, top = 12.dp, end = 14.dp, bottom = 4.dp),
     ) {
         // The double rule of a new notice, as a node of its own for the tests (D35).
@@ -642,10 +647,27 @@ fun NoticeCard(
                 if (notice.parsed.cents.v > 0) Amount(notice.parsed.cents, color = if (refund) c.inkSecondary else c.ink)
             }
         }
-        Row(Modifier.fillMaxWidth().padding(top = 4.dp), horizontalArrangement = Arrangement.spacedBy(8.dp, Alignment.End)) {
+        // Spec §2.13, book 8.4: the app recognizing the recado as a previsto, in anil.
+        if (recognized) InfoBand(
+            R.drawable.i_ligar, "É o previsto ${planned.name}", plannedLine(planned) + " · dia ${planned.day}",
+            Modifier.padding(top = 10.dp).then(if (bandTag.isEmpty()) Modifier else Modifier.testTag(bandTag)),
+        )
+        Row(Modifier.fillMaxWidth().padding(top = 4.dp), horizontalArrangement = Arrangement.spacedBy(8.dp, Alignment.End), verticalAlignment = Alignment.CenterVertically) {
             val accept = if (acceptTag.isEmpty()) Modifier else Modifier.testTag(acceptTag)
             val dismiss = if (dismissTag.isEmpty()) Modifier else Modifier.testTag(dismissTag)
             when {
+                recognized && onRestore == null -> {
+                    Button("Não é", onNotIt, if (notItTag.isEmpty()) Modifier else Modifier.testTag(notItTag), kind = ButtonKind.TEXT, small = true)
+                    Box(
+                        dismiss.size(Space.touch).semantics { contentDescription = "Riscar" }.clickable(role = Role.Button, onClick = onDismiss),
+                        contentAlignment = Alignment.Center,
+                    ) {
+                        Box(Modifier.size(40.dp).border(1.dp, c.ruleStrong, RoundedCornerShape(4.dp)), contentAlignment = Alignment.Center) {
+                            Icon(R.drawable.i_riscar, tint = c.overrun, size = 18.dp)
+                        }
+                    }
+                    Button("Lançar previsto", onAccept, accept, icon = R.drawable.i_lancar, small = true, enabled = acceptEnabled)
+                }
                 // Riscados: the one action is bringing it back to the Pauta.
                 onRestore != null -> Button(
                     "Trazer de volta", onRestore, if (restoreTag.isEmpty()) Modifier else Modifier.testTag(restoreTag),
@@ -1045,6 +1067,69 @@ fun CapturePaused(onReconnect: () -> Unit, modifier: Modifier = Modifier, onManu
     if (onManual != null) Button("Novo lançamento", onManual, kind = ButtonKind.TEXT)
 }
 
+// ---- 8.11 Previsto ----
+
+/** "Casa · contas, internet": budget and tags of a previsto, as its band and rows say them. */
+fun plannedLine(p: Planned): String = listOf(p.budgetName, p.tags.joinToString(", ")).filter(String::isNotEmpty).joinToString(" · ")
+
+/**
+ * Book 8.11 `.liga`: the app recognizing (anil container, never a state color): [icon] in anil, a serif [title]
+ * when given, then [text] and an optional text [action] ("Desligar").
+ */
+@Composable
+fun InfoBand(icon: Int, title: String, text: String, modifier: Modifier = Modifier, action: String = "", onAction: () -> Unit = {}, actionTag: String = "") {
+    val c = Margem.colors
+    Row(
+        modifier.fillMaxWidth().background(c.infoContainer, RoundedCornerShape(6.dp)).semantics(mergeDescendants = true) {}
+            .padding(horizontal = 12.dp, vertical = 9.dp),
+        horizontalArrangement = Arrangement.spacedBy(10.dp),
+    ) {
+        Icon(icon, Modifier.padding(top = 2.dp), tint = c.info, size = 18.dp)
+        Column(Modifier.weight(1f)) {
+            if (title.isNotEmpty()) Text(title, serif(16, 500, 20))
+            Text(text, sans(13.5f, 400, 18f), color = c.inkSecondary)
+            if (action.isNotEmpty()) Text(
+                action, sans(13.5f, 600, 18f), Modifier.then(if (actionTag.isEmpty()) Modifier else Modifier.testTag(actionTag))
+                    .clickable(role = Role.Button, onClick = onAction).padding(vertical = 6.dp),
+                c.info,
+            )
+        }
+    }
+}
+
+/** Book 8.11 `.dia`: the dashed day stamp — "still to happen". Late: the day in ink 3. */
+@Composable
+fun DayStamp(date: LocalDate, late: Boolean, modifier: Modifier = Modifier) {
+    val c = Margem.colors
+    Column(
+        modifier.width(42.dp).drawBehind { dashedBorder(c.ruleStrong, 3.dp) }.padding(top = 3.dp, bottom = 4.dp),
+        horizontalAlignment = Alignment.CenterHorizontally,
+    ) {
+        Text(monthShort(date.month).uppercase(), sans(9.5f, 700, 12f, 0.12f), color = c.inkTertiary)
+        Text(date.day.toString(), serif(20, 500, 21, tabular = true), color = if (late) c.inkTertiary else c.ink)
+    }
+}
+
+/** Book 8.11: a sheet from the bottom, radius 16, with its handle. Back or a touch above it calls [onDismiss]. */
+@Composable
+fun BottomSheet(onDismiss: () -> Unit, modifier: Modifier = Modifier, content: @Composable ColumnScope.() -> Unit) {
+    Dialog(onDismiss, DialogProperties(usePlatformDefaultWidth = false)) {
+        val c = Margem.colors
+        (LocalView.current.parent as? DialogWindowProvider)?.window?.let {
+            it.setDimAmount(if (c.isDark) 0.6f else 0.45f)
+            it.setGravity(android.view.Gravity.BOTTOM)
+        }
+        val shape = RoundedCornerShape(topStart = 16.dp, topEnd = 16.dp)
+        Column(
+            modifier.fillMaxWidth().background(c.surface, shape).verticalScroll(rememberScrollState())
+                .padding(start = 24.dp, end = 24.dp, top = 10.dp, bottom = 30.dp),
+        ) {
+            Box(Modifier.align(Alignment.CenterHorizontally).padding(bottom = 14.dp).size(32.dp, 4.dp).background(c.ruleStrong, RoundedCornerShape(2.dp)))
+            content()
+        }
+    }
+}
+
 // ---- 8.8 Dialog and snackbar ----
 
 /**
@@ -1220,7 +1305,7 @@ fun DateTimeDialog(
             Row(Modifier.fillMaxWidth().padding(horizontal = 12.dp), verticalAlignment = Alignment.CenterVertically) {
                 IconButton(R.drawable.i_voltar, { shown = month.minusMonth().toString() }, Modifier.testTag(DateTimeTags.PREV))
                 Text(monthTitle(month), serif(17, 500, 22), Modifier.weight(1f).testTag(DateTimeTags.MONTH), align = TextAlign.Center)
-                val canNext = month < today.yearMonth
+                val canNext = future || month < today.yearMonth
                 IconButton(R.drawable.i_avancar, { shown = month.plusMonth().toString() }, Modifier.testTag(DateTimeTags.NEXT), dim = !canNext, enabled = canNext)
             }
             val order = List(7) { DayOfWeek((weekStart.isoDayNumber - 1 + it) % 7 + 1) }
@@ -1240,10 +1325,10 @@ fun DateTimeDialog(
                     }
                     val d = month.onDay(n)
                     val on = d == day
-                    val future = d > today
+                    val shut = !future && d > today
                     Box(
                         Modifier.weight(1f).height(48.dp).testTag(DateTimeTags.DAY + d).semantics { selected = on }
-                            .clickable(enabled = !future, role = Role.RadioButton) { chosen = d.toString() },
+                            .clickable(enabled = !shut, role = Role.RadioButton) { chosen = d.toString() },
                         contentAlignment = Alignment.Center,
                     ) {
                         Box(
@@ -1253,11 +1338,11 @@ fun DateTimeDialog(
                             contentAlignment = Alignment.Center,
                         ) {
                             Text(
-                                n.toString(), serif(15, if (d == today) 600 else if (future) 400 else 500, 20, tabular = true),
+                                n.toString(), serif(15, if (d == today) 600 else if (shut) 400 else 500, 20, tabular = true),
                                 color = when {
                                     on -> c.paper
                                     d == today -> c.brand
-                                    future -> c.inkTertiary
+                                    shut -> c.inkTertiary
                                     else -> c.ink
                                 },
                             )

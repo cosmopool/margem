@@ -290,8 +290,9 @@ class RecadoUiTest {
         click(TransactionTags.TAG + "almoço")
         click(TransactionTags.FORM_DATE)
         waitFor(DateTimeTags.DIALOG)
-        compose.onNodeWithTag(DateTimeTags.NEXT).assertIsNotEnabled()
-        compose.onNodeWithTag(DateTimeTags.DAY + "2026-10-10").assertIsNotEnabled()
+        // Spec §7.3 (previsto, P4): only the manual form takes days ahead; they make a previsto.
+        compose.onNodeWithTag(DateTimeTags.NEXT).assertIsEnabled()
+        compose.onNodeWithTag(DateTimeTags.DAY + "2026-10-10").assertIsEnabled()
         compose.onNodeWithTag(DateTimeTags.WEEKDAYS).assertTextContains("seg")
         click(DateTimeTags.PREV)
         compose.onNodeWithTag(DateTimeTags.MONTH).assertTextContains("setembro de 2026")
