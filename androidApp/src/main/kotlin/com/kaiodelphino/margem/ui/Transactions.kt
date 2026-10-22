@@ -365,7 +365,8 @@ object TransactionTags {
 
     /**
      * "Repete" with [FORM_REPEATS_ONCE] "Só uma vez" and [FORM_REPEATS_MONTHLY] "Todo mês, dia 12" (the
-     * form date's day), one `selected`; Só uma vez on open (the previsto's own in Editar previsto). Shown in
+     * form date's day), one `selected`; Só uma vez on open (the previsto's own in Editar previsto, and in Editar
+     * lançamento the one of its previsto, D65: switching that to Só uma vez and saving deletes it). Shown in
      * the three forms whatever the date (P4, P4b); absent while the form is linked ([FORM_LINKED]).
      */
     const val FORM_REPEATS = "txForm.repeats"
@@ -871,6 +872,8 @@ private fun TxForm(
                 budget = r.budget.v
                 installments = r.installments
                 chips = chipList(r.tags.associateWith { 'C' })
+                // D65: "Repete" opens as the transaction's own previsto is.
+                monthly = data.detail.repeats == Repeats.MONTHLY
             }
             isEditPlanned -> {
                 val p = data.planned.firstOrNull { it.occurrence == editPlanned }

@@ -268,6 +268,13 @@ data class TransactionDetail(
     val row: TransactionRow = TransactionRow(),
     val installments: List<Installment> = emptyList(),
     val notice: NoticeRow = NoticeRow(),
+    /**
+     * Its previsto (D65): the one its "Repete" created, else the one whose occurrence it closed; 0 = none
+     * (or deleted). The edit's "Repete" opens as [repeats] says, and [Db.edit] acts on this previsto.
+     */
+    val planned: PlannedId = PlannedId(0),
+    /** That previsto's repetition; ONCE when there is none. */
+    val repeats: Repeats = Repeats.ONCE,
 )
 
 /** Budget and tags of the merchant's last transaction (spec §2.5); zero = no history. */

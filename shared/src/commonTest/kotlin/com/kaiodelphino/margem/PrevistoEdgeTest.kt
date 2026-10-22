@@ -712,9 +712,11 @@ class PrevistoEdgeTest {
         val tx = db.accept(r, form)
         assertNotEquals(TransactionId(0), tx)
 
-        assertTrue(db.edit(tx, form.copy(total = Cents(11000), occurrence = OccurrenceId(0))))
+        // D65 (2026-10-22): the edit form opens "Repete" as its previsto is (Todo mês here); Só uma vez would delete it.
+        assertEquals(Repeats.MONTHLY, db.transaction(tx).repeats)
+        assertTrue(db.edit(tx, form.copy(total = Cents(11000), occurrence = OccurrenceId(0), repeats = Repeats.MONTHLY)))
         assertTrue(db.planned(TODAY).none { it.occurrence == p.occurrence }, "still closed by the edited lançamento")
-        assertTrue(db.edit(tx, form.copy(occurrence = agua.occurrence)))
+        assertTrue(db.edit(tx, form.copy(occurrence = agua.occurrence, repeats = Repeats.MONTHLY)))
         assertTrue(db.planned(TODAY).any { it.occurrence == agua.occurrence }, "edit never closes another occurrence")
         assertTrue(db.planned(TODAY).none { it.occurrence == p.occurrence })
 

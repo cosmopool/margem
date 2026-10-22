@@ -178,6 +178,40 @@ class PrevistoTest {
     }
 
     @Test
+    fun theEditRemembersTheRepeteOfItsPrevisto() = runTest {
+        val casa = casa()
+        val t = db.addManual(form(casa, 4_600, LocalDate(2026, 10, 8), "BAR", repeats = Repeats.MONTHLY), oct9)
+        // D65: the edit opens "Repete" as its previsto is.
+        val detail = db.transaction(t.transaction)
+        assertEquals(t.planned to Repeats.MONTHLY, detail.planned to detail.repeats)
+        // Todo mês again creates no second previsto.
+        assertTrue(db.edit(t.transaction, form(casa, 5_000, LocalDate(2026, 10, 8), "BAR", repeats = Repeats.MONTHLY)))
+        assertEquals(listOf(t.planned), db.planned(LocalDate(2026, 10, 30)).map { it.planned })
+        // Só uma vez deletes it; the lançamento stays and no longer has a previsto.
+        assertTrue(db.edit(t.transaction, form(casa, 5_000, LocalDate(2026, 10, 8), "BAR")))
+        assertEquals(emptyList(), db.planned(LocalDate(2026, 12, 30)))
+        assertEquals(Cents(5_000), db.transaction(t.transaction).row.total)
+        assertEquals(PlannedId(0) to Repeats.ONCE, db.transaction(t.transaction).let { it.planned to it.repeats })
+        // Without a previsto, Todo mês makes one again, remembered from then on.
+        assertTrue(db.edit(t.transaction, form(casa, 5_000, LocalDate(2026, 10, 8), "BAR", repeats = Repeats.MONTHLY)))
+        assertEquals(Repeats.MONTHLY, db.transaction(t.transaction).repeats)
+        assertEquals(1, db.planned(LocalDate(2026, 10, 30)).size)
+    }
+
+    @Test
+    fun aLancamentoFromAPrevistoShowsAndChangesThatPrevisto() = runTest {
+        val casa = casa()
+        val saved = db.addManual(form(casa, 18_000, LocalDate(2026, 10, 12), "Luz"), oct9)
+        val p = db.planned(oct9).single()
+        val tx = db.addManual(form(casa, 18_000, p.date, caption = p.name).copy(occurrence = p.occurrence), LocalDate(2026, 10, 12)).transaction
+        assertEquals(saved.planned to Repeats.ONCE, db.transaction(tx).let { it.planned to it.repeats })
+        // Todo mês on its Só uma vez previsto makes that one Todo mês: November comes.
+        assertTrue(db.edit(tx, form(casa, 18_000, p.date, caption = p.name, repeats = Repeats.MONTHLY)))
+        assertEquals(listOf(saved.planned), db.planned(LocalDate(2026, 11, 5)).map { it.planned }.distinct())
+        assertEquals(LocalDate(2026, 11, 12), db.planned(LocalDate(2026, 11, 5)).single().date)
+    }
+
+    @Test
     fun aRefusedFormWritesNothing() = runTest {
         val casa = casa()
         val n = recado("VIVO FIBRA", "119,90", oct9)

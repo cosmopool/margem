@@ -656,7 +656,11 @@ private suspend fun pfStep(db: Db, what0: String, w: PfWorld, kind: String, noti
     if (kind == "edit" && form.occurrence.v != 0L) ambiguous += "occurrence on edit"
     if (path != "L" && form.occurrence.v != 0L) ambiguous += "occurrence on a previsto-only save"
     if (path == "E" && form.planned !in w.previstos) refuse += "unknown previsto"
-    val previsto = path != "L" || form.repeats == Repeats.MONTHLY
+    // D65 (2026-10-22, the user's decision after this round): on edit, "Repete" acts on the transaction's own
+    // previsto (the one it created or the one it closed an occurrence of); only without one does MONTHLY create.
+    val ownDetail = if (kind == "edit" && editId in w.txs) db.transaction(editId) else null
+    val own = ownDetail?.planned ?: PlannedId(0)
+    val previsto = path != "L" || (form.repeats == Repeats.MONTHLY && own.v == 0L)
     val names = if (previsto) pfNameReadings(path, kind, form) else emptySet()
     if (previsto) {
         if (names.all { it.length > PF_CAP }) refuse += "previsto name over 80 after cleaning"
@@ -771,15 +775,23 @@ private suspend fun pfStep(db: Db, what0: String, w: PfWorld, kind: String, noti
     val beforeIds = before.map { it.planned }.toSet()
     val edited = if (path == "E") form.planned else PlannedId(0)
     val created = after.map { it.planned }.toSet() - beforeIds - edited
-    val touched = setOf(edited) + (if (relinked) setOf(closedRow.planned) else emptySet())
+    val touched = setOf(edited) + (if (relinked) setOf(closedRow.planned) else emptySet()) + (if (own.v != 0L) setOf(own) else emptySet())
     assertEquals(
         before.filter { it.planned !in touched && it.occurrence != closedNow }.map(::pfStrip),
         after.filter { it.planned !in touched && it.planned !in created }.map(::pfStrip),
         "$what: previstos the write doesn't touch changed",
     )
     when (path) {
-        "L" -> if (form.repeats == Repeats.ONCE) {
-            assertEquals(emptySet(), created, "$what: Só uma vez creates no previsto")
+        "L" -> if (form.repeats == Repeats.ONCE || own.v != 0L) {
+            assertEquals(emptySet(), created, "$what: Só uma vez creates no previsto, nor an edit of one that has its previsto (D65)")
+            if (own.v != 0L) {
+                val ownAfter = after.filter { it.planned == own }
+                if (form.repeats == Repeats.ONCE && ownDetail?.repeats == Repeats.MONTHLY) {
+                    assertTrue(ownAfter.isEmpty(), "$what: Só uma vez on its Todo mês previsto deletes it (D65)")
+                } else if (form.repeats == Repeats.MONTHLY) {
+                    assertTrue(ownAfter.all { it.repeats == Repeats.MONTHLY }, "$what: Todo mês on its previsto makes it Todo mês (D65)")
+                }
+            }
         } else {
             val first = pfFirstOcc(form.date)
             // A first occurrence past today + 10 may or may not exist yet (lazy R1 vs. made at save): not asserted.

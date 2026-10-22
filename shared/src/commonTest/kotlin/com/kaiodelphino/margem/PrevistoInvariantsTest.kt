@@ -215,7 +215,10 @@ private class PvInvTx(
     val month: YearMonth,
     /** The previsto's link before this lançamento's accept rewrote it; null when it didn't change it. */
     val linkAlt: PvInvLink?,
-)
+) {
+    /** D65: the previsto this lançamento's "Repete" created; null when none (or deleted). */
+    var started: PvInvPlan? = null
+}
 
 /** What a refused write must leave untouched ("nothing written", and no version bump: Db.version KDoc). */
 private data class PvInvSnap(
@@ -569,7 +572,10 @@ private class PrevistoInvariantRun(val db: Db, val seed: Int, val startDay: Int)
                 deletedOccs.add(o.id)
             }
         }
-        for (t in txs.values) if (t.plan === p) t.plan = null
+        for (t in txs.values) {
+            if (t.plan === p) t.plan = null
+            if (t.started === p) t.started = null
+        }
         log("  $p is deleted")
     }
 
@@ -750,6 +756,7 @@ private class PrevistoInvariantRun(val db: Db, val seed: Int, val startDay: Int)
                 Repeats.MONTHLY, f.date.yearMonth.plusMonth(), link,
             )
             plans.add(p)
+            txs.getValue(id).started = p
             log("  expects $p: day ${p.day} from ${p.first}, ${p.cents}, link ${p.link}")
         }
     }
@@ -825,6 +832,7 @@ private class PrevistoInvariantRun(val db: Db, val seed: Int, val startDay: Int)
             )
             p.id = saved.planned
             plans.add(p)
+            txs.getValue(saved.transaction).started = p
         }
     }
 
@@ -947,8 +955,13 @@ private class PrevistoInvariantRun(val db: Db, val seed: Int, val startDay: Int)
             return
         }
         val t = txs.values.random(rnd)
-        // Ambiguity avoided: "Todo mês" on a lançamento that came from a previsto (the field is gone there, §7.3).
-        val monthly = t.plan == null && rnd.nextInt(3) == 0 && (t.caption.isNotEmpty() || t.merchant.isNotEmpty())
+        // D65 (2026-10-22, the user's decision after this round): "Repete" acts on the lançamento's own previsto (the
+        // one it created, else the one it closed an occurrence of) and opens as that one is. Kept as it opens, but
+        // now and then Todo mês → Só uma vez, which deletes it. "Só uma vez" → "Todo mês" is avoided (months between).
+        val own = t.started?.takeIf { it in plans } ?: t.plan?.takeIf { it in plans }
+        val drop = own != null && own.repeats == Repeats.MONTHLY && rnd.nextInt(6) == 0
+        val monthly = if (own != null) own.repeats == Repeats.MONTHLY && !drop
+            else rnd.nextInt(3) == 0 && (t.caption.isNotEmpty() || t.merchant.isNotEmpty())
         val kind = if (rnd.nextInt(10) == 0) rnd.nextInt(2) else -1
         val f = TransactionForm(
             budget = when {
@@ -980,7 +993,8 @@ private class PrevistoInvariantRun(val db: Db, val seed: Int, val startDay: Int)
         t.budget = f.budget
         t.tags = pvinvTags(f.tags)
         t.cents = f.total.v
-        if (monthly) {
+        if (drop) dropPlan(own!!)
+        if (monthly && own == null) {
             val info = if (t.notice.v == 0L) PvInvLink() else noticeInfo.getValue(t.notice)
             val link = if (info.on && keyOf(info.text).isNotEmpty()) info else PvInvLink()
             val p = PvInvPlan(
@@ -988,6 +1002,7 @@ private class PrevistoInvariantRun(val db: Db, val seed: Int, val startDay: Int)
                 Repeats.MONTHLY, t.date.yearMonth.plusMonth(), link,
             )
             plans.add(p)
+            t.started = p
             log("  expects $p: day ${p.day} from ${p.first}, ${p.cents}, link ${p.link}")
         }
     }

@@ -398,8 +398,10 @@ class Db(
      * is recomputed against the notice's [Parsed]. A registered estorno stays. False if refused or
      * unknown. A blank caption removes the legenda (unlike the alias, §2.10); a refused edit (too long
      * a caption among the rest) leaves the transaction as it was. The origin ([TransactionForm.occurrence])
-     * never changes on edit; MONTHLY creates a previsto like [accept] does, linked from the transaction's
-     * notice (none for a manual one).
+     * never changes on edit. "Repete" acts on the transaction's previsto ([TransactionDetail.planned], D65):
+     * MONTHLY on a MONTHLY one changes nothing, on a ONCE one makes it MONTHLY; ONCE on a MONTHLY one deletes
+     * it like [deletePlanned]. With no previsto, MONTHLY creates one like [accept] does, linked from the
+     * transaction's notice (none for a manual one).
      */
     suspend fun edit(id: TransactionId, form: TransactionForm): Boolean = write { c ->
         val notice = c.query("SELECT notice_id FROM transactions WHERE id = ?", id.v) { it.getLong(0) }.firstOrNull()
@@ -434,7 +436,9 @@ class Db(
     /** Zero detail when unknown. */
     suspend fun transaction(id: TransactionId): TransactionDetail = read { c ->
         val row = transactionRows(c, "WHERE t.id = ?", id.v).firstOrNull() ?: return@read TransactionDetail()
+        val own = ownPlanned(c, id.v)
         TransactionDetail(
+            planned = PlannedId(own?.first ?: 0), repeats = own?.second ?: Repeats.ONCE,
             row = row,
             installments = c.query("SELECT k, date, cents FROM installments WHERE transaction_id = ? ORDER BY k", id.v) {
                 Installment(it.getInt(0), LocalDate.parse(it.getText(1)), Cents(it.getLong(2)))
@@ -1063,6 +1067,17 @@ class Db(
         }
     }
 
+    /**
+     * The previsto of transaction [id] and its repetition (D65): the one its "Repete" created (the latest), else the
+     * one whose occurrence it closed; null when none.
+     */
+    private fun ownPlanned(c: SQLiteConnection, id: Long): Pair<Long, Repeats>? =
+        c.query("SELECT id, repeats FROM planned WHERE source_transaction = ? ORDER BY id DESC LIMIT 1", id) {
+            it.getLong(0) to Repeats.entries[it.getInt(1)]
+        }.firstOrNull() ?: c.query(
+            "SELECT p.id, p.repeats FROM transactions t JOIN planned_dates d ON d.id = t.occurrence_id JOIN planned p ON p.id = d.planned_id WHERE t.id = ?", id,
+        ) { it.getLong(0) to Repeats.entries[it.getInt(1)] }.firstOrNull()
+
     /** Deletes the previstos matching [where] (over `planned`) with their tags and occurrences; their lançamentos lose their origin (D59). */
     private fun deletePlanned(c: SQLiteConnection, where: String, vararg args: Any) {
         val ids = "SELECT id FROM planned WHERE $where"
@@ -1148,7 +1163,9 @@ class Db(
         val occurrencePlanned = if (occurrence == 0L) 0L else c.query(
             "SELECT planned_id FROM planned_dates WHERE id = ? AND skipped = 0 AND id NOT IN (SELECT occurrence_id FROM transactions)", occurrence,
         ) { it.getLong(0) }.firstOrNull() ?: return Saved()
-        val monthlyName = if (form.repeats == Repeats.MONTHLY) {
+        // D65: on edit, "Repete" acts on the transaction's own previsto; only without one does MONTHLY create.
+        val own = if (id != 0L) ownPlanned(c, id) else null
+        val monthlyName = if (form.repeats == Repeats.MONTHLY && own == null) {
             val alias = form.alias.trim().ifEmpty { aliases(c)[key].orEmpty() }
             cleanCaption(caption.ifEmpty { alias.ifEmpty { merchant } }).also { if (it.length > MAX_CAPTION) return Saved() }
         } else ""
@@ -1183,20 +1200,35 @@ class Db(
         if (occurrencePlanned != 0L && linkKey.v.isNotEmpty()) {
             c.exec("UPDATE planned SET link_package = ?, link_key = ?, link_text = ? WHERE id = ?", raw.packageName, linkKey, bank, occurrencePlanned)
         }
-        val planned = if (form.repeats == Repeats.MONTHLY) {
-            val pkg = if (linkKey.v.isEmpty()) "" else raw.packageName
-            insertPlanned(c, monthlyName, form, tags, form.date.yearMonth.plusMonth(), pkg, linkKey, if (linkKey.v.isEmpty()) "" else bank)
-        } else 0L
+        val planned = when {
+            own != null && form.repeats == Repeats.MONTHLY && own.second == Repeats.ONCE -> {
+                c.exec("UPDATE planned SET repeats = ? WHERE id = ?", Repeats.MONTHLY.ordinal, own.first)
+                0L
+            }
+            own != null && form.repeats == Repeats.ONCE && own.second == Repeats.MONTHLY -> {
+                deletePlanned(c, "id = ?", own.first)
+                0L
+            }
+            own == null && form.repeats == Repeats.MONTHLY -> {
+                val pkg = if (linkKey.v.isEmpty()) "" else raw.packageName
+                insertPlanned(c, monthlyName, form, tags, form.date.yearMonth.plusMonth(), pkg, linkKey, if (linkKey.v.isEmpty()) "" else bank, txId)
+            }
+            else -> 0L
+        }
         return Saved(TransactionId(txId), PlannedId(planned))
     }
 
-    /** A new previsto from [form] (budget, value, day of its date, repeats) named [name], with its first occurrence in [first]. */
+    /**
+     * A new previsto from [form] (budget, value, day of its date, repeats) named [name], with its first occurrence in
+     * [first]; [source] is the lançamento whose "Repete" made it (D65), 0 for Salvar previsto.
+     */
     private fun insertPlanned(
         c: SQLiteConnection, name: String, form: TransactionForm, tags: List<String>, first: YearMonth, pkg: String, key: MerchantKey, text: String,
+        source: Long = 0,
     ): Long {
         c.exec(
-            "INSERT INTO planned(name, budget_id, cents, day, repeats, link_package, link_key, link_text) VALUES (?,?,?,?,?,?,?,?)",
-            name, form.budget.v, form.total.v, form.date.day, form.repeats.ordinal, pkg, key, text,
+            "INSERT INTO planned(name, budget_id, cents, day, repeats, link_package, link_key, link_text, source_transaction) VALUES (?,?,?,?,?,?,?,?,?)",
+            name, form.budget.v, form.total.v, form.date.day, form.repeats.ordinal, pkg, key, text, source,
         )
         val id = c.lastId()
         for (t in tags) c.exec("INSERT OR IGNORE INTO planned_tags(planned_id, tag_id) VALUES (?, ?)", id, tagId(c, t))
@@ -1302,6 +1334,7 @@ class Db(
         c.exec("DELETE FROM installments WHERE transaction_id IN ($ids)", *args)
         c.exec("DELETE FROM transaction_tags WHERE transaction_id IN ($ids)", *args)
         c.exec("DELETE FROM refunds WHERE transaction_id IN ($ids)", *args)
+        c.exec("UPDATE planned SET source_transaction = 0 WHERE source_transaction IN ($ids)", *args)
         c.exec("DELETE FROM transactions WHERE $where", *args)
     }
 
@@ -1382,8 +1415,13 @@ class Db(
             "CREATE INDEX planned_tags_tag ON planned_tags(tag_id)",
         )
 
+        /** v5: the lançamento whose "Repete" created a previsto (D65); v4 previstos read 0 (none). */
+        val SCHEMA_V5 = listOf(
+            "ALTER TABLE planned ADD COLUMN source_transaction INTEGER NOT NULL DEFAULT 0",
+        )
+
         /** The schema version = how many SCHEMA_Vn migrations exist (v1 is SCHEMA_V1): a new migration can't be forgotten here. */
-        val SCHEMA_VERSION = listOf(SCHEMA_V1, SCHEMA_V2, SCHEMA_V3, SCHEMA_V4).size.toLong()
+        val SCHEMA_VERSION = listOf(SCHEMA_V1, SCHEMA_V2, SCHEMA_V3, SCHEMA_V4, SCHEMA_V5).size.toLong()
 
         /** One `if (v < N)` per version, each in a transaction that ends by writing N (architecture §4). */
         fun migrate(c: SQLiteConnection) {
@@ -1410,6 +1448,12 @@ class Db(
                 c.execSQL("BEGIN IMMEDIATE")
                 SCHEMA_V4.forEach(c::execSQL)
                 c.execSQL("PRAGMA user_version = 4")
+                c.execSQL("COMMIT")
+            }
+            if (v < 5) {
+                c.execSQL("BEGIN IMMEDIATE")
+                SCHEMA_V5.forEach(c::execSQL)
+                c.execSQL("PRAGMA user_version = 5")
                 c.execSQL("COMMIT")
             }
         }
