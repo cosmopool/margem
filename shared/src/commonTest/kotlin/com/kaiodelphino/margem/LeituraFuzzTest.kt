@@ -295,7 +295,7 @@ class LeituraFuzzTest {
                             installments = listOf(1, 1, 2, 12).random(rnd), merchant = "LOJA ${rnd.nextInt(50)}",
                             date = bm.start.lDays(rnd.nextInt(0, days)), time = lTime(rnd),
                         )
-                        assertNotEquals(0L, lNoThrow("$where addManual($form)") { db.addManual(form) }.v, "$where: addManual($form) accepted")
+                        assertNotEquals(0L, lNoThrow("$where addManual($form)") { db.addManual(form).transaction }.v, "$where: addManual($form) accepted")
                         assertEquals(before, db.budgetDetail(b, m, today).month.idealByDay, "$where: a purchase of ${form.total.v} on ${form.date} doesn't change idealByDay (spec §4: the plan doesn't change with spending)")
                     }
                     8 -> { // week start change: edits from today's month on are deleted, months recomputed
@@ -541,7 +541,7 @@ class LeituraFuzzTest {
                     in 0..4 -> { // addManual
                         val (form, group) = randomForm()
                         val w = "$where addManual($form)"
-                        val id = lNoThrow(w) { db.addManual(form) }
+                        val id = lNoThrow(w) { db.addManual(form).transaction }
                         assertNotEquals(0L, id.v, "$w: a valid form is accepted")
                         txs[id] = LTx(id, form.budget, tagSet(form), group, form.merchant, installmentsOf(w, id, form), NoticeId(0))
                         applyForm(form, group)
@@ -652,7 +652,7 @@ class LeituraFuzzTest {
                     installments = listOf(1, 1, 3, 10, 24).random(rnd), merchant = L_BASES.random(rnd),
                     date = today.lDays(rnd.nextInt(-300, 60)), time = lTime(rnd),
                 )
-                db.addManual(form).also { assertNotEquals(0L, it.v, "$head: setup addManual $k $form") }
+                db.addManual(form).transaction.also { assertNotEquals(0L, it.v, "$head: setup addManual $k $form") }
             }
             val from = LocalDate(1, 1, 1)
             val to = LocalDate(9999, 12, 31)

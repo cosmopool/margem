@@ -141,8 +141,14 @@ class TetoTest {
     fun v1DatabaseMigratesAndBackupKeepsTheCeiling() = runTest {
         db.createBudget("Mercado", Cents(124_000), oct9)
         db.close()
-        // Back to v1: what the app had before the teto and the legenda.
+        // Back to v1: what the app had before the teto, the legenda and the previsto.
         BundledSQLiteDriver().open(path).let {
+            it.execSQL("DROP TABLE planned")
+            it.execSQL("DROP TABLE planned_tags")
+            it.execSQL("DROP TABLE planned_dates")
+            it.execSQL("DROP INDEX transactions_occurrence")
+            it.execSQL("ALTER TABLE transactions DROP COLUMN occurrence_id")
+            it.execSQL("ALTER TABLE merchant_aliases DROP COLUMN alias_key")
             it.execSQL("DROP TABLE ceiling_months")
             it.execSQL("ALTER TABLE transactions DROP COLUMN caption")
             it.execSQL("PRAGMA user_version = 1")

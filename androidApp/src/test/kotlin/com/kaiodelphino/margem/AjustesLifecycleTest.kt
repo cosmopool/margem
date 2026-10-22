@@ -1175,7 +1175,7 @@ class AjustesLifecycleTest {
         TransactionForm(budget = budget, tags = tags, total = Cents(cents), installments = 1, merchant = merchant, date = DIA, time = LocalTime(10, 0))
 
     private fun manual(budget: BudgetId, cents: Long, tags: List<String>): TransactionId =
-        fora { db.addManual(form(budget, cents, tags)) }.also { assertNotEquals("addManual $tags", 0L, it.v) }
+        fora { db.addManual(form(budget, cents, tags)).transaction }.also { assertNotEquals("addManual $tags", 0L, it.v) }
 
     private fun version(): Long = db.version.value
 

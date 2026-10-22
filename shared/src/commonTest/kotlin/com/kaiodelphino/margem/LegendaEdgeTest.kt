@@ -90,7 +90,7 @@ class LegendaEdgeTest {
         assertNotEquals(TransactionId(0), tx, "accept 80")
         assertEquals(A80, db.transaction(tx).row.caption)
         assertEquals(80, db.transaction(tx).row.caption.length)
-        val manual = db.addManual(form(b, 500, caption = A80))
+        val manual = db.addManual(form(b, 500, caption = A80)).transaction
         assertNotEquals(TransactionId(0), manual, "addManual 80")
         assertEquals(A80, db.transaction(manual).row.caption)
         assertTrue(db.edit(manual, form(b, 500, caption = "b".repeat(80))), "edit 80")
@@ -101,7 +101,7 @@ class LegendaEdgeTest {
         val read2 = db.asRead(id2, b)
         val version = db.version.value
         assertEquals(TransactionId(0), db.accept(id2, read2.copy(caption = A81)), "accept 81")
-        assertEquals(TransactionId(0), db.addManual(form(b, 500, caption = A81)), "addManual 81")
+        assertEquals(TransactionId(0), db.addManual(form(b, 500, caption = A81)).transaction, "addManual 81")
         assertEquals(version, db.version.value, "a refused write writes nothing")
         assertEquals(listOf(id2), db.pending().map { it.id }, "the notice is untouched")
         assertEquals(2, db.transactions().size)
@@ -123,7 +123,7 @@ class LegendaEdgeTest {
         val tx = db.accept(id, read.copy(caption = padded))
         assertNotEquals(TransactionId(0), tx, "accept 81 raw → 80 clean")
         assertEquals(A80, db.transaction(tx).row.caption)
-        val manual = db.addManual(form(b, 500, caption = "$A80\t"))
+        val manual = db.addManual(form(b, 500, caption = "$A80\t")).transaction
         assertNotEquals(TransactionId(0), manual, "addManual 84 raw → 80 clean")
         assertEquals(A80, db.transaction(manual).row.caption)
         assertTrue(db.edit(tx, read.copy(caption = "  $A80 \n")), "edit raw → 80 clean")
@@ -135,7 +135,7 @@ class LegendaEdgeTest {
         val id2 = db.purchase(2)
         val version = db.version.value
         assertEquals(TransactionId(0), db.accept(id2, db.asRead(id2, b).copy(caption = over)), "accept 81 clean")
-        assertEquals(TransactionId(0), db.addManual(form(b, 500, caption = over)), "addManual 81 clean")
+        assertEquals(TransactionId(0), db.addManual(form(b, 500, caption = over)).transaction, "addManual 81 clean")
         assertEquals(version, db.version.value, "a refused write writes nothing")
         val before = db.transaction(tx).row
         assertFalse(db.edit(tx, read.copy(caption = over)), "edit 81 clean")
@@ -149,12 +149,12 @@ class LegendaEdgeTest {
         val forty = emoji.repeat(40)
         assertEquals(80, forty.length)
 
-        val tx = db.addManual(form(b, 500, caption = forty))
+        val tx = db.addManual(form(b, 500, caption = forty)).transaction
         assertNotEquals(TransactionId(0), tx, "40 emojis = 80 units")
         assertEquals(forty, db.transaction(tx).row.caption)
         assertEquals(80, db.transaction(tx).row.caption.length)
 
-        assertEquals(TransactionId(0), db.addManual(form(b, 500, caption = emoji.repeat(41))), "41 emojis = 82 units")
+        assertEquals(TransactionId(0), db.addManual(form(b, 500, caption = emoji.repeat(41))).transaction, "41 emojis = 82 units")
         assertFalse(db.edit(tx, form(b, 500, caption = emoji.repeat(41))), "41 emojis = 82 units")
         assertEquals(forty, db.transaction(tx).row.caption)
     }
@@ -171,10 +171,10 @@ class LegendaEdgeTest {
         assertEquals(80, withNfc.length)
         assertEquals(81, withNfd.length)
 
-        val tx = db.addManual(form(b, 500, caption = withNfc))
+        val tx = db.addManual(form(b, 500, caption = withNfc)).transaction
         assertNotEquals(TransactionId(0), tx, "80 units")
         assertEquals(withNfc, db.transaction(tx).row.caption)
-        assertEquals(TransactionId(0), db.addManual(form(b, 500, caption = withNfd)), "81 units in 80 code points")
+        assertEquals(TransactionId(0), db.addManual(form(b, 500, caption = withNfd)).transaction, "81 units in 80 code points")
     }
 
     // ---- Limpeza (KDoc of TransactionForm.caption) ----
@@ -182,7 +182,7 @@ class LegendaEdgeTest {
     @Test
     fun `espaços nas pontas saem e o que se lê é o texto limpo`() = withDb { db ->
         val b = db.budget("Mercado", 60000)
-        val tx = db.addManual(form(b, 500, caption = " \t Bolo da Ana \n "))
+        val tx = db.addManual(form(b, 500, caption = " \t Bolo da Ana \n ")).transaction
         assertNotEquals(TransactionId(0), tx)
         assertEquals("Bolo da Ana", db.transaction(tx).row.caption)
 
@@ -196,7 +196,7 @@ class LegendaEdgeTest {
     fun `só espaços tabulação ou quebra de linha não tem legenda`() = withDb { db ->
         val b = db.budget("Mercado", 60000)
         for ((i, blank) in listOf("", " ", "\t", "\n", " \t\n ", "   ").withIndex()) {
-            val tx = db.addManual(form(b, 500, merchant = "LOJA $i", caption = blank))
+            val tx = db.addManual(form(b, 500, merchant = "LOJA $i", caption = blank)).transaction
             assertNotEquals(TransactionId(0), tx, "blank '$blank'")
             val row = db.transaction(tx).row
             assertEquals("", row.caption, "blank '$blank'")
@@ -217,7 +217,7 @@ class LegendaEdgeTest {
         )
         for ((i, case) in cases.withIndex()) {
             val (raw, clean) = case
-            val tx = db.addManual(form(b, 500, merchant = "LOJA $i", caption = raw))
+            val tx = db.addManual(form(b, 500, merchant = "LOJA $i", caption = raw)).transaction
             assertNotEquals(TransactionId(0), tx, "raw $i")
             assertEquals(clean, db.transaction(tx).row.caption, "raw $i")
         }
@@ -229,14 +229,14 @@ class LegendaEdgeTest {
         val bom = "\uFEFF"
         val ok = "a".repeat(39) + bom + "a".repeat(40) // 80 units with a U+FEFF inside
         assertEquals(80, ok.length)
-        val tx = db.addManual(form(b, 500, caption = ok))
+        val tx = db.addManual(form(b, 500, caption = ok)).transaction
         assertNotEquals(TransactionId(0), tx, "80 units with a U+FEFF inside")
         val back = db.transaction(tx).row.caption
         assertEquals("a".repeat(39) + "\uFFFD" + "a".repeat(40), back)
         assertEquals(80, back.length, "storable replaces one unit with one unit")
 
         // The replacement keeps the count honest: 81 units with a U+FEFF inside stay 81 and are refused.
-        assertEquals(TransactionId(0), db.addManual(form(b, 500, caption = "a".repeat(40) + bom + "a".repeat(40))))
+        assertEquals(TransactionId(0), db.addManual(form(b, 500, caption = "a".repeat(40) + bom + "a".repeat(40))).transaction)
     }
 
     // ---- Edição (spec §2.10, §2.12) ----
@@ -264,7 +264,7 @@ class LegendaEdgeTest {
         assertEquals(gone.name, gone.title)
 
         // Whitespace-only removes it too: só espaços = sem legenda.
-        val manual = db.addManual(form(b, 500, caption = "Bolo"))
+        val manual = db.addManual(form(b, 500, caption = "Bolo")).transaction
         assertTrue(db.edit(manual, form(b, 500, caption = "   ")))
         assertEquals("", db.transaction(manual).row.caption)
     }
@@ -293,7 +293,7 @@ class LegendaEdgeTest {
             assertFalse(db.transaction(tx).row.corrected, "$name edited with a caption only")
         }
 
-        val manual = db.addManual(form(b, 500, caption = "Bolo"))
+        val manual = db.addManual(form(b, 500, caption = "Bolo")).transaction
         assertFalse(db.transaction(manual).row.corrected, "manual with a legenda")
         assertTrue(db.edit(manual, form(b, 500, caption = "Outro bolo")))
         assertFalse(db.transaction(manual).row.corrected, "manual edited with a legenda")
@@ -321,7 +321,7 @@ class LegendaEdgeTest {
         assertEquals(row.name, row.title)
 
         // A manual one simply goes.
-        val manual = db.addManual(form(b, 500, caption = "Bolo"))
+        val manual = db.addManual(form(b, 500, caption = "Bolo")).transaction
         db.deleteTransaction(manual)
         assertTrue(db.transactions().none { it.id == manual })
         assertEquals(TransactionDetail(), db.transaction(manual))
@@ -332,12 +332,12 @@ class LegendaEdgeTest {
     @Test
     fun `suggestion nunca vem com legenda`() = withDb { db ->
         val b = db.budget("Mercado", 60000)
-        assertNotEquals(TransactionId(0), db.addManual(form(b, 500, date = OCT_6, merchant = "LOJA X", tags = listOf("feira"), caption = "Bolo antigo")))
+        assertNotEquals(TransactionId(0), db.addManual(form(b, 500, date = OCT_6, merchant = "LOJA X", tags = listOf("feira"), caption = "Bolo antigo")).transaction)
         // The last lançamento of the merchant has a legenda: the suggestion still is verba e marcadores.
-        assertNotEquals(TransactionId(0), db.addManual(form(b, 700, date = OCT_10, merchant = "LOJA X", tags = listOf("feira"), caption = "Bolo da Ana")))
+        assertNotEquals(TransactionId(0), db.addManual(form(b, 700, date = OCT_10, merchant = "LOJA X", tags = listOf("feira"), caption = "Bolo da Ana")).transaction)
         assertEquals(Suggestion(b, listOf("feira")), db.suggestion("LOJA X"))
 
-        assertNotEquals(TransactionId(0), db.addManual(form(b, 900, date = OCT_10, merchant = "LOJA Y", tags = listOf("feira"))))
+        assertNotEquals(TransactionId(0), db.addManual(form(b, 900, date = OCT_10, merchant = "LOJA Y", tags = listOf("feira"))).transaction)
         assertEquals(db.suggestion("LOJA Y"), db.suggestion("LOJA X"), "the legenda changes nothing")
     }
 
@@ -347,8 +347,8 @@ class LegendaEdgeTest {
     fun `merchantRanking tagRanking e history são os de um lançamento idêntico sem legenda`() = withDb { db ->
         val b = db.budget("Casa", 90000)
         fun of(caption: String) = form(b, 3000, date = OCT_6, merchant = "PADARIA DO ZE", tags = listOf("feira"), alias = "Padaria do Zé", caption = caption)
-        val with = db.addManual(of("Bolo da Ana"))
-        val without = db.addManual(of(""))
+        val with = db.addManual(of("Bolo da Ana")).transaction
+        val without = db.addManual(of("")).transaction
         assertNotEquals(TransactionId(0), with)
         assertNotEquals(TransactionId(0), without)
 
@@ -405,7 +405,7 @@ class LegendaEdgeTest {
             db.close()
             db = Db(BundledSQLiteDriver(), a, timeZone = TimeZone.of("America/Sao_Paulo")) // reopening is idempotent
             assertV1Intact(db, "reaberto")
-            val tx = db.addManual(form(BudgetId(1), 900, caption = "Bolo da Ana"))
+            val tx = db.addManual(form(BudgetId(1), 900, caption = "Bolo da Ana")).transaction
             assertNotEquals(TransactionId(0), tx, "the migrated database writes the legenda")
             assertEquals("Bolo da Ana", db.transaction(tx).row.caption)
             db.close()

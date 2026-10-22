@@ -468,7 +468,7 @@ class RecadoFuzzTest {
                         wrote = id.v != 0L
                     }
                     "addManual" -> {
-                        id = rfNoThrow(what) { db.addManual(form) }
+                        id = rfNoThrow(what) { db.addManual(form).transaction }
                         wrote = id.v != 0L
                     }
                     else -> {
@@ -583,7 +583,7 @@ class RecadoFuzzTest {
                 everTx += id
             }
             repeat(8) { k ->
-                val id = db.addManual(simpleForm())
+                val id = db.addManual(simpleForm()).transaction
                 assertNotEquals(0L, id.v, "setup: addManual $k")
                 txNotice[id] = NoticeId(0)
                 everTx += id
@@ -752,7 +752,7 @@ class RecadoFuzzTest {
                         val f = simpleForm()
                         what = "seed=$seed i=$i addManual(${rfShowForm(f)})"
                         expect = true
-                        val id = rfNoThrow(what) { db.addManual(f) }
+                        val id = rfNoThrow(what) { db.addManual(f).transaction }
                         got = id.v != 0L
                         if (got) {
                             txNotice[id] = NoticeId(0)
@@ -844,7 +844,7 @@ class RecadoFuzzTest {
                         merchant = "LOJA $round $date", date = date, time = rfTime(rnd),
                     )
                     val what = "seed=$seed day=$day addManual(${rfShowForm(form)})"
-                    val id = rfNoThrow(what) { db.addManual(form) }
+                    val id = rfNoThrow(what) { db.addManual(form).transaction }
                     if (!rfInRange(date, n)) {
                         assertEquals(0L, id.v, "$what: an installment past 9999-12-31 must be refused")
                         continue

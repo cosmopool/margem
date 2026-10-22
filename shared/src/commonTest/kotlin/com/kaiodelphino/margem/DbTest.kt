@@ -113,7 +113,7 @@ class DbTest {
         assertFalse(db.transaction(tx).row.corrected) // back to what was read
         assertEquals(first, db.transaction(tx).notice.id)
 
-        val manual = db.addManual(TransactionForm(budget, listOf("feira"), Cents(2000), 1, "Feira", OCT_6, LocalTime(9, 0)))
+        val manual = db.addManual(TransactionForm(budget, listOf("feira"), Cents(2000), 1, "Feira", OCT_6, LocalTime(9, 0))).transaction
         assertFalse(db.transaction(manual).row.corrected)
         assertEquals(NoticeRow(), db.transaction(manual).notice)
 
@@ -244,7 +244,7 @@ class DbTest {
     @Test
     fun `installments count each in its own month and the last takes the cents`() = runTest {
         val budget = setUp()
-        val tx = db.addManual(TransactionForm(budget, listOf("casa"), Cents(100001), 10, "Loja", OCT_6, LocalTime(10, 0)))
+        val tx = db.addManual(TransactionForm(budget, listOf("casa"), Cents(100001), 10, "Loja", OCT_6, LocalTime(10, 0))).transaction
 
         val installments = db.transaction(tx).installments
         assertEquals((1..10).toList(), installments.map { it.k })
@@ -271,8 +271,8 @@ class DbTest {
     @Test
     fun `previewRefund gives back the purchase's installment of its first month`() = runTest {
         val budget = setUp()
-        val cash = db.addManual(TransactionForm(budget, listOf("casa"), Cents(5990), 1, "Loja", OCT_6, LocalTime(10, 0)))
-        val split = db.addManual(TransactionForm(budget, listOf("casa"), Cents(120000), 10, "Móveis", OCT_6, LocalTime(11, 0)))
+        val cash = db.addManual(TransactionForm(budget, listOf("casa"), Cents(5990), 1, "Loja", OCT_6, LocalTime(10, 0))).transaction
+        val split = db.addManual(TransactionForm(budget, listOf("casa"), Cents(120000), 10, "Móveis", OCT_6, LocalTime(11, 0))).transaction
         // October: 600,00 − 59,90 − 120,00 = 420,10; refunding the cash one gives its 59,90 back, the split one its 1st installment.
         assertEquals(Preview(YearMonth(2026, 10), Cents(42010), Cents(48000)), db.previewRefund(cash, NOV_20))
         assertEquals(Preview(YearMonth(2026, 10), Cents(42010), Cents(54010)), db.previewRefund(split, OCT_6))
@@ -290,9 +290,9 @@ class DbTest {
         val budget = setUp()
         val last = LocalDate(9999, 12, 31)
         // Dates are ISO text: "+10000-01-31" would sort before "0001-01-01".
-        assertEquals(TransactionId(0), db.addManual(TransactionForm(budget, listOf("x"), Cents(200), 2, "Loja", last, LocalTime(10, 0))))
+        assertEquals(TransactionId(0), db.addManual(TransactionForm(budget, listOf("x"), Cents(200), 2, "Loja", last, LocalTime(10, 0))).transaction)
         assertEquals(Preview(), db.previewAccept(budget, last, Cents(200), 2, OCT_6))
-        val tx = db.addManual(TransactionForm(budget, listOf("x"), Cents(200), 1, "Loja", last, LocalTime(10, 0)))
+        val tx = db.addManual(TransactionForm(budget, listOf("x"), Cents(200), 1, "Loja", last, LocalTime(10, 0))).transaction
         assertNotEquals(TransactionId(0), tx)
         // With the month starting on the 15th, Dec 9999's month runs into year 10000.
         assertTrue(db.setMonthStartDay(15, OCT_6))
@@ -303,8 +303,8 @@ class DbTest {
     @Test
     fun `transactions of today carry the installment of today's month`() = runTest {
         val budget = setUp()
-        val split = db.addManual(TransactionForm(budget, listOf("casa"), Cents(100001), 10, "Móveis", OCT_6, LocalTime(11, 0)))
-        val later = db.addManual(TransactionForm(budget, listOf("casa"), Cents(500), 1, "Depois", LocalDate(2026, 12, 2), LocalTime(9, 0)))
+        val split = db.addManual(TransactionForm(budget, listOf("casa"), Cents(100001), 10, "Móveis", OCT_6, LocalTime(11, 0))).transaction
+        val later = db.addManual(TransactionForm(budget, listOf("casa"), Cents(500), 1, "Depois", LocalDate(2026, 12, 2), LocalTime(9, 0))).transaction
 
         fun now(rows: List<TransactionRow>, id: TransactionId) = rows.single { it.id == id }.now
         assertEquals(Installment(1, OCT_6, Cents(10000)), now(db.transactions(OCT_6), split))
@@ -324,7 +324,7 @@ class DbTest {
         val budget = setUp()
         assertTrue(db.setMonthStartDay(30, OCT_6))
         // Feb 2026 with day 30 starts on Feb 28 (no Feb 30) and ends on Mar 29; Mar 28 would still be February's.
-        val tx = db.addManual(TransactionForm(budget, listOf("casa"), Cents(200), 2, "Loja", LocalDate(2026, 2, 28), LocalTime(10, 0)))
+        val tx = db.addManual(TransactionForm(budget, listOf("casa"), Cents(200), 2, "Loja", LocalDate(2026, 2, 28), LocalTime(10, 0))).transaction
         assertEquals(listOf(LocalDate(2026, 2, 28), LocalDate(2026, 3, 30)), db.transaction(tx).installments.map { it.date })
         assertEquals(YearMonth(2026, 3), db.monthOf(LocalDate(2026, 3, 30)))
     }
@@ -426,10 +426,10 @@ class DbTest {
     fun `a deleted transaction's id never comes back`() = runTest {
         val budget = setUp()
         val form = TransactionForm(budget, listOf("x"), Cents(100), 1, "Loja", OCT_6, LocalTime(10, 0))
-        val first = db.addManual(form)
+        val first = db.addManual(form).transaction
         val last = db.accept(post(nu(PURCHASE)), form)
         db.deleteTransaction(last)
-        val next = db.addManual(form)
+        val next = db.addManual(form).transaction
         assertTrue(next.v > last.v && first.v < last.v)
         assertEquals(TransactionDetail(), db.transaction(last))
     }
@@ -476,9 +476,9 @@ class DbTest {
         db.addSource(NUBANK, "Nu", 0)
         val budget = db.createBudget("Casa", Cents(100000), LocalDate(2026, 8, 3))
         db.ensureMonths(YearMonth(2026, 10))
-        val sofa = db.addManual(TransactionForm(budget, listOf("móveis"), Cents(120005), 10, "Movelaria Real", LocalDate(2026, 8, 15), LocalTime(10, 0)))
-        val lamp = db.addManual(TransactionForm(budget, listOf("casa"), Cents(4500), 1, "Luz & Cia", LocalDate(2026, 10, 2), LocalTime(9, 0)))
-        val uber = db.addManual(TransactionForm(budget, listOf("casa"), Cents(994), 1, "DL *UberRides", LocalDate(2026, 10, 20), LocalTime(9, 0)))
+        val sofa = db.addManual(TransactionForm(budget, listOf("móveis"), Cents(120005), 10, "Movelaria Real", LocalDate(2026, 8, 15), LocalTime(10, 0))).transaction
+        val lamp = db.addManual(TransactionForm(budget, listOf("casa"), Cents(4500), 1, "Luz & Cia", LocalDate(2026, 10, 2), LocalTime(9, 0))).transaction
+        val uber = db.addManual(TransactionForm(budget, listOf("casa"), Cents(994), 1, "DL *UberRides", LocalDate(2026, 10, 20), LocalTime(9, 0))).transaction
         assertTrue(db.registerRefund(post(nu(UBER_REFUND)), uber))
 
         val oct = db.budgetDetail(budget, YearMonth(2026, 10), LocalDate(2026, 10, 25))
@@ -589,7 +589,7 @@ class DbTest {
         assertEquals(version + 1, db.version.value)
         assertEquals(listOf("Mercado"), db.transactions().map { it.budgetName })
         assertEquals(Theme.SYSTEM, db.settings().theme)
-        assertNotEquals(TransactionId(0), db.addManual(TransactionForm(budget, listOf("x"), Cents(1), 1, "", OCT_6, LocalTime(0, 0))))
+        assertNotEquals(TransactionId(0), db.addManual(TransactionForm(budget, listOf("x"), Cents(1), 1, "", OCT_6, LocalTime(0, 0))).transaction)
 
         SystemFileSystem.sink(Path(copy)).buffered().use { it.write(ByteArray(4096) { i -> i.toByte() }) }
         assertFalse(db.importFrom(copy))

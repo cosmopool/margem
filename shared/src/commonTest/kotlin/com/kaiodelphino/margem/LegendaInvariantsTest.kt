@@ -444,7 +444,7 @@ private class LegendaInvariantRun(val db: Db, val shadow: Db, val seed: Int, val
         val f = randomForm(merchant)
         val expect = valid(f)
         val before = snap()
-        val id = db.addManual(f)
+        val id = db.addManual(f).transaction
         log("addManual ${describe(f)} -> ${id.v}")
         assertEquals(expect, id.v != 0L, "addManual accepted/refused (same rules as accept)")
         if (id.v == 0L) {
@@ -456,7 +456,7 @@ private class LegendaInvariantRun(val db: Db, val shadow: Db, val seed: Int, val
         captions[id] = linvCleanCaption(f.caption)
         verifyTx(id, f, NoticeId(0), NoticeId(0), budgets.getValue(f.budget))
         assertFalse(db.transaction(id).row.corrected, "a manual transaction is never corrected")
-        val sid = shadow.addManual(f.copy(caption = ""))
+        val sid = shadow.addManual(f.copy(caption = "")).transaction
         assertEquals(id, sid, "the same write without legenda yields the same transaction id")
     }
 

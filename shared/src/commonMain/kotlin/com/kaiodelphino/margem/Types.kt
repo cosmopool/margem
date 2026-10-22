@@ -19,6 +19,10 @@ import kotlinx.datetime.YearMonth
 @JvmInline value class TransactionId(val v: Long)
 @JvmInline value class BudgetId(val v: Long)
 @JvmInline value class TagId(val v: Long)
+@JvmInline value class PlannedId(val v: Long)
+
+/** One month of a previsto (D59): the row of `planned_dates`, never deleted. */
+@JvmInline value class OccurrenceId(val v: Long)
 
 /** The empty date and time of zero values. */
 val NO_DATE = LocalDate(1970, 1, 1)
@@ -74,6 +78,44 @@ enum class PaceStatus { ON_PACE, AHEAD, OVERRUN }
 /** Derived, never stored (spec §2, architecture §5). */
 enum class NoticeStatus { PENDING, DISMISSED, PROCESSED }
 
+/** "Repete" (spec §2.13, P8, D64). Stored by ordinal: ONCE = 0 = zero. Never reorder. */
+enum class Repeats { ONCE, MONTHLY }
+
+/**
+ * One open occurrence of a previsto (spec §2.13, D59, D62): the rule and the month together, everything
+ * "A caminho", the previsto sheet, the Pauta band, the snackbar and "Qual previsto é este recado?" show.
+ * `Planned()` (zero, [occurrence] 0) = no previsto.
+ */
+data class Planned(
+    val occurrence: OccurrenceId = OccurrenceId(0),
+    val planned: PlannedId = PlannedId(0),
+    /** Clean like a legenda (D53, D62): becomes the lançamento's caption; at most [MAX_CAPTION]. */
+    val name: String = "",
+    val budget: BudgetId = BudgetId(0),
+    val budgetName: String = "",
+    /** Sorted. */
+    val tags: List<String> = emptyList(),
+    /** The previsto's own value (P7: never replaced by a recado's). */
+    val cents: Cents = Cents(0),
+    /** 1..31: the day of every occurrence; a month without it uses its last day (P8). */
+    val day: Int = 0,
+    val repeats: Repeats = Repeats.ONCE,
+    /** This occurrence's date: [day] in its calendar month, clamped to the month's last day. */
+    val date: LocalDate = NO_DATE,
+    /** [MONTHLY][Repeats.MONTHLY]: the date of the occurrence of the month after [date] ("O próximo é 10 nov."); NO_DATE for ONCE. */
+    val next: LocalDate = NO_DATE,
+    /** Has a link (fonte + texto do banco, D59): recados that match are recognized (D60). */
+    val linked: Boolean = false,
+    /** The bank text the link was made from, raw, for display only (R4b): "SMARTFIT". "" when not linked. */
+    val linkText: String = "",
+    /** The label of the linked fonte (Source.label; the package when the source was removed). "" when not linked. */
+    val linkSource: String = "",
+    /** [date] < the `today` of the read: waiting past its day (P10). Always false in reads without today. */
+    val late: Boolean = false,
+    /** A pending recado is recognized as this occurrence (D60): "recado na Pauta". */
+    val noticeInPauta: Boolean = false,
+)
+
 data class Settings(
     /** 1..31; a day missing from a month means that month's last day (spec §3). */
     val monthStartDay: Int = 1,
@@ -116,6 +158,13 @@ data class NoticeRow(
     val isNew: Boolean = false,
     /** Neither a value nor a merchant was read: the button becomes "Lançar mesmo assim". */
     val looksLikeAd: Boolean = false,
+    /**
+     * The open occurrence this pending recado is recognized as (D60, D62): same fonte and same
+     * [MerchantKey] of its bank text as a linked previsto, its date within 10 days of the recado's date,
+     * the closest one (ties: earlier date, then lower occurrence id). Zero when none, always zero for a
+     * recado whose bank text gives an empty key (R2), and in every read but [Db.pending].
+     */
+    val planned: Planned = Planned(),
 )
 
 /** The most a legenda takes (spec §2.12, D53, D55): `String.length` units — the field cuts here, the Db refuses past it. */
@@ -146,7 +195,34 @@ data class TransactionForm(
      * sets `corrected` (not an emenda).
      */
     val caption: String = "",
+    /**
+     * The open occurrence this lançamento closes (D62); 0 = none. Insert only (accept, addManual): stored
+     * as the lançamento's origin, which edit never changes. Refused when the occurrence is not open
+     * (skipped, or closed by another lançamento). With a recado whose bank text gives a non-empty key,
+     * accept also (re)writes the previsto's link from that recado's fonte and bank text (not from
+     * [merchant]); a manual one writes no link (R2, R6b).
+     */
+    val occurrence: OccurrenceId = OccurrenceId(0),
+    /**
+     * "Repete" (D64). MONTHLY, in the same write: a new previsto named after the line (caption, else alias,
+     * else bank text, cleaned like the caption), with this budget, tags, total and the day of [date], first
+     * occurrence in the calendar month after [date]'s, linked like [occurrence] says when there is a recado.
+     * With [planned] ≠ 0, the previsto's own repetition.
+     */
+    val repeats: Repeats = Repeats.ONCE,
+    /**
+     * Editar previsto (D64): ≠ 0 makes [Db.addManual] update this previsto's rule — name ([caption], else
+     * [merchant], cleaned like the caption), budget, tags, value ([total]), day (of [date]) and [repeats] —
+     * and nothing else: no lançamento. Its open occurrences follow the new day. Ignored by accept and edit.
+     */
+    val planned: PlannedId = PlannedId(0),
 )
+
+/**
+ * What [Db.addManual] wrote: a lançamento, a previsto, or both ("Todo mês" from today or the past).
+ * Both zero = refused, nothing written.
+ */
+data class Saved(val transaction: TransactionId = TransactionId(0), val planned: PlannedId = PlannedId(0))
 
 /** One line of Lançamentos and of the budget detail. */
 data class TransactionRow(

@@ -376,7 +376,7 @@ private class InvariantRun(val db: Db, val seed: Int) {
 
     suspend fun addManualAction() {
         val f = randomForm()
-        val id = attempt("addManual ${describe(f)}", formValid(f), { it: TransactionId -> it.v != 0L }) { db.addManual(f) }
+        val id = attempt("addManual ${describe(f)}", formValid(f), { it: TransactionId -> it.v != 0L }) { db.addManual(f).transaction }
         if (id.v != 0L) verifyTx(id, f, NoticeId(0), NoticeId(0), null)
     }
 
@@ -944,7 +944,7 @@ class InvariantsTest {
             val e1 = db.captured(4, estornoText(1000, "LOJA X"))
             val t1 = db.accept(p1, form(budget, listOf("mercado"), 1000))
             val t2 = db.accept(p2, form(budget, listOf("Mercado", "feira"), 2000))
-            val t3 = db.addManual(form(budget, listOf("mercado"), 8000))
+            val t3 = db.addManual(form(budget, listOf("mercado"), 8000)).transaction
             val t4 = db.accept(p3, form(budget, listOf("feira"), 4000))
             assertTrue(listOf(t1, t2, t3, t4).all { it.v != 0L })
             assertTrue(db.registerRefund(e1, t1))
@@ -980,7 +980,7 @@ class InvariantsTest {
             val t1 = db.accept(p1, form(a, listOf("feira"), 1000, installments = 3))
             val t2 = db.accept(p2, form(a, listOf("feira", "casa"), 2000))
             val t3 = db.accept(p3, form(b, listOf("casa"), 3000))
-            val tm = db.addManual(form(a, listOf("feira"), 500))
+            val tm = db.addManual(form(a, listOf("feira"), 500)).transaction
             assertTrue(listOf(t1, t2, t3, tm).all { it.v != 0L })
             assertTrue(db.registerRefund(e1, t1))
             assertTrue(db.registerRefund(e4, p4))
@@ -1010,9 +1010,9 @@ class InvariantsTest {
     fun mergingTagsKeepsTransactionsTagged() = runTest(timeout = 30.seconds) {
         withDb { db ->
             val budget = db.createBudget("Mercado", Cents(100_000), TODAY)
-            val t1 = db.addManual(form(budget, listOf("cafe"), 1000))
-            val t2 = db.addManual(form(budget, listOf("cafe", "padaria"), 2000))
-            val t3 = db.addManual(form(budget, listOf("padaria"), 3000))
+            val t1 = db.addManual(form(budget, listOf("cafe"), 1000)).transaction
+            val t2 = db.addManual(form(budget, listOf("cafe", "padaria"), 2000)).transaction
+            val t3 = db.addManual(form(budget, listOf("padaria"), 3000)).transaction
             assertTrue(listOf(t1, t2, t3).all { it.v != 0L })
             val tags = db.tags().associateBy { it.name }
             val cafe = tags.getValue("cafe").id

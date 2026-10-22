@@ -465,7 +465,7 @@ class FuzzTest {
             val txBefore = db.transactions()
             val tagsBefore = db.tags()
             val id = try {
-                if (manual) db.addManual(form) else db.accept(notice, form)
+                if (manual) db.addManual(form).transaction else db.accept(notice, form)
             } catch (e: Throwable) {
                 fail("$what threw $e", e)
             }
@@ -704,11 +704,11 @@ class FuzzTest {
             TransactionForm(budget = budget, tags = listOf("t"), total = Cents(100), merchant = merchant, date = TODAY, time = LocalTime(12, 0), alias = alias)
         val txs = HashMap<String, TransactionId>()
         for ((m, _) in pairs) {
-            val id = db.addManual(form(m))
+            val id = db.addManual(form(m)).transaction
             assertNotEquals(0L, id.v, "addManual(merchant=${show(m)})")
             txs[m] = id
         }
-        val empty = db.addManual(form(""))
+        val empty = db.addManual(form("")).transaction
         assertNotEquals(0L, empty.v, "addManual(merchant=\"\")")
 
         for ((m, alias) in pairs) db.setAlias(m, alias)
@@ -730,7 +730,7 @@ class FuzzTest {
         db.setAlias("PAG*JOSEX1000", "  ")
         assertEquals("", aliasOf(txs.getValue("PAG*JOSEX1000")), "blank alias removes it")
         // A form alias names the merchant.
-        val named = db.addManual(form("Loja \"X\" ; --", "Apelido 'Y' %"))
+        val named = db.addManual(form("Loja \"X\" ; --", "Apelido 'Y' %")).transaction
         assertNotEquals(0L, named.v)
         assertEquals("Apelido 'Y' %", aliasOf(named), "form alias read back")
     }

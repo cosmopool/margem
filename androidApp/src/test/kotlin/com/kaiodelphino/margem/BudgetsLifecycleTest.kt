@@ -111,7 +111,7 @@ class BudgetsLifecycleTest {
         val row = BudgetTags.ROW + id.v
         await("linha de Mercado com 'de 600,00'") { shows(row, "Mercado") && shows(row, moneyPlain(Cents(60_000))) }
 
-        assertNotEquals(0L, fora { db.addManual(form(id, 12_345)) }.v)
+        assertNotEquals(0L, fora { db.addManual(form(id, 12_345)).transaction }.v)
         // §3: margem = cota − gasto = 600,00 − 123,45 = 476,55.
         await("gasto 123,45 e margem 476,55 na linha", row) {
             shows(row, money(Cents(12_345))) && shows(row, money(Cents(47_655)))
@@ -126,7 +126,7 @@ class BudgetsLifecycleTest {
         assertTrue(fora { db.renameBudget(id, "Feira") })
         await("nome novo na linha", row) { shows(row, "Feira") }
 
-        assertNotEquals(0L, fora { db.addManual(form(id, 70_000)) }.v)
+        assertNotEquals(0L, fora { db.addManual(form(id, 70_000)).transaction }.v)
         // Gasto 123,45 + 700,00 = 823,45 > cota 800,00: Fora da margem, "R$ 23,45 além" (§5, BudgetTags.ROW).
         await("gasto 823,45 e 'R$ 23,45 além' na linha", row) {
             shows(row, money(Cents(82_345))) && shows(row, money(Cents(2_345))) && shows(row, "além")
@@ -146,7 +146,7 @@ class BudgetsLifecycleTest {
         // 26–31 = 60000 − 7741 − 3×13548 = 11615.
         await("passos padrão", W12, W26) { shows(W12, stepValue(Cents(13_548))) && shows(W26, stepValue(Cents(11_615))) }
 
-        val t = fora { db.addManual(form(id, 12_345)) }
+        val t = fora { db.addManual(form(id, 12_345)).transaction }
         assertNotEquals(0L, t.v)
         val line = BudgetTags.LINE + t.v
         val sum = BudgetTags.LINE_SUM + t.v
@@ -188,7 +188,7 @@ class BudgetsLifecycleTest {
     @Test
     fun `verba apagada por fora com o detalhe aberto não quebra e some da lista`() {
         val id = fora { db.createBudget("Lazer", Cents(30_000), DIA_FIXO) }
-        assertNotEquals(0L, fora { db.addManual(form(id, 4_500)) }.v)
+        assertNotEquals(0L, fora { db.addManual(form(id, 4_500)).transaction }.v)
         composeRule.setContent { Content() }
         openDetail(id)
         await("detalhe de Lazer", BudgetTags.DETAIL_TITLE) { shows(BudgetTags.DETAIL_TITLE, "Lazer") }
@@ -311,7 +311,7 @@ class BudgetsLifecycleTest {
     fun `detalhe no mês passado sobrevive à restauração no mesmo mês e Voltar leva a Verbas`() {
         val id = fora { db.createBudget("Viagem", Cents(40_000), LocalDate(2026, 9, 10)) }
         assertNotEquals(0L, id.v)
-        assertNotEquals(0L, fora { db.addManual(form(id, 5_000, LocalDate(2026, 9, 20))) }.v)
+        assertNotEquals(0L, fora { db.addManual(form(id, 5_000, LocalDate(2026, 9, 20))).transaction }.v)
         val restore = StateRestorationTester(composeRule)
         restore.setContent { Content() }
         openDetail(id)
@@ -439,7 +439,7 @@ class BudgetsLifecycleTest {
                         // 1/6 + 0..135 dias = de 1/6 a 14/10 (30 + 31 + 31 + 30 = 122 dias até 1/10).
                         val date = LocalDate(2026, 6, 1).plus(rnd.nextInt(0, 136), DateTimeUnit.DAY)
                         val cents = rnd.nextLong(100, 20_000)
-                        val t = withTimeout(OP_TIMEOUT_MS) { db.addManual(form(a, cents, date)) }
+                        val t = withTimeout(OP_TIMEOUT_MS) { db.addManual(form(a, cents, date)).transaction }
                         assertNotEquals("seed=$SEED op=$i addManual($cents, $date)", 0L, t.v)
                         if (date >= LocalDate(2026, 10, 1)) spentInOctober += cents
                     }

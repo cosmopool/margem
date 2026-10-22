@@ -701,7 +701,7 @@ private class AjustesInvariantRun(
         val before = if (valid) null else quickState()
         val v0 = db.version.value
         val w0 = writes.n
-        val id = db.addManual(form)
+        val id = db.addManual(form).transaction
         log("addManual valid=$valid tags=${form.tags} -> ${id.v}")
         if (valid) {
             assertNotEquals(TransactionId(0), id)

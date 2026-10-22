@@ -420,7 +420,7 @@ private suspend fun lgStep(
             wrote = id.v != 0L
         }
         "addManual" -> {
-            id = lgNoThrow(what) { db.addManual(form) }
+            id = lgNoThrow(what) { db.addManual(form).transaction }
             wrote = id.v != 0L
         }
         else -> {
@@ -467,7 +467,7 @@ private suspend fun lgRun(seed: Long, iterations: Int, table: List<LgCase>, gen:
                 budget = budget, tags = listOf("mercado"), total = Cents(100), installments = 1,
                 merchant = "LOJA SEED", date = LG_TODAY, time = LocalTime(9, 0),
             ),
-        )
+        ).transaction
         assertNotEquals(0L, seedTx.v, "seed=$seed setup: seed transaction")
         env.txs[seedTx] = setOf("")
 

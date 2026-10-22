@@ -54,6 +54,7 @@ import com.kaiodelphino.margem.NoticeId
 import com.kaiodelphino.margem.NoticeRow
 import com.kaiodelphino.margem.NoticeStatus
 import com.kaiodelphino.margem.NO_MONTH
+import com.kaiodelphino.margem.Planned
 import com.kaiodelphino.margem.R
 import com.kaiodelphino.margem.Suggestion
 import com.kaiodelphino.margem.TransactionDetail
@@ -150,9 +151,60 @@ object TransactionTags {
      */
     const val UNDO_REFUND = "transactions.undoRefund."
 
+    // ---- A caminho (spec §2.13, §7.4, book 8.11, 10.5; D59) ----
+    // Rows come from Db.planned(today). Nothing here counts in any budget.
+
+    /**
+     * The "A caminho" line, first in [LIST], absent when there is no open previsto. "A caminho", "4 previstos ·
+     * R$ 539,70" ("1 previsto"; Σ Planned.cents) and, only the parts that exist, "1 com recado na Pauta"
+     * (Planned.noticeInPauta) and "1 atrasado" / "2 atrasados" (Planned.late) joined by " · ". Always opens
+     * collapsed (P11); click toggles it. "$ON_THE_WAY.open" is present while it is open: then one [PLANNED_ROW]
+     * per open occurrence follows it, before the day groups. Stays open while the screen is open.
+     */
+    const val ON_THE_WAY = "transactions.onTheWay"
+
+    /**
+     * Prefix: PLANNED_ROW + occurrence id, while [ON_THE_WAY] is open: late ones first, then by date. The
+     * dashed day stamp ("out" / "5", day in ink 3 when late), the name, and under it "esperando desde 5 out"
+     * when late, else "recado na Pauta" (anil) when Planned.noticeInPauta, else "Casa · contas, luz · todo mês"
+     * (budget · tags · "todo mês" or "só uma vez"); the value in ink 2. Click opens [PLANNED_SHEET].
+     */
+    const val PLANNED_ROW = "transactions.planned."
+
+    /**
+     * The previsto sheet (book 8.11): stamp, name, "Lazer · academia · todo mês, dia 5", value; then
+     * "Esperando o recado desde 5 de outubro." when late and "Ligado a SMARTFIT, do Cartão Ipê." (Planned.linkText,
+     * linkSource) when linked, in one line; then the actions. Back or a touch outside closes it.
+     */
+    const val PLANNED_SHEET = "transactions.plannedSheet"
+
+    /**
+     * "Lançar sem recado", "vira um lançamento de 5 out, sem ligação": only from the occurrence's day on
+     * (date ≤ today, R6). Opens Novo lançamento filled from the previsto (budget, tags, caption = name, value,
+     * the occurrence's date, occurrence): saving closes the occurrence and writes no link.
+     */
+    const val PLANNED_LAUNCH_NO_NOTICE = "transactions.plannedSheet.launch"
+
+    /** "Pular este mês", "some sem lançar; volta em 5 de novembro" (Só uma vez: "some sem lançar"). Db.skipOccurrence; the sheet closes. */
+    const val PLANNED_SKIP = "transactions.plannedSheet.skip"
+
+    /** "Editar previsto": opens the manual form with the previsto (FORM_TITLE "Editar previsto"; TransactionForm.planned). */
+    const val PLANNED_EDIT = "transactions.plannedSheet.edit"
+
+    /** "Apagar previsto", "este e os próximos meses": opens [PLANNED_DELETE_DIALOG]. */
+    const val PLANNED_DELETE = "transactions.plannedSheet.delete"
+
+    /**
+     * "Apagar o previsto Academia?", "Este e os próximos meses somem. O que já foi lançado continua." Confirm
+     * deletes it (Db.deletePlanned) and closes dialog and sheet; cancel closes the dialog.
+     */
+    const val PLANNED_DELETE_DIALOG = "transactions.plannedDelete"
+    const val PLANNED_DELETE_CONFIRM = "transactions.plannedDelete.confirm"
+    const val PLANNED_DELETE_CANCEL = "transactions.plannedDelete.cancel"
+
     // ---- The form (spec §7.3, book 10.3) ----
 
-    /** The top bar: "Lançar recado", "Editar lançamento" or "Novo lançamento". */
+    /** The top bar: "Lançar recado", "Editar lançamento", "Novo lançamento" or "Editar previsto". */
     const val FORM_TITLE = "txForm.title"
 
     /** Post and Edit of a transaction from a notice: "Cartão Ipê · qui, 8 out, 23:10" and the bank text in quotes. Absent otherwise. */
@@ -289,6 +341,56 @@ object TransactionTags {
     const val FORM_REFUNDED = "txForm.refunded"
     const val FORM_UNDO_REFUND = "txForm.undoRefund"
 
+    // ---- Previsto in the form (spec §2.13, §7.3, book 8.9, 8.11; D62, D64) ----
+
+    /**
+     * "Repete" with [FORM_REPEATS_ONCE] "Só uma vez" and [FORM_REPEATS_MONTHLY] "Todo mês, dia 12" (the
+     * form date's day), one `selected`; Só uma vez on open (the previsto's own in Editar previsto). Shown in
+     * the three forms whatever the date (P4, P4b); absent while the form is linked ([FORM_LINKED]).
+     */
+    const val FORM_REPEATS = "txForm.repeats"
+    const val FORM_REPEATS_ONCE = "txForm.repeats.once"
+    const val FORM_REPEATS_MONTHLY = "txForm.repeats.monthly"
+
+    /**
+     * Lançar, with Todo mês and a non-empty bank text: "Em novembro, o recado do SPOTIFY chega ligado." (the
+     * month after the date's, the bank text). Absent otherwise.
+     */
+    const val FORM_REPEATS_HINT = "txForm.repeats.hint"
+
+    /**
+     * Novo lançamento only, while the date is after today: the anil band "Data à frente: vira previsto. Fica
+     * em Lançamentos esperando o recado, sem contar na verba."; [FORM_SUBMIT] reads "Salvar previsto" and
+     * saves only the previsto (Db.addManual with today), back to Lançamentos. [FORM_PREVIEW] is absent.
+     */
+    const val FORM_FUTURE = "txForm.future"
+
+    /**
+     * "É um previsto? Ligar": under the notice quote in Lançar, under [FORM_NAME] in Novo lançamento (R6b).
+     * Absent in Editar, while linked, and when there is no open previsto. Opens [LINK_SHEET].
+     */
+    const val FORM_LINK_OPEN = "txForm.link"
+
+    /**
+     * The sheet "Qual previsto é este recado?" (Lançar; "Só desta vez: nos próximos meses, o recado da ENEL SP
+     * chega ligado." under it, the bank text) or "Qual previsto é este lançamento?" (manual). One
+     * [LINK_CANDIDATE] per Db.planned(today), closest date to the form's first, then closest value; the first
+     * reads "mais provável". [LINK_SUBMIT] "Ligar à Conta de luz" (disabled until one is chosen) links the form.
+     */
+    const val LINK_SHEET = "txForm.linkSheet"
+    const val LINK_CANDIDATE = "txForm.linkSheet.candidate."
+    const val LINK_SUBMIT = "txForm.linkSheet.submit"
+
+    /**
+     * The linked state: the anil band "Ligado à Conta de luz", "Todo mês, dia 12. Verba, marcadores e nome
+     * vieram do previsto." with [FORM_UNLINK] "Desligar". Budget and tags of the previsto selected and
+     * confirmed (not suggested), the caption field open with its name; total, bank text, date and time stay
+     * the recado's (P7: no emenda, no previsto value). [FORM_REPEATS] is absent. Saving closes the occurrence
+     * (TransactionForm.occurrence). Desligar puts the form back as it was before linking.
+     */
+    const val FORM_LINKED = "txForm.linked"
+    const val FORM_UNLINK = "txForm.unlink"
+
     /** Editar only: "Apagar lançamento", opens [DELETE_DIALOG]. */
     const val FORM_DELETE = "txForm.delete"
 
@@ -371,6 +473,27 @@ private fun TransactionLine(t: TransactionRow, onClick: () -> Unit, onUndoRefund
         Amount(value, size = 17, color = if (t.refunded) c.inkTertiary else c.ink, struck = t.refunded)
     }
 }
+
+// ---- A caminho and the previsto sheet ----
+
+/** Book 8.11: the "A caminho" line and, open, its rows. Tags: [TransactionTags.ON_THE_WAY], [TransactionTags.PLANNED_ROW]. */
+@Composable
+private fun OnTheWay(rows: List<Planned>, today: LocalDate, open: Boolean, toggle: () -> Unit, pick: (Planned) -> Unit): Unit = TODO()
+
+/** Book 8.11: the previsto sheet with its actions. Tags: [TransactionTags.PLANNED_SHEET]. */
+@Composable
+private fun PlannedSheet(db: Db, p: Planned, today: LocalDate, go: (Screen) -> Unit, close: () -> Unit): Unit = TODO()
+
+/** Book 8.11: "Qual previsto é este recado?". Tags: [TransactionTags.LINK_SHEET]. */
+@Composable
+private fun LinkSheet(rows: List<Planned>, notice: NoticeRow, date: LocalDate, total: Cents, link: (Planned) -> Unit, close: () -> Unit): Unit = TODO()
+
+/**
+ * D62: the one form of a previsto with a recado (Lançar previsto, Lançar já ligado, "É um previsto? Ligar")
+ * or without one ([notice] zero: "Lançar sem recado", R6b): budget and tags of the previsto, caption = its
+ * name, total / bank text / date / time of the recado (else the occurrence's value and date at 00:00), occurrence.
+ */
+fun formFrom(planned: Planned, notice: NoticeRow): TransactionForm = TODO()
 
 /** D55: the caption input takes at most [MAX_CAPTION] UTF-16 units and never leaves a lone high surrogate at the cut. */
 private fun cutCaption(s: String): String =
@@ -531,7 +654,7 @@ private fun TxForm(
                     if (!db.edit(edit, f)) snack.show(Snack(GONE_TX))
                 }
                 else -> {
-                    val id = if (isPost) db.accept(notice, f) else db.addManual(f)
+                    val id = if (isPost) db.accept(notice, f) else db.addManual(f).transaction
                     if (id.v == 0L) snack.show(Snack(InboxTags.GONE_TEXT))
                     else snack.show(Snack("Lançado em $budgetName. Margem: ${marginText(margin)}.", "Desfazer") { db.deleteTransaction(id) })
                 }

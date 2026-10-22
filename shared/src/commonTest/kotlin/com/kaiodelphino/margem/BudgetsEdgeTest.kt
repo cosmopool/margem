@@ -54,7 +54,7 @@ class BudgetsEdgeTest {
             budget = budget, tags = listOf("teste"), total = Cents(cents), installments = installments,
             merchant = "Loja", date = date, time = time,
         )
-        return addManual(form).also { assertNotEquals(0L, it.v, "addManual refused $cents on $date") }
+        return addManual(form).transaction.also { assertNotEquals(0L, it.v, "addManual refused $cents on $date") }
     }
 
     /** ensureMonths + budgetDetail, as the detail screen does; checks Σ steps = limit (spec §4, D11). */

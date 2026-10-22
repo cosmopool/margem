@@ -137,8 +137,8 @@ class AjustesUiTest {
     fun `renaming a tag to another's name joins them and deleting says what goes`() {
         val (mercado, feira) = runBlocking {
             val b = db.createBudget("Casa", Cents(50000), OCT_14)
-            db.addManual(TransactionForm(b, listOf("mercado"), Cents(1000), 1, "A", OCT_14, NO_TIME))
-            db.addManual(TransactionForm(b, listOf("feira"), Cents(2000), 1, "B", OCT_14, NO_TIME))
+            db.addManual(TransactionForm(b, listOf("mercado"), Cents(1000), 1, "A", OCT_14, NO_TIME)).transaction
+            db.addManual(TransactionForm(b, listOf("feira"), Cents(2000), 1, "B", OCT_14, NO_TIME)).transaction
             val tags = db.tags()
             tags.first { it.name == "mercado" }.id to tags.first { it.name == "feira" }.id
         }

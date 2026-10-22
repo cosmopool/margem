@@ -404,7 +404,7 @@ private class BudgetsInvariantRun(val db: Db, val seed: Int) {
             budget = b, tags = listOf(BINV_TAGS.random(rnd)), total = Cents(total), installments = n,
             merchant = "LOJA ${rnd.nextInt(5)}", date = date, time = time,
         )
-        val id = db.addManual(form)
+        val id = db.addManual(form).transaction
         log("addManual budget=${b.v} $total in $n on $date $time -> ${id.v}")
         assertNotEquals(0L, id.v, "addManual of a valid form")
     }

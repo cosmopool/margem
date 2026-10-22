@@ -257,8 +257,8 @@ class RecadoLifecycleTest {
 
     /** Duas compras manuais de R$ 20,00 (como o estorno): nenhuma é "provável" (sem fonte), nada vem selecionado. */
     private fun duasCompras(budget: BudgetId): Pair<TransactionId, TransactionId> {
-        val p1 = fora { db.addManual(form(budget, 2_000, merchant = "Mercado Bom", date = LocalDate(2026, 10, 12))) }
-        val p2 = fora { db.addManual(form(budget, 2_000, merchant = "Padaria Pao Quente", date = LocalDate(2026, 10, 11))) }
+        val p1 = fora { db.addManual(form(budget, 2_000, merchant = "Mercado Bom", date = LocalDate(2026, 10, 12))).transaction }
+        val p2 = fora { db.addManual(form(budget, 2_000, merchant = "Padaria Pao Quente", date = LocalDate(2026, 10, 11))).transaction }
         assertNotEquals("addManual P1", 0L, p1.v)
         assertNotEquals("addManual P2", 0L, p2.v)
         return p1 to p2
@@ -309,8 +309,8 @@ class RecadoLifecycleTest {
     fun `Lançar no meio do preenchimento sobrevive à recriação - valor, emendas, apelido, banco, data, verba, parcelas e marcadores`() {
         val lazer = budget("Lazer", 50_000)
         val casa = budget("Casa", 80_000)
-        assertNotEquals(0L, fora { db.addManual(form(lazer, 900, tags = listOf("cafe"), merchant = "CAFE CENTRAL", date = LocalDate(2026, 10, 5))) }.v)
-        assertNotEquals(0L, fora { db.addManual(form(lazer, 6_000, tags = listOf("bar", "amigos"), merchant = "BAR PONTO CERTO", date = LocalDate(2026, 10, 10))) }.v)
+        assertNotEquals(0L, fora { db.addManual(form(lazer, 900, tags = listOf("cafe"), merchant = "CAFE CENTRAL", date = LocalDate(2026, 10, 5))).transaction }.v)
+        assertNotEquals(0L, fora { db.addManual(form(lazer, 6_000, tags = listOf("bar", "amigos"), merchant = "BAR PONTO CERTO", date = LocalDate(2026, 10, 10))).transaction }.v)
         assertEquals("pré-condição: sugestão de BAR PONTO CERTO é Lazer", lazer, fora { db.suggestion("BAR PONTO CERTO") }.budget)
         val n = compra("n1", 4_600, "BAR PONTO CERTO", 13, 21, 3)
 
@@ -736,7 +736,7 @@ class RecadoLifecycleTest {
         assertTrue(fora { db.undoRefund(e) })
         await("estorno desfeito por fora", r1) { !shows(r1, "estornada") && !exists(TransactionTags.UNDO_REFUND + p1.v) }
 
-        val p3 = fora { db.addManual(form(casa, 3_300, merchant = "Acougue", date = LocalDate(2026, 10, 13))) }
+        val p3 = fora { db.addManual(form(casa, 3_300, merchant = "Acougue", date = LocalDate(2026, 10, 13))).transaction }
         await("linha nova") { rowIds(TransactionTags.ROW) == setOf(p1.v, p2.v, p3.v) && shows(TransactionTags.ROW + p3.v, money(Cents(3_300))) }
 
         fora { db.deleteTransaction(p1) }

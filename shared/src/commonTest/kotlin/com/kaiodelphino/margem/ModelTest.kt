@@ -619,7 +619,7 @@ private class MtRun(val db: Db, val path: String, val seed: Int) {
     suspend fun manual() {
         val f = form(null)
         val t = m.txOf(TransactionId(0), NoticeId(0), f)
-        val id = db.addManual(f)
+        val id = db.addManual(f).transaction
         log("addManual ${describe(f)} -> ${id.v}")
         assertEquals(t != null, id.v != 0L, "addManual accepted")
         if (t == null) return
@@ -1115,7 +1115,7 @@ class ModelTest {
             assertTrue(db.addSource(MT_NU, "Nubank", 1L))
             val budget = db.createBudget("Mercado", Cents(60_000), MT_DAY0)
             val form = TransactionForm(budget, listOf("feira"), Cents(10_000), 1, "LOJA X", MT_DAY0, LocalTime(12, 0))
-            val purchase = db.addManual(form)
+            val purchase = db.addManual(form).transaction
             val at = 1_791_000_000_000L
             assertTrue(capture(db, RawNotice(MT_NU, "Nubank", "e", at, at, "Estorno", "A compra em LOJA X no valor de R$ 100,00 foi estornada no seu cartão.")))
             assertTrue(db.registerRefund(db.pending().single().id, purchase))
@@ -1143,7 +1143,7 @@ class ModelTest {
         mtWithDb { db, _ ->
             val budget = db.createBudget("Casa", Cents(500_000), MT_DAY0)
             val bought = LocalDate(2026, 1, 30)
-            assertNotEquals(0L, db.addManual(TransactionForm(budget, listOf("casa"), Cents(30_000), 3, "LOJA X", bought, LocalTime(12, 0))).v)
+            assertNotEquals(0L, db.addManual(TransactionForm(budget, listOf("casa"), Cents(30_000), 3, "LOJA X", bought, LocalTime(12, 0))).transaction.v)
             assertTrue(db.setMonthStartDay(31, MT_DAY0))
             val first = db.monthOf(bought)
             for (i in 0..2) {

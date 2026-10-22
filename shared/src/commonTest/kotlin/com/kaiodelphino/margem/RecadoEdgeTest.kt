@@ -81,7 +81,7 @@ class RecadoEdgeTest {
     }
 
     private suspend fun Db.manual(budget: BudgetId, total: Long, installments: Int = 1, date: LocalDate = OCT_6): TransactionId =
-        addManual(form(budget, total, installments, date)).also { assertNotEquals(0L, it.v, "addManual $total in $installments on $date") }
+        addManual(form(budget, total, installments, date)).transaction.also { assertNotEquals(0L, it.v, "addManual $total in $installments on $date") }
 
     /** ensureMonths + budgetDetail, as the detail screen does. */
     private suspend fun Db.month(budget: BudgetId, month: YearMonth): BudgetMonth {
@@ -105,7 +105,7 @@ class RecadoEdgeTest {
 
         for (n in listOf(0, 401, -1)) {
             assertEquals(TransactionId(0), db.accept(id, read.copy(installments = n)), "accept $n")
-            assertEquals(TransactionId(0), db.addManual(form(b, 3150, n)), "addManual $n")
+            assertEquals(TransactionId(0), db.addManual(form(b, 3150, n)).transaction, "addManual $n")
             // KDoc of previewAccept: zero when the inputs aren't valid.
             assertEquals(Preview(), db.previewAccept(b, OCT_6, Cents(3150), n, TODAY), "previewAccept $n")
         }
@@ -532,7 +532,7 @@ class RecadoEdgeTest {
 
         for (blanks in listOf(emptyList(), listOf(""), listOf(" ", "   ", ""))) {
             assertEquals(TransactionId(0), db.accept(id, read.copy(tags = blanks)), "accept $blanks")
-            assertEquals(TransactionId(0), db.addManual(form(a, 1000, tags = blanks)), "addManual $blanks")
+            assertEquals(TransactionId(0), db.addManual(form(a, 1000, tags = blanks)).transaction, "addManual $blanks")
         }
         assertTrue(db.transactions().isEmpty())
         assertEquals(listOf(id), db.pending().map { it.id })
@@ -558,7 +558,7 @@ class RecadoEdgeTest {
         val row = db.transaction(tx).row
         assertEquals("" to "", row.merchant to row.name)
 
-        val manual = db.addManual(form(a, 500, merchant = ""))
+        val manual = db.addManual(form(a, 500, merchant = "")).transaction
         assertNotEquals(TransactionId(0), manual)
         assertEquals("", db.transaction(manual).row.merchant)
         assertEquals(2, db.transactions().size)
@@ -675,7 +675,7 @@ class RecadoEdgeTest {
         assertTrue(db.edit(t1, db.asRead(n1, a).copy(alias = "")))
         assertTrue(db.transactions().all { it.alias == "Padaria do Zé" })
 
-        val manual = db.addManual(form(a, 300, merchant = db.notice(n1).parsed.merchant, alias = " "))
+        val manual = db.addManual(form(a, 300, merchant = db.notice(n1).parsed.merchant, alias = " ")).transaction
         assertNotEquals(TransactionId(0), manual)
         assertEquals("Padaria do Zé", db.transaction(manual).row.name)
     }

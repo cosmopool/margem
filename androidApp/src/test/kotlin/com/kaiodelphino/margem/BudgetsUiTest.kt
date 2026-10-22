@@ -216,7 +216,7 @@ class BudgetsUiTest {
             val id = db.createBudget("Lazer", Cents(46500), LocalDate(2026, 10, 1))
             // Book 10.8: 315 + 48 + 56 + 46 = 465 reaches the limit; 12 more goes beyond it.
             val lines = listOf(1 to 31500L, 3 to 4800L, 7 to 5600L, 8 to 4600L, 9 to 1200L).map { (day, cents) ->
-                db.addManual(TransactionForm(id, listOf("lazer"), Cents(cents), 1, "Loja $day", LocalDate(2026, 10, day), LocalTime(12, 0)))
+                db.addManual(TransactionForm(id, listOf("lazer"), Cents(cents), 1, "Loja $day", LocalDate(2026, 10, day), LocalTime(12, 0))).transaction
             }
             id to lines
         }

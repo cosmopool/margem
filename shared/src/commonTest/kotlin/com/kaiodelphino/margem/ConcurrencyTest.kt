@@ -377,7 +377,7 @@ class ConcurrencyTest {
         write("dismiss") { db.dismiss(n2) }
         write("restore") { db.restore(n2) }
         write("accept") { db.accept(idOf(db, notice(1).key), form(budget)).also { tx = it }.v != 0L }
-        write("addManual") { db.addManual(form(budget, 2500)).v != 0L }
+        write("addManual") { db.addManual(form(budget, 2500)).transaction.v != 0L }
         write("edit") { db.edit(tx, form(budget, 1200)) }
         val estorno = idOf(db, notice(3).key)
         write("registerRefund") { db.registerRefund(estorno, tx) }
@@ -401,7 +401,7 @@ class ConcurrencyTest {
 
         // Refused writes: the contract doesn't say whether they bump; onWrite still follows version exactly.
         assertEquals(0L, db.accept(NoticeId(999_999), form(budget)).v)
-        assertEquals(0L, db.addManual(form(budget).copy(tags = emptyList())).v)
+        assertEquals(0L, db.addManual(form(budget).copy(tags = emptyList())).transaction.v)
         assertFalse(db.dismiss(NoticeId(999_999)))
         assertEquals(0L, db.createBudget("mercado", Cents(1), TODAY).v)
         assertFalse(capture(db, notice(1)))

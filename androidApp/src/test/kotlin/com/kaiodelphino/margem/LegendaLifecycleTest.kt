@@ -295,7 +295,7 @@ class LegendaLifecycleTest {
 
     /** Um lançamento manual já salvo com legenda; a edição abre com o campo à vista (TransactionTags.FORM_CAPTION). */
     private fun comLegenda(caption: String): TransactionId {
-        val t = fora { db.addManual(form(budget("Lazer"), 4_600, caption = caption)) }
+        val t = fora { db.addManual(form(budget("Lazer"), 4_600, caption = caption)).transaction }
         assertNotEquals("addManual", 0L, t.v)
         return t
     }

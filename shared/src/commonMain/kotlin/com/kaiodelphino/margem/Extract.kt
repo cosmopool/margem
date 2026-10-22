@@ -1,5 +1,6 @@
 package com.kaiodelphino.margem
 
+import kotlin.jvm.JvmInline
 import kotlin.math.abs
 import kotlin.time.Instant
 import kotlinx.datetime.LocalDate
@@ -29,6 +30,31 @@ fun parseBrl(text: String): Cents {
 
 /** Same merchant across spacing and case: "DL *UberRides" and "dl*uberrides" share a key. */
 internal fun merchantKey(merchant: String): String = merchant.filterNot(Char::isWhitespace).lowercase()
+
+/**
+ * The one text fold of the app (D61): what compares texts ignoring case and accents — keys ([MerchantKey])
+ * and the estorno search. One pass per char, the same on every target:
+ * - U+0300–U+036F (combining marks, from NFD text) are dropped;
+ * - the Latin table below folds to its base: every letter of U+00C0–U+017F whose canonical decomposition is
+ *   a base letter + combining marks (À–Å à–å Ā–ą → a; Ç ç Ć–č → c; Ď ď → d; È–Ë è–ë Ē–ě → e; Ĝ–ģ → g;
+ *   Ĥ ĥ → h; Ì–Ï ì–ï Ĩ–į İ → i; Ĵ ĵ → j; Ķ ķ → k; Ĺ–ľ → l; Ñ ñ Ń–ň → n; Ò–Ö ò–ö Ō–ő → o; Ŕ–ř → r;
+ *   Ś–š → s; Ţ–ť → t; Ù–Ü ù–ü Ũ–ų → u; Ŵ ŵ → w; Ý ý ÿ Ŷ Ÿ → y; Ź–ž → z), plus ß → "ss" and ı → "i";
+ * - anything else goes through `lowercaseChar()`. Letters with no decomposition (Æ Ø Đ Ł Œ …) and every
+ *   script outside Latin are only lowercased: a documented limit.
+ * So `fold(fold(x)) == fold(x)` and an NFC text folds like its NFD form. Never throws; lone surrogates pass.
+ */
+fun fold(s: String): String = TODO()
+
+/**
+ * Same merchant across spacing, case and accents (D61): "VIVO  FIBRA", "vivo fibra" and "VÍVO FIBRA" share
+ * a key. Only [of] makes one, so a raw String never reaches a key column. Empty = no key: never matches.
+ */
+@JvmInline value class MerchantKey private constructor(val v: String) {
+    companion object {
+        /** [fold] of [text] without the chars of `isEdgeSpace` (whitespace, controls, the NBSP family), anywhere in it. */
+        fun of(text: String): MerchantKey = TODO()
+    }
+}
 
 private const val NUBANK = "com.nu.production"
 

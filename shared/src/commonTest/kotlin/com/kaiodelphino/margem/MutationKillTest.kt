@@ -72,24 +72,24 @@ class MutationKillTest {
         val a = db.createBudget("A", Cents(100_000), OCT_6)
         val b = db.createBudget("B", Cents(100_000), OCT_6)
 
-        db.addManual(form(b, "Feira", OCT_6, tags = listOf("nova")))
-        db.addManual(form(a, "feira ", LocalDate(2026, 10, 5), tags = listOf("velha")))
+        db.addManual(form(b, "Feira", OCT_6, tags = listOf("nova"))).transaction
+        db.addManual(form(a, "feira ", LocalDate(2026, 10, 5), tags = listOf("velha"))).transaction
         assertEquals(b to listOf("nova"), db.suggestion("FEIRA").let { it.budget to it.tags })
 
-        db.addManual(form(a, "Padaria", OCT_6, LocalTime(9, 0), tags = listOf("tarde")))
-        db.addManual(form(b, "Padaria", OCT_6, LocalTime(8, 0), tags = listOf("cedo")))
+        db.addManual(form(a, "Padaria", OCT_6, LocalTime(9, 0), tags = listOf("tarde"))).transaction
+        db.addManual(form(b, "Padaria", OCT_6, LocalTime(8, 0), tags = listOf("cedo"))).transaction
         assertEquals(a to listOf("tarde"), db.suggestion("padaria").let { it.budget to it.tags })
 
-        db.addManual(form(a, "Banca", OCT_6, tags = listOf("primeira")))
-        db.addManual(form(b, "Banca", OCT_6, tags = listOf("segunda")))
+        db.addManual(form(a, "Banca", OCT_6, tags = listOf("primeira"))).transaction
+        db.addManual(form(b, "Banca", OCT_6, tags = listOf("segunda"))).transaction
         assertEquals(b to listOf("segunda"), db.suggestion("Banca").let { it.budget to it.tags })
     }
 
     @Test
     fun `a blank merchant has no suggestion and takes no alias`() = runTest {
         val a = db.createBudget("A", Cents(100_000), OCT_6)
-        db.addManual(form(a, "", OCT_6, alias = "Feira"))
-        db.addManual(form(a, "  ", OCT_6))
+        db.addManual(form(a, "", OCT_6, alias = "Feira")).transaction
+        db.addManual(form(a, "  ", OCT_6)).transaction
         assertEquals(Suggestion(), db.suggestion(""))
         assertEquals(Suggestion(), db.suggestion("   "))
         assertEquals(listOf("", ""), db.transactions().map { it.alias })
@@ -101,7 +101,7 @@ class MutationKillTest {
     fun `an unknown estorno has no candidates`() = runTest {
         db.addSource(BANK, "Banco", 0)
         val a = db.createBudget("A", Cents(100_000), OCT_6)
-        db.addManual(form(a, "Feira", OCT_6))
+        db.addManual(form(a, "Feira", OCT_6)).transaction
         capture(db, bank("k", T, "Compra de R$ 10,00 em A"))
         assertEquals(emptyList(), db.refundCandidates(NoticeId(999)))
     }
@@ -116,7 +116,7 @@ class MutationKillTest {
         val estorno = db.pending().first { it.parsed.isRefund }.id
         assertTrue(capture(db, bank("n", T - 1_000, "Compra de R$ 5,00 em BANCA às 21:00")))
         val night = db.pending().first { it.parsed.merchant == "BANCA" }.id
-        db.addManual(form(a, "Feira", OCT_6, LocalTime(20, 0)))
+        db.addManual(form(a, "Feira", OCT_6, LocalTime(20, 0))).transaction
 
         val c = db.refundCandidates(estorno)
         assertEquals(purchase, c.first().notice)
@@ -168,7 +168,7 @@ class MutationKillTest {
         )
         for ((name, limit, spent) in spend) {
             val id = db.createBudget(name, Cents(limit), today)
-            if (spent > 0) db.addManual(TransactionForm(id, listOf("x"), Cents(spent), 1, name, LocalDate(2026, 10, 10), NOON))
+            if (spent > 0) db.addManual(TransactionForm(id, listOf("x"), Cents(spent), 1, name, LocalDate(2026, 10, 10), NOON)).transaction
         }
         val order = db.budgetsOverview(YearMonth(2026, 10), today, BudgetOrder.RISK)
         assertEquals(listOf("Mel", "Ovo", "Uva", "Pão", "Zeta", "Alfa", "Beta", "Gama"), order.map { it.name })
@@ -184,7 +184,7 @@ class MutationKillTest {
             val ids = names.map { name ->
                 val (limit, spent) = if (name == "Zeta") 100_000L to 40_000L else 1_000L to 100L
                 db.createBudget(name, Cents(limit), today).also {
-                    db.addManual(TransactionForm(it, listOf("x"), Cents(spent), 1, name, LocalDate(2026, 10, 10), NOON))
+                    db.addManual(TransactionForm(it, listOf("x"), Cents(spent), 1, name, LocalDate(2026, 10, 10), NOON)).transaction
                 }
             }
             val order = db.budgetsOverview(YearMonth(2026, 10), today, BudgetOrder.RISK)
@@ -256,7 +256,7 @@ class MutationKillTest {
     @Test
     fun `spending on the first storable day is found by a range ending on it`() = runTest {
         val a = db.createBudget("A", Cents(100_000), OCT_6)
-        db.addManual(form(a, "Feira", FIRST))
+        db.addManual(form(a, "Feira", FIRST)).transaction
         assertEquals(mapOf(FIRST to Cents(1000)), db.spentByDay(FIRST, FIRST))
     }
 
@@ -265,7 +265,7 @@ class MutationKillTest {
     @Test
     fun `without today no row has a current installment - not even one dated in the month of NO_DATE`() = runTest {
         val a = db.createBudget("A", Cents(100_000), OCT_6)
-        db.addManual(form(a, "Antiga", LocalDate(1970, 1, 15)))
+        db.addManual(form(a, "Antiga", LocalDate(1970, 1, 15))).transaction
         assertEquals(Installment(), db.transactions().single().now)
         assertEquals(Installment(1, LocalDate(1970, 1, 15), Cents(1000)), db.transactions(LocalDate(1970, 1, 20)).single().now)
     }
@@ -356,11 +356,11 @@ class MutationKillTest {
         val gone = db.createBudget("Some", Cents(100_000), OCT_6)
         val kept = db.createBudget("Fica", Cents(100_000), OCT_6)
         fun three(budget: BudgetId, merchant: String, tags: List<String>) = form(budget, merchant, OCT_6, tags = tags).copy(installments = 3)
-        db.addManual(three(gone, "A", listOf("x")))
-        val single = db.addManual(three(kept, "B", listOf("x")))
-        val refunded = db.addManual(three(kept, "C", listOf("x")))
-        val onlyTagged = db.addManual(three(kept, "D", listOf("solo")))
-        val survivor = db.addManual(three(kept, "E", listOf("x", "solo")))
+        db.addManual(three(gone, "A", listOf("x"))).transaction
+        val single = db.addManual(three(kept, "B", listOf("x"))).transaction
+        val refunded = db.addManual(three(kept, "C", listOf("x"))).transaction
+        val onlyTagged = db.addManual(three(kept, "D", listOf("solo"))).transaction
+        val survivor = db.addManual(three(kept, "E", listOf("x", "solo"))).transaction
         assertTrue(capture(db, bank("e", T, "Estorno de R$ 10,00")))
         assertTrue(db.registerRefund(db.pending().single().id, refunded))
         db.ensureMonths(YearMonth(2026, 12))

@@ -46,7 +46,7 @@ class EdgeTest {
             budget = budget, tags = listOf("teste"), total = Cents(cents), installments = installments,
             merchant = "Loja", date = date, time = LocalTime(12, 0),
         )
-        return addManual(form).also { assertNotEquals(0L, it.v, "addManual refused $cents on $date") }
+        return addManual(form).transaction.also { assertNotEquals(0L, it.v, "addManual refused $cents on $date") }
     }
 
     /** ensureMonths + budgetDetail, as a screen does; also checks Σ steps = limit (spec §4, D11). */
@@ -831,7 +831,7 @@ class EdgeTest {
         val id = db.createBudget("Casa", Cents(50000), day(2026, 10, 14))
         for (n in listOf(0, -1, 401)) {
             val form = TransactionForm(budget = id, tags = listOf("teste"), total = Cents(40100), installments = n, date = day(2026, 10, 14))
-            assertEquals(TransactionId(0), db.addManual(form), "installments = $n")
+            assertEquals(TransactionId(0), db.addManual(form).transaction, "installments = $n")
         }
         assertEquals(emptyList(), db.transactions())
         assertEquals(Preview(), db.previewAccept(id, day(2026, 10, 14), Cents(40100), 401, day(2026, 10, 14)))

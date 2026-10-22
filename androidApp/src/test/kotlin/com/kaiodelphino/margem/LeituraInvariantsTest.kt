@@ -536,7 +536,7 @@ class LeituraInvariantsTest {
 
     private suspend fun addTransaction(forceOctTag: String? = null) {
         val f = form(forceOctTag) ?: return
-        log += "addManual($f) = ${db.addManual(f).v}"
+        log += "addManual($f) = ${db.addManual(f).transaction.v}"
     }
 
     private suspend fun editTransaction() {

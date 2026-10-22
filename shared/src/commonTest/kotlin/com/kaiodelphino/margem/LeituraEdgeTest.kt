@@ -63,7 +63,7 @@ class LeituraEdgeTest {
             budget = budget, tags = tags, total = Cents(cents), installments = installments,
             merchant = merchant, date = date, time = LocalTime(12, 0),
         )
-        return addManual(form).also { assertNotEquals(0L, it.v, "addManual refused $cents on $date") }
+        return addManual(form).transaction.also { assertNotEquals(0L, it.v, "addManual refused $cents on $date") }
     }
 
     /** ensureMonths + budgetDetail, as the Leitura does (D30, D45). */

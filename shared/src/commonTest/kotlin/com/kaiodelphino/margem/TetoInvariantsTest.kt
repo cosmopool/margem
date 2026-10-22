@@ -204,7 +204,7 @@ private class TetoInvariantRun(val db: Db, val seed: Int) {
             installments = listOf(1, 1, 1, 2, 3, 6).random(rnd), merchant = "LOJA ${rnd.nextInt(5)}",
             date = today.plus(rnd.nextInt(-40, 6), DateTimeUnit.DAY), time = LocalTime(rnd.nextInt(24), rnd.nextInt(60)),
         )
-        val id = db.addManual(form)
+        val id = db.addManual(form).transaction
         log("addManual budget=${b.v} ${form.total.v} in ${form.installments} on ${form.date} -> ${id.v}")
         assertNotEquals(0L, id.v, "addManual of a valid form")
     }

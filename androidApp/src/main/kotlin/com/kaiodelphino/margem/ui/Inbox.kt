@@ -140,6 +140,34 @@ object InboxTags {
      */
     const val DISMISS = "inbox.dismiss."
 
+    // ---- Recado reconhecido de um previsto (spec §2.13, §7.2, book 8.4; D60, D62) ----
+    // While NoticeRow.planned is non-zero, the card's ACCEPT is [PLANNED_LAUNCH], DISMISS is the Riscar icon
+    // (content description "Riscar") and [PLANNED_NOT_IT] sits before them. Clicking the card body opens the
+    // Lançar form already linked (TransactionTags.FORM_LINKED).
+
+    /**
+     * Prefix: PLANNED_BAND + notice id: the anil band "É o previsto Internet" (Planned.name) and
+     * "Casa · contas, internet · dia 10" (budget · tags joined by ", " · "dia " + Planned.day). Present while
+     * the recado is recognized and not set aside by [PLANNED_NOT_IT].
+     */
+    const val PLANNED_BAND = "inbox.planned."
+
+    /**
+     * Prefix: PLANNED_NOT_IT + notice id: "Não é". Takes the band away while the Pauta stays open, writing
+     * nothing (D60): the card turns into an ordinary one ("Lançar", "Riscar"); reopening the Pauta shows
+     * the band again.
+     */
+    const val PLANNED_NOT_IT = "inbox.plannedNotIt."
+
+    /**
+     * Prefix: PLANNED_LAUNCH + notice id: "Lançar previsto". Lança with no form (P5): Db.accept with the form of
+     * the previsto and the recado (budget and tags of the previsto, caption = its name, total, bank text,
+     * date and time of the recado, occurrence). The card leaves and the snack "Lançado: Internet, em Casa.
+     * O próximo é 10 nov." ("Lançado: Internet, em Casa." for Só uma vez; day and monthShort of Planned.next)
+     * with "Desfazer" (Db.deleteTransaction: recado and occurrence come back, S1). Refused: [GONE_TEXT].
+     */
+    const val PLANNED_LAUNCH = "inbox.plannedLaunch."
+
     // ---- Registrar estorno (spec §6, §7.3, book 10.4), Screen.Refund ----
 
     /** The top bar: "Registrar estorno". */
@@ -154,7 +182,7 @@ object InboxTags {
     /**
      * Search input (lupa), placeholder "nome, legenda ou valor". Filters the candidates as the person
      * types: a candidate stays when its legenda, alias, bank text or name contains the query ignoring case
-     * and accents ("estação" finds LOJA ESTACAO; one `fold`: NFD, no combining marks, lowercase — D56), or
+     * and accents ("estação" finds LOJA ESTACAO; the shared `fold`, D61), or
      * when moneyPlain of its total contains it ("59,9" keeps R$ 59,90). Blank = no filter. The selection
      * stays even when the selected candidate is filtered out.
      */

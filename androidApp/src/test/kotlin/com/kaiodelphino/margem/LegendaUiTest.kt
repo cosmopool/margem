@@ -341,7 +341,7 @@ class LegendaUiTest {
     fun `a refund candidate shows the legenda with a credit and one without a name has none`() {
         val withName = seed(post("Compra aprovada: R$ 46,00 em PADARIA ZE 0231", at(7, 42, OCT_5)), LEGENDA, "Padaria do Zé")
         val manual = runBlocking {
-            db.addManual(TransactionForm(budget = lazer, tags = listOf("casa"), total = Cents(1200), installments = 1, merchant = "", date = OCT_5, time = LocalTime(14, 30), caption = "Feira de domingo"))
+            db.addManual(TransactionForm(budget = lazer, tags = listOf("casa"), total = Cents(1200), installments = 1, merchant = "", date = OCT_5, time = LocalTime(14, 30), caption = "Feira de domingo")).transaction
         }
         val notice = post("Compra aprovada: R$ 30,00 em BANCA CENTRAL", at(9, 0, OCT_5))
         val estorno = post("Estorno de compra: R$ 46,00 em PADARIA ZE 0231", at(21, 3))

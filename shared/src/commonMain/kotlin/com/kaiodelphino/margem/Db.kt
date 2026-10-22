@@ -302,8 +302,17 @@ class Db(
 
     // ---- Notices ----
 
-    /** Pending notices, newest (posted_at) first. */
-    suspend fun pending(): List<NoticeRow> = read { c -> notices(c, "WHERE status = 0 ORDER BY posted_at DESC, id DESC") }
+    /**
+     * Pending notices, newest (posted_at) first, each with the previsto it is recognized as
+     * ([NoticeRow.planned], D60). With [today], first creates the previstos' occurrences dated up to
+     * today + 10 days (R1; a write that doesn't bump [version], like [ensureMonths]) and reads
+     * [Planned.late] against it; with NO_DATE nothing is created, existing open occurrences are still
+     * recognized and `late` is false.
+     */
+    suspend fun pending(today: LocalDate = NO_DATE): List<NoticeRow> {
+        if (today != NO_DATE) TODO()
+        return read { c -> notices(c, "WHERE status = 0 ORDER BY posted_at DESC, id DESC") }
+    }
 
     suspend fun pendingCount(): Int = read { c -> c.long("SELECT COUNT(*) FROM ($NOTICES) WHERE status = 0").toInt() }
 
@@ -351,20 +360,42 @@ class Db(
      * down and the last absorbs the remainder. `corrected` when total, merchant, date or time
      * differ from the notice's [Parsed]. A non-blank alias names the merchant. The caption, cleaned as
      * [TransactionForm.caption] says, is stored as the legenda.
+     *
+     * Previstos (D62, D64): with [TransactionForm.occurrence], that occurrence must be open (else refused)
+     * and is closed by this lançamento; the previsto's link is (re)written from this notice's fonte and bank
+     * text when its key is not empty (R2). With MONTHLY, the new previsto is linked the same way, first
+     * occurrence in the month after the purchase date's. [TransactionForm.planned] is ignored.
      */
     suspend fun accept(notice: NoticeId, form: TransactionForm): TransactionId = write { c ->
         if (c.long("SELECT COUNT(*) FROM ($NOTICES) WHERE id = ? AND status = 0", notice.v) == 0L) return@write TransactionId(0)
         TransactionId(saveTransaction(c, 0, notice.v, form))
     }
 
-    /** Lançamento manual: same rules as [accept], with no notice; never corrected. Like [accept], under an id never used before. */
-    suspend fun addManual(form: TransactionForm): TransactionId = write { c -> TransactionId(saveTransaction(c, 0, 0, form)) }
+    /**
+     * Lançamento manual: same rules as [accept], with no notice; never corrected. Like [accept], under an id
+     * never used before. Previstos (spec §2.13, D64), all parsed once and refused whole (Saved() zero, nothing
+     * written) by the same rules, plus the previsto's: name (caption, else merchant) at most 80 after
+     * cleaning like the caption, day of [TransactionForm.date] 1–31:
+     * - [TransactionForm.planned] ≠ 0 (Editar previsto): updates that previsto (see the field); Saved(planned).
+     *   Refused when it doesn't exist.
+     * - date > [today] (Salvar previsto; never with NO_DATE): only a new previsto, unlinked, first occurrence
+     *   on that date, repeating as [TransactionForm.repeats] says; Saved(planned). No lançamento.
+     * - otherwise the lançamento, Saved(transaction); with [TransactionForm.occurrence] it closes that open
+     *   occurrence without writing a link (R6b); with MONTHLY also the new previsto (first occurrence next
+     *   month), Saved(transaction, planned).
+     */
+    suspend fun addManual(form: TransactionForm, today: LocalDate = NO_DATE): Saved = write { c ->
+        if (form.planned.v != 0L || (today != NO_DATE && form.date > today)) TODO()
+        Saved(TransactionId(saveTransaction(c, 0, 0, form)))
+    }
 
     /**
      * Replaces every field, installment and tag of a transaction; same rules as [accept]. corrected
      * is recomputed against the notice's [Parsed]. A registered estorno stays. False if refused or
      * unknown. A blank caption removes the legenda (unlike the alias, §2.10); a refused edit (too long
-     * a caption among the rest) leaves the transaction as it was.
+     * a caption among the rest) leaves the transaction as it was. The origin ([TransactionForm.occurrence])
+     * never changes on edit; MONTHLY creates a previsto like [accept] does, linked from the transaction's
+     * notice (none for a manual one).
      */
     suspend fun edit(id: TransactionId, form: TransactionForm): Boolean = write { c ->
         val notice = c.query("SELECT notice_id FROM transactions WHERE id = ?", id.v) { it.getLong(0) }.firstOrNull()
@@ -375,7 +406,8 @@ class Db(
     /**
      * Deletes the transaction with its installments, tag links and the estorno registered on it:
      * its notice and that estorno notice become pending again (spec §2.8). The legenda goes with the
-     * transaction (spec §2.12): the notice returns to the Pauta without one, no extra warning.
+     * transaction (spec §2.12): the notice returns to the Pauta without one, no extra warning. A lançamento
+     * from a previsto reopens its occurrence, waiting and linked as before (spec S1): nothing to undo.
      */
     suspend fun deleteTransaction(id: TransactionId): Unit = write { c -> deleteTransactions(c, "id = ?", id.v) }
 
@@ -605,7 +637,7 @@ class Db(
         return read { c -> editsOver(c, id.v, limit.v, today).isNotEmpty() }
     }
 
-    /** Deletes the budget, its transactions (notices back to the Pauta), limits and step edits. */
+    /** Deletes the budget, its transactions (notices back to the Pauta), limits, step edits and previstos (D59). */
     suspend fun deleteBudget(id: BudgetId): Unit = write { c ->
         deleteTransactions(c, "budget_id = ?", id.v)
         c.exec("DELETE FROM budget_months WHERE budget_id = ?", id.v)
@@ -779,7 +811,10 @@ class Db(
         }
     }
 
-    /** Moves every link of [from] to [into] and deletes [from]. False if either is unknown or they are the same. */
+    /**
+     * Moves every link of [from] to [into], the previstos' too (no repeated pair), and deletes [from]. False if
+     * either is unknown or they are the same.
+     */
     suspend fun mergeTags(from: TagId, into: TagId): Boolean = write { c ->
         if (from == into || c.long("SELECT COUNT(*) FROM tags WHERE id IN (?, ?)", from.v, into.v) != 2L) return@write false
         c.exec("INSERT OR IGNORE INTO transaction_tags(transaction_id, tag_id) SELECT transaction_id, ? FROM transaction_tags WHERE tag_id = ?", into.v, from.v)
@@ -788,12 +823,35 @@ class Db(
         true
     }
 
-    /** Deletes the tag; transactions left without tags are deleted and their notices go back to the Pauta. */
+    /**
+     * Deletes the tag; transactions left without tags are deleted and their notices go back to the Pauta;
+     * previstos left without tags are deleted like [deletePlanned].
+     */
     suspend fun deleteTag(id: TagId): Unit = write { c ->
         c.exec("DELETE FROM transaction_tags WHERE tag_id = ?", id.v)
         c.exec("DELETE FROM tags WHERE id = ?", id.v)
         deleteTransactions(c, "id NOT IN (SELECT transaction_id FROM transaction_tags)")
     }
+
+    // ---- Previstos (spec §2.13, D59–D64) ----
+
+    /**
+     * "A caminho", the previsto sheet and "Qual previsto é este recado?": every open occurrence (not skipped,
+     * not closed by a lançamento), oldest date first (ties: occurrence id), [Planned.late] against [today] and
+     * [Planned.noticeInPauta] like [pending]. First creates the occurrences dated up to [today] + 10 days (R1),
+     * without bumping [version]: a ONCE previsto never gets a second one, a month that has its row (open,
+     * closed or skipped) never gets another. Previstos never count in spent, pace, Leitura or widgets.
+     */
+    suspend fun planned(today: LocalDate): List<Planned> = TODO()
+
+    /** Pular este mês (P10): the open occurrence won't come back; the next month's still does. False when not open. */
+    suspend fun skipOccurrence(id: OccurrenceId): Boolean = TODO()
+
+    /**
+     * Apagar previsto: the rule, its tags and every occurrence; its lançamentos stay and keep counting, with
+     * no origin (occurrence 0). Unknown: nothing changes.
+     */
+    suspend fun deletePlanned(id: PlannedId): Unit = TODO()
 
     // ---- Aliases ----
 
@@ -1019,6 +1077,7 @@ class Db(
      * installments and tags. Returns its id, or 0 with nothing written when the form is refused.
      */
     private fun saveTransaction(c: SQLiteConnection, id: Long, notice: Long, form: TransactionForm): Long {
+        if (form.occurrence.v != 0L || form.repeats != Repeats.ONCE) TODO()
         val tags = form.tags.map { it.trim().lowercase() }.filter(String::isNotEmpty).distinct()
         if (tags.isEmpty() || form.total.v !in 1..MAX_CENTS || form.installments !in 1..MAX_INSTALLMENTS) return 0
         if (c.long("SELECT COUNT(*) FROM budgets WHERE id = ?", form.budget.v) == 0L) return 0
@@ -1137,8 +1196,27 @@ class Db(
             "ALTER TABLE transactions ADD COLUMN caption TEXT NOT NULL DEFAULT ''",
         )
 
+        /**
+         * v4: the previsto (D59) and the alias key (D61). Old rows read occurrence_id 0 (not from a previsto)
+         * and alias_key '' (filled by the user's script, R3): zero is initialization. No key is recomputed.
+         */
+        val SCHEMA_V4 = listOf(
+            "ALTER TABLE transactions ADD COLUMN occurrence_id INTEGER NOT NULL DEFAULT 0",
+            "ALTER TABLE merchant_aliases ADD COLUMN alias_key TEXT NOT NULL DEFAULT ''",
+            "CREATE TABLE planned(id INTEGER PRIMARY KEY AUTOINCREMENT, name TEXT NOT NULL, budget_id INTEGER NOT NULL, " +
+                "cents INTEGER NOT NULL, day INTEGER NOT NULL, repeats INTEGER NOT NULL, link_package TEXT NOT NULL DEFAULT '', " +
+                "link_key TEXT NOT NULL DEFAULT '', link_text TEXT NOT NULL DEFAULT '')",
+            "CREATE TABLE planned_tags(planned_id INTEGER NOT NULL, tag_id INTEGER NOT NULL, PRIMARY KEY(planned_id, tag_id))",
+            "CREATE TABLE planned_dates(id INTEGER PRIMARY KEY AUTOINCREMENT, planned_id INTEGER NOT NULL, month TEXT NOT NULL, " +
+                "skipped INTEGER NOT NULL DEFAULT 0, UNIQUE(planned_id, month))",
+            "CREATE INDEX planned_dates_planned ON planned_dates(planned_id)",
+            "CREATE INDEX transactions_occurrence ON transactions(occurrence_id)",
+            "CREATE INDEX planned_link ON planned(link_package, link_key)",
+            "CREATE INDEX planned_tags_tag ON planned_tags(tag_id)",
+        )
+
         /** The schema version = how many SCHEMA_Vn migrations exist (v1 is SCHEMA_V1): a new migration can't be forgotten here. */
-        val SCHEMA_VERSION = listOf(SCHEMA_V1, SCHEMA_V2, SCHEMA_V3).size.toLong()
+        val SCHEMA_VERSION = listOf(SCHEMA_V1, SCHEMA_V2, SCHEMA_V3, SCHEMA_V4).size.toLong()
 
         /** One `if (v < N)` per version, each in a transaction that ends by writing N (architecture §4). */
         fun migrate(c: SQLiteConnection) {
@@ -1161,6 +1239,12 @@ class Db(
                 c.execSQL("PRAGMA user_version = 3")
                 c.execSQL("COMMIT")
             }
+            if (v < 4) {
+                c.execSQL("BEGIN IMMEDIATE")
+                SCHEMA_V4.forEach(c::execSQL)
+                c.execSQL("PRAGMA user_version = 4")
+                c.execSQL("COMMIT")
+            }
         }
     }
 }
@@ -1176,7 +1260,7 @@ private val CLEAN_BREAKS = Regex("\\r\\n|[\\r\\n\\u2028\\u2029]")
  * U+205F, U+3000). An explicit set: `isWhitespace` differs between targets. In the middle of the text
  * they stay (only the five breaks of [CLEAN_BREAKS] become spaces).
  */
-private fun isEdgeSpace(c: Char): Boolean =
+internal fun isEdgeSpace(c: Char): Boolean =
     c <= ' ' || c == '\u0085' || c == '\u00A0' || c == '\u1680' || c in '\u2000'..'\u200A' || c == '\u202F' || c == '\u205F' || c == '\u3000'
 
 /**
@@ -1202,6 +1286,7 @@ private fun SQLiteStatement.bindAll(args: Array<out Any>) {
             is Int -> bindLong(i + 1, a.toLong())
             is Boolean -> bindLong(i + 1, if (a) 1 else 0)
             is String -> bindText(i + 1, storable(a))
+            is MerchantKey -> bindText(i + 1, storable(a.v))
             else -> error("can't bind ${a::class}")
         }
     }

@@ -64,7 +64,7 @@ class LeituraUiTest {
     private fun description(text: String) = SemanticsMatcher.expectValue(SemanticsProperties.ContentDescription, listOf(text))
 
     private fun add(budget: BudgetId, cents: Long, day: Int, tag: String, merchant: String = "Loja") = runBlocking {
-        db.addManual(TransactionForm(budget, listOf(tag), Cents(cents), 1, merchant, LocalDate(2026, 10, day), LocalTime(12, 0)))
+        db.addManual(TransactionForm(budget, listOf(tag), Cents(cents), 1, merchant, LocalDate(2026, 10, day), LocalTime(12, 0))).transaction
     }
 
     /** Book 10.6: Restaurantes R$ 620 with R$ 231,10 by the 9th; Lazer R$ 465 with R$ 477,00. */
@@ -156,7 +156,7 @@ class LeituraUiTest {
     @Test
     fun `a past month shows how it closed and an empty month says so`() {
         val id = runBlocking { db.createBudget("Mercado", Cents(124000), LocalDate(2026, 9, 1)) }
-        runBlocking { db.addManual(TransactionForm(id, listOf("feira"), Cents(118000), 1, "Feira", LocalDate(2026, 9, 12), LocalTime(9, 0))) }
+        runBlocking { db.addManual(TransactionForm(id, listOf("feira"), Cents(118000), 1, "Feira", LocalDate(2026, 9, 12), LocalTime(9, 0))).transaction }
         open()
         waitFor(InsightsTags.RANK_EMPTY)
         node(InsightsTags.RANK_EMPTY).assertTextEquals("Nada lançado em outubro.")

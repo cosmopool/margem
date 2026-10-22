@@ -241,7 +241,7 @@ class LeituraLifecycleTest {
         val ids = runBlocking(Dispatchers.Default) {
             withTimeout(STORM_TIMEOUT_MS) {
                 (1..18).map { i ->
-                    async { db.addManual(form(mercado, 1_000, LocalDate(2026, 10, 5), listOf("feira"), "Sacolao $i")) }
+                    async { db.addManual(form(mercado, 1_000, LocalDate(2026, 10, 5), listOf("feira"), "Sacolao $i")).transaction }
                 }.awaitAll()
             }
         }
@@ -689,7 +689,7 @@ class LeituraLifecycleTest {
         TransactionForm(budget = budget, tags = tags, total = Cents(cents), installments = 1, merchant = merchant, date = date, time = LocalTime(10, 0))
 
     private fun tx(budget: BudgetId, cents: Long, date: LocalDate, tags: List<String>, merchant: String = "Sacolao"): TransactionId =
-        fora { db.addManual(form(budget, cents, date, tags, merchant)) }.also { assertNotEquals("addManual $merchant", 0L, it.v) }
+        fora { db.addManual(form(budget, cents, date, tags, merchant)).transaction }.also { assertNotEquals("addManual $merchant", 0L, it.v) }
 
     /** Epoch ms de [day]/10/2026 [h]:[m] no fuso do sistema. */
     private fun at(day: Int, h: Int, m: Int): Long =

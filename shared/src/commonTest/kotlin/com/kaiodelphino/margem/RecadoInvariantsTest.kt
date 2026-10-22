@@ -327,7 +327,7 @@ private class RecadoInvariantRun(val db: Db, val seed: Int, val startDay: Int) {
         val expect = valid(f)
         val p = acceptPreview(f, TransactionId(0))
         val before = snap()
-        val id = db.addManual(f)
+        val id = db.addManual(f).transaction
         log("addManual ${describe(f)} -> ${id.v}")
         assertEquals(expect, id.v != 0L, "addManual accepted/refused (same rules as accept)")
         if (id.v == 0L) {

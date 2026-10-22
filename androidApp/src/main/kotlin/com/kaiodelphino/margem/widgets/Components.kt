@@ -1159,7 +1159,7 @@ object DateTimeTags {
     /** The month shown: "outubro de 2026" (monthTitle). Opens on the chosen date's month. */
     const val MONTH = "dateTime.month"
 
-    /** One month back (no limit) and one forward; forward is disabled on today's month. */
+    /** One month back (no limit) and one forward; forward is disabled on today's month (enabled always with `future`, book 8.9). */
     const val PREV = "dateTime.prev"
     const val NEXT = "dateTime.next"
 
@@ -1167,7 +1167,8 @@ object DateTimeTags {
     const val WEEKDAYS = "dateTime.weekdays"
 
     /**
-     * Prefix: DAY + date ("dateTime.day.2026-10-08"): every day of the month shown. Disabled after today;
+     * Prefix: DAY + date ("dateTime.day.2026-10-08"): every day of the month shown. Disabled after today,
+     * unless the dialog takes `future` (Novo lançamento only: a day ahead becomes a previsto, spec §7.3);
      * `selected` on the chosen date. Click chooses it.
      */
     const val DAY = "dateTime.day."
@@ -1189,14 +1190,15 @@ object DateTimeTags {
 }
 
 /**
- * Book 8.9: date and time of a transaction. Opens on [date] and [time]; days after [today] can't be chosen.
+ * Book 8.9: date and time of a transaction. Opens on [date] and [time]; days after [today] can't be chosen
+ * unless [future] (the manual form, where a day ahead makes a previsto).
  * [weekStart] orders the grid (Settings.weekStart). [onDone] receives the choice; [onDismiss] closes it
  * either way. Tags: [DateTimeTags].
  */
 @Composable
 fun DateTimeDialog(
     date: LocalDate, time: LocalTime, today: LocalDate, weekStart: DayOfWeek,
-    onDone: (LocalDate, LocalTime) -> Unit, onDismiss: () -> Unit,
+    onDone: (LocalDate, LocalTime) -> Unit, onDismiss: () -> Unit, future: Boolean = false,
 ) {
     val c = Margem.colors
     var chosen by rememberSaveable { mutableStateOf(date.toString()) }
