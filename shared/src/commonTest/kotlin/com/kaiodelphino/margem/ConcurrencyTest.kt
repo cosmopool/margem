@@ -386,9 +386,12 @@ class ConcurrencyTest {
         write("setAlias") { db.setAlias("LOJA", "Loja do Zé"); true }
         write("setTheme") { db.setTheme(Theme.DARK); true }
         write("setBudgetOrder") { db.setBudgetOrder(BudgetOrder.AZ); true }
-        write("markPautaSeen") { db.markPautaSeen(T0 + 10_000); true }
         write("setLimit") { db.setLimit(budget, Cents(80_000), TODAY) }
         write("deleteTransaction") { db.deleteTransaction(tx); true }
+
+        // Opening the Pauta writes without a bump: the open Pauta has nothing to re-read (Db.markPautaSeen KDoc).
+        db.markPautaSeen(T0 + 10_000)
+        assertEquals(version to calls, db.version.value to writes.load(), "markPautaSeen doesn't bump nor call onWrite")
 
         // Reads never bump.
         db.pending(); db.pendingCount(); db.dismissed(); db.transactions(); db.tags(); db.sources(); db.settings()

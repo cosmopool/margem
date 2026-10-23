@@ -295,30 +295,6 @@ class PrevistoTest {
         assertEquals(MerchantKey.of("vivo fibra"), MerchantKey.of(" VÍVO  FIBRA "))
     }
 
-    @Test
-    fun aV3DatabaseMigratesToV4() = runTest {
-        val casa = casa()
-        db.addManual(form(casa, 1_000, oct9, "LOJA"))
-        db.setAlias("LOJA", "Loja")
-        db.close()
-        BundledSQLiteDriver().open(path).let {
-            it.execSQL("DROP TABLE planned")
-            it.execSQL("DROP TABLE planned_tags")
-            it.execSQL("DROP TABLE planned_dates")
-            it.execSQL("DROP INDEX transactions_occurrence")
-            it.execSQL("ALTER TABLE transactions DROP COLUMN occurrence_id")
-            it.execSQL("ALTER TABLE merchant_aliases DROP COLUMN alias_key")
-            it.execSQL("PRAGMA user_version = 3")
-            it.close()
-        }
-        db = Db(BundledSQLiteDriver(), path, timeZone = tz)
-        assertEquals("Loja", db.transactions().single().alias)
-        assertEquals(emptyList(), db.planned(oct9))
-        db.close()
-        db = Db(BundledSQLiteDriver(), path, timeZone = tz)
-        assertEquals(1, db.transactions().size)
-    }
-
     private companion object {
         const val NU = "com.nu.production"
     }

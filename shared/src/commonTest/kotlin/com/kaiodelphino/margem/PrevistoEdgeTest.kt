@@ -29,7 +29,7 @@ import kotlinx.io.files.SystemTemporaryDirectory
  * today + 10 (R1), closed and skipped months, editing the day, the late occurrence beside the next one,
  * the tie-break between previstos, the empty key (R2), the key fold, "Lançar previsto" through accept,
  * Desfazer / delete (S1), "Data à frente" through addManual(form, today), the refusals, previstos never
- * counting, deleteBudget / deleteTag / mergeTags / deletePlanned and the v3 → v4 migration.
+ * counting, deleteBudget / deleteTag / mergeTags / deletePlanned and the refusal of a backup older than the one schema.
  *
  * Expected values are computed by hand from the spec and the KDoc. Day arithmetic used below (2026 unless
  * said; September and November have 30 days, October and December 31, February 2027 has 28, 2028 is leap):
@@ -1061,40 +1061,8 @@ class PrevistoEdgeTest {
         assertEquals(listOf(d(12, 5)), db.planned(d(11, 26)).map { it.date })
     }
 
-    // ---- Migração v3 → v4 (D59, D61) ----
+    // ---- Schema único (D67) ----
 
-    @Test
-    fun `banco v3 migra para v4 com os dados intactos e aceita previstos`() = runTest(timeout = 120.seconds) {
-        val path = Path(SystemTemporaryDirectory, "PrevistoEdge-${Random.nextLong().toULong()}.db").toString()
-        val a = "$path.v3a"
-        val b = "$path.v3b"
-        try {
-            writeV3(a)
-            var db = Db(BundledSQLiteDriver(), a, timeZone = TZ)
-            assertV3Intact(db, "aberto")
-            db.close()
-            db = Db(BundledSQLiteDriver(), a, timeZone = TZ)
-            assertV3Intact(db, "reaberto")
-            // The migrated database takes a previsto: "Todo mês" on the pending recado (6 out, FEIRA DA ESQUINA).
-            val p = db.notice(NoticeId(2)).parsed
-            assertNotEquals(TransactionId(0), db.accept(NoticeId(2), TransactionForm(BudgetId(1), listOf("feira"), p.cents, 1, p.merchant, p.date, p.time, repeats = Repeats.MONTHLY)))
-            val feira = db.planned(d(10, 27)).single() // 27 out + 10 = 6 nov
-            assertEquals(Triple("FEIRA DA ESQUINA", d(11, 6), true), Triple(feira.name, feira.date, feira.linked))
-            db.close()
-
-            writeV3(b)
-            val live = Db(BundledSQLiteDriver(), path, timeZone = TZ)
-            assertTrue(live.importFrom(b), "a v3 backup imports")
-            assertV3Intact(live, "importado")
-            live.close()
-        } finally {
-            for (p in listOf(path, a, b)) {
-                for (suffix in listOf("", "-wal", "-shm")) SystemFileSystem.delete(Path(p + suffix), mustExist = false)
-            }
-        }
-    }
-
-    /** A Margem v3 database (DDL of SCHEMA_V1..V3): one lançamento with a legenda, one pending recado, a teto. */
     @Test
     fun `backup de um banco anterior ao schema único é recusado`() = runTest(timeout = 120.seconds) {
         // D67 (2026-10-23): one schema, no migrations of the old versions; the real backup is converted once outside the app.
@@ -1111,6 +1079,7 @@ class PrevistoEdgeTest {
         }
     }
 
+    /** A Margem database from before the one schema (D67): v3, one lançamento with a legenda, one pending recado, a teto. */
     private fun writeV3(file: String) {
         val c = BundledSQLiteDriver().open(file)
         for (ddl in V3_DDL) c.execSQL(ddl)
@@ -1137,29 +1106,6 @@ class PrevistoEdgeTest {
         c.exec("INSERT INTO merchant_aliases(merchant_key, alias) VALUES ('padariadoze', 'Padaria do Zé')")
         c.execSQL("PRAGMA user_version = 3")
         c.close()
-    }
-
-    /** What a v3 database must still give after the migration: the rows intact, no previsto, no origin. */
-    private suspend fun assertV3Intact(db: Db, tag: String) {
-        val row = db.transactions().single()
-        assertEquals(TransactionId(1), row.id, tag)
-        assertEquals(NoticeId(1) to BudgetId(1), row.notice to row.budget, tag)
-        assertEquals("Mercado" to "PADARIA DO ZE", row.budgetName to row.merchant, tag)
-        assertEquals("Padaria do Zé" to "Bolo da Ana", row.alias to row.caption, tag)
-        assertEquals(Cents(3150) to 1, row.total to row.installments, tag)
-        assertEquals(d(10, 6) to NOON, row.date to row.time, tag)
-        assertEquals(listOf("feira"), row.tags, tag)
-        assertFalse(row.corrected, tag)
-
-        assertEquals(NoticeStatus.PROCESSED, db.notice(NoticeId(1)).status, tag)
-        val pend = db.pending(TODAY)
-        assertEquals(listOf(NoticeId(2)), pend.map { it.id }, tag)
-        assertEquals(Planned(), pend.single().planned, tag)
-        assertTrue(db.planned(TODAY).isEmpty(), tag)
-        assertEquals(Cents(410000), db.ceiling(YearMonth(2026, 10)).cents, tag)
-        db.ensureMonths(YearMonth(2026, 10))
-        assertEquals(Cents(3150), db.budgetDetail(BudgetId(1), YearMonth(2026, 10), TODAY).month.spent, tag)
-        assertEquals(Suggestion(BudgetId(1), listOf("feira")), db.suggestion("PADARIA DO ZE"), tag)
     }
 
     private companion object {

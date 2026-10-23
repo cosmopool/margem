@@ -377,6 +377,8 @@ data class BudgetDetail(
      * that time): the month picker goes from here to the current month. NO_MONTH when unknown.
      */
     val firstMonth: YearMonth = NO_MONTH,
+    /** Its previstos, due or not: deleted with it (D59, spec §7.1's "Apagar verba"). */
+    val planned: Int = 0,
 )
 
 /**
@@ -409,6 +411,8 @@ data class TagRow(
     val uses: Int = 0,
     /** Transactions with only this tag: deleted with it (spec §2.9). */
     val soleUses: Int = 0,
+    /** Previstos with only this tag: deleted with it (D59). */
+    val solePlanned: Int = 0,
 )
 
 /** Leitura, Verbas por mês: one budget in one month, with that month's own limit. */

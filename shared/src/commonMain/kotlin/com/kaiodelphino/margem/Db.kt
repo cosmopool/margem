@@ -10,6 +10,7 @@ import kotlinx.coroutines.channels.Channel
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
+import kotlinx.coroutines.runBlocking
 import kotlinx.coroutines.sync.Mutex
 import kotlinx.coroutines.sync.withLock
 import kotlinx.coroutines.withContext
@@ -59,8 +60,9 @@ class Db(
     }
 
     /**
-     * Bumped once at the end of every write that changed something (except [ensureMonths]); a
-     * refused write or one that changes nothing doesn't bump. Screens re-query on change.
+     * Bumped once at the end of every write that changed something (except [ensureMonths], [markPautaSeen] and
+     * the occurrences [pending] and [planned] create with a today); a refused write or one that changes nothing
+     * doesn't bump. Screens re-query on change.
      */
     val version: StateFlow<Long> = _version.asStateFlow()
 
@@ -77,10 +79,17 @@ class Db(
         }
     }
 
-    /** Closes every connection. The Db can't be used afterwards. */
-    fun close() {
-        writer.close()
-        repeat(READERS) { readers.tryReceive().getOrNull()?.close() }
+    /**
+     * Closes every connection, after the write in flight ends and the reads in flight hand their connections back.
+     * The Db can't be used afterwards: a later read fails at once instead of waiting for a connection.
+     */
+    fun close(): Unit = runBlocking {
+        writeLock.withLock {
+            writer.close()
+            repeat(READERS) { readers.receive().close() }
+            readers.close()
+        }
+        Unit
     }
 
     /**
@@ -177,7 +186,7 @@ class Db(
             try {
                 val v = c.long("PRAGMA user_version")
                 val tables = c.long("SELECT COUNT(*) FROM sqlite_master WHERE type = 'table' AND name IN ('notices', 'transactions', 'budgets')")
-                v in 1..SCHEMA_VERSION && tables == 3L
+                v == SCHEMA_VERSION && tables == 3L
             } finally {
                 c.close()
             }
@@ -278,8 +287,8 @@ class Db(
 
     suspend fun setWidgetOrder(order: BudgetOrder): Unit = write { setSetting(it, "widget_order", order.name) }
 
-    /** Opening the Pauta: notices posted up to [now] stop being new. */
-    suspend fun markPautaSeen(now: Long): Unit = write { setSetting(it, "pauta_seen_at", now.toString()) }
+    /** Opening the Pauta: notices posted up to [now] stop being new. Doesn't bump [version]: the open Pauta has nothing to re-read. */
+    suspend fun markPautaSeen(now: Long): Unit = write(bump = false) { setSetting(it, "pauta_seen_at", now.toString()) }
 
     /** Sorted by label, ignoring case. */
     suspend fun sources(): List<Source> = read { c ->
@@ -313,7 +322,7 @@ class Db(
      * recognized and `late` is false.
      */
     suspend fun pending(today: LocalDate = NO_DATE): List<NoticeRow> {
-        if (today != NO_DATE) write(bump = false) { c -> fillPlanned(c, today) }
+        if (today != NO_DATE) fill(today)
         return read { c ->
             val rows = notices(c, "WHERE status = 0 ORDER BY posted_at DESC, id DESC")
             val found = recognize(c, rows, plannedRows(c, today, "WHERE p.link_key != ''"))
@@ -737,7 +746,8 @@ class Db(
             id.v, from, to,
         ) { MonthLine(rows.getValue(it.getLong(0)), it.getInt(1), LocalDate.parse(it.getText(2)), Cents(it.getLong(3))) }
         val first = c.query("SELECT MIN(month) FROM budget_months WHERE budget_id = ?", id.v) { if (it.isNull(0)) NO_MONTH else YearMonth.parse(it.getText(0)) }
-        BudgetDetail(id, name, bm, lines, first.firstOrNull() ?: NO_MONTH)
+        val planned = c.long("SELECT COUNT(*) FROM planned WHERE budget_id = ?", id.v).toInt()
+        BudgetDetail(id, name, bm, lines, first.firstOrNull() ?: NO_MONTH, planned)
     }
 
     // ---- Teto (spec §3, §7.1; D42, D46) ----
@@ -798,9 +808,11 @@ class Db(
             "SELECT g.id, g.name, " +
                 "(SELECT COUNT(*) FROM transaction_tags l WHERE l.tag_id = g.id), " +
                 "(SELECT COUNT(*) FROM transaction_tags l WHERE l.tag_id = g.id " +
-                "AND (SELECT COUNT(*) FROM transaction_tags o WHERE o.transaction_id = l.transaction_id) = 1) " +
+                "AND (SELECT COUNT(*) FROM transaction_tags o WHERE o.transaction_id = l.transaction_id) = 1), " +
+                "(SELECT COUNT(*) FROM planned_tags l WHERE l.tag_id = g.id " +
+                "AND (SELECT COUNT(*) FROM planned_tags o WHERE o.planned_id = l.planned_id) = 1) " +
                 "FROM tags g ORDER BY g.name",
-        ) { TagRow(TagId(it.getLong(0)), it.getText(1), it.getInt(2), it.getInt(3)) }
+        ) { TagRow(TagId(it.getLong(0)), it.getText(1), it.getInt(2), it.getInt(3), it.getInt(4)) }
     }
 
     /** Trimmed and lowercased; returns the existing tag for a used name. TagId(0) for a blank one. */
@@ -858,13 +870,20 @@ class Db(
      * closed or skipped) never gets another. Previstos never count in spent, pace, Leitura or widgets.
      */
     suspend fun planned(today: LocalDate): List<Planned> {
-        write(bump = false) { c -> fillPlanned(c, today) }
+        fill(today)
         return read { c ->
             val rows = plannedRows(c, today, "")
-            val pending = notices(c, "WHERE status = 0")
-            val inPauta = recognize(c, pending, rows.filter { it.linked }).values.map { it.occurrence }.toSet()
+            // Only a linked previsto can have its recado in the Pauta: without one, the Pauta isn't read (D60).
+            val linked = rows.filter { it.linked }
+            if (linked.isEmpty()) return@read rows
+            val inPauta = recognize(c, notices(c, "WHERE status = 0"), linked).values.map { it.occurrence }.toSet()
             rows.map { if (it.occurrence in inPauta) it.copy(noticeInPauta = true) else it }
         }
+    }
+
+    /** R1's occurrence creation, without the writer when every one already exists: a read checks first. */
+    private suspend fun fill(today: LocalDate) {
+        if (read { c -> missingOccurrences(c, today).isNotEmpty() }) write(bump = false) { c -> fillPlanned(c, today) }
     }
 
     /** Pular este mês (P10): the open occurrence won't come back; the next month's still does. False when not open. */
@@ -1141,18 +1160,32 @@ class Db(
         val editing = id == 0L && notice == 0L && form.planned.v != 0L
         val ahead = id == 0L && notice == 0L && today != NO_DATE && form.date > today
         if (editing || ahead) {
-            val name = cleanCaption(caption.ifEmpty { merchant })
+            val name = plannedName(caption, "", merchant)
             if (name.length > MAX_CAPTION) return Saved()
             if (editing) {
-                if (c.long("SELECT COUNT(*) FROM planned WHERE id = ?", form.planned.v) == 0L) return Saved()
+                val oldDay = c.query("SELECT day FROM planned WHERE id = ?", form.planned.v) { it.getInt(0) }.firstOrNull() ?: return Saved()
+                // The occurrence the form was opened on, while still open (else as 0): its date, cut to the month's
+                // last day, keeps the day (P8); "Só uma vez" keeps it alone (spec §2.13, 2026-10-23).
+                val opened = c.query(
+                    "SELECT id, month FROM planned_dates WHERE id = ? AND planned_id = ? AND skipped = 0 AND id NOT IN (SELECT occurrence_id FROM transactions)",
+                    form.occurrence.v, form.planned.v,
+                ) { it.getLong(0) to YearMonth.parse(it.getText(1)) }.firstOrNull()
+                val newDay = if (opened != null && form.date == occurrenceDate(opened.second, oldDay)) oldDay else form.date.day
                 c.exec(
                     "UPDATE planned SET name = ?, budget_id = ?, cents = ?, day = ?, repeats = ? WHERE id = ?",
-                    name, form.budget.v, form.total.v, form.date.day, form.repeats.ordinal, form.planned.v,
+                    name, form.budget.v, form.total.v, newDay, form.repeats.ordinal, form.planned.v,
                 )
                 c.exec("DELETE FROM planned_tags WHERE planned_id = ?", form.planned.v)
                 for (t in tags) c.exec("INSERT OR IGNORE INTO planned_tags(planned_id, tag_id) VALUES (?, ?)", form.planned.v, tagId(c, t))
+                if (form.repeats == Repeats.ONCE) {
+                    val open = "planned_id = ? AND skipped = 0 AND id NOT IN (SELECT occurrence_id FROM transactions)"
+                    val keep = opened?.first ?: c.query("SELECT id FROM planned_dates WHERE $open ORDER BY month LIMIT 1", form.planned.v) { it.getLong(0) }.firstOrNull() ?: 0L
+                    c.exec("DELETE FROM planned_dates WHERE $open AND id != ?", form.planned.v, keep)
+                }
                 return Saved(planned = form.planned)
             }
+            // Linked and ahead at once (a contradictory form): refused, never a second previsto.
+            if (form.occurrence.v != 0L) return Saved()
             return Saved(planned = PlannedId(insertPlanned(c, name, form, tags, form.date.yearMonth, "", MerchantKey.of(""), "")))
         }
 
@@ -1168,7 +1201,7 @@ class Db(
         val own = if (id != 0L) ownPlanned(c, id) else null
         val monthlyName = if (form.repeats == Repeats.MONTHLY && own == null) {
             val alias = form.alias.trim().ifEmpty { aliases(c)[key].orEmpty() }
-            cleanCaption(caption.ifEmpty { alias.ifEmpty { merchant } }).also { if (it.length > MAX_CAPTION) return Saved() }
+            plannedName(caption, alias, merchant).also { if (it.length > MAX_CAPTION) return Saved() }
         } else ""
 
         val corrected = notice != 0L && extract(raw, timeZone).let {
@@ -1199,6 +1232,13 @@ class Db(
         for (name in tags) c.exec("INSERT OR IGNORE INTO transaction_tags(transaction_id, tag_id) VALUES (?, ?)", txId, tagId(c, name))
         if (form.alias.isNotBlank() && key.v.isNotEmpty()) saveAlias(c, key, form.alias)
         if (occurrencePlanned != 0L && linkKey.v.isNotEmpty()) {
+            // D65: the link this rewrites is kept on the lançamento, so deleting it gives it back.
+            val p = "FROM planned WHERE id = $occurrencePlanned"
+            c.exec(
+                "UPDATE transactions SET prev_link_package = (SELECT link_package $p), prev_link_key = (SELECT link_key $p), " +
+                    "prev_link_text = (SELECT link_text $p) WHERE id = ?",
+                txId,
+            )
             c.exec("UPDATE planned SET link_package = ?, link_key = ?, link_text = ? WHERE id = ?", raw.packageName, linkKey, bank, occurrencePlanned)
         }
         val planned = when {
@@ -1242,18 +1282,25 @@ class Db(
      * (like [ensureMonth]); a row that exists is never created again, Só uma vez never gets a second one.
      */
     private fun fillPlanned(c: SQLiteConnection, today: LocalDate) {
+        for ((id, m) in missingOccurrences(c, today)) c.exec("INSERT OR IGNORE INTO planned_dates(planned_id, month) VALUES (?, ?)", id, m.toString())
+    }
+
+    /** The (previsto, month) rows [fillPlanned] would create for [today]. */
+    private fun missingOccurrences(c: SQLiteConnection, today: LocalDate): List<Pair<Long, YearMonth>> {
         val until = LocalDate.fromEpochDays(minOf(today.toEpochDays() + 10, LAST_DATE.toEpochDays()))
         val rules = c.query(
             "SELECT p.id, p.day, MAX(d.month) FROM planned p JOIN planned_dates d ON d.planned_id = p.id WHERE p.repeats = ? GROUP BY p.id",
             Repeats.MONTHLY.ordinal,
         ) { Triple(it.getLong(0), it.getInt(1), YearMonth.parse(it.getText(2))) }
+        val missing = ArrayList<Pair<Long, YearMonth>>()
         for ((id, day, last) in rules) {
             var m = last
             while (m < LAST_MONTH && occurrenceDate(m.plusMonth(), day) <= until) {
                 m = m.plusMonth()
-                c.exec("INSERT OR IGNORE INTO planned_dates(planned_id, month) VALUES (?, ?)", id, m.toString())
+                missing += id to m
             }
         }
+        return missing
     }
 
     /**
@@ -1293,7 +1340,7 @@ class Db(
     }
 
     /**
-     * D60: for each recado, the linked open occurrence of the same fonte and key whose date is at most 10 days
+     * D60: for each recado but an estorno, the linked open occurrence of the same fonte and key whose date is at most 10 days
      * from the recado's; the closest wins, then the earlier date, then the lower id. A loop, not a join: the
      * recado's merchant only exists after `extract`. Keyed by notice id; absent = not recognized.
      */
@@ -1307,7 +1354,8 @@ class Db(
         val found = HashMap<Long, Planned>()
         for (n in notices) {
             val key = MerchantKey.of(n.parsed.merchant)
-            if (key.v.isEmpty()) continue
+            // An estorno is never the previsto's recado: its button is "Registrar estorno" (spec §2.8).
+            if (key.v.isEmpty() || n.parsed.isRefund) continue
             val best = byLink[n.raw.packageName to key]?.filter { abs(it.date.toEpochDays() - n.parsed.date.toEpochDays()) <= 10 }
                 ?.minWithOrNull(compareBy<Planned> { abs(it.date.toEpochDays() - n.parsed.date.toEpochDays()) }.thenBy { it.date }.thenBy { it.occurrence.v })
             if (best != null) found[n.id.v] = best
@@ -1331,12 +1379,31 @@ class Db(
 
     /** Deletes the transactions matching [where] with their installments, tag links and estornos (spec §2.8). */
     private fun deleteTransactions(c: SQLiteConnection, where: String, vararg args: Any) {
-        val ids = "SELECT id FROM transactions WHERE $where"
-        c.exec("DELETE FROM installments WHERE transaction_id IN ($ids)", *args)
-        c.exec("DELETE FROM transaction_tags WHERE transaction_id IN ($ids)", *args)
-        c.exec("DELETE FROM refunds WHERE transaction_id IN ($ids)", *args)
-        c.exec("UPDATE planned SET source_transaction = 0 WHERE source_transaction IN ($ids)", *args)
-        c.exec("DELETE FROM transactions WHERE $where", *args)
+        val gone = c.query("SELECT id FROM transactions WHERE $where", *args) { it.getLong(0) }
+        if (gone.isEmpty()) return
+        val ids = gone.joinToString(",")
+        // D65: a link this lançamento rewrote goes back to the one before, while the previsto still has the one it wrote.
+        val relinked = c.query(
+            "SELECT d.planned_id, t.notice_id, t.prev_link_package, t.prev_link_key, t.prev_link_text FROM transactions t " +
+                "JOIN planned_dates d ON d.id = t.occurrence_id WHERE t.id IN ($ids) AND t.prev_link_key != ''",
+        ) { listOf(it.getLong(0), it.getLong(1), it.getText(2), it.getText(3), it.getText(4)) }
+        for ((planned, notice, pkg, key, text) in relinked) {
+            val raw = notice(c, notice as Long).raw
+            c.exec(
+                "UPDATE planned SET link_package = ?, link_key = ?, link_text = ? WHERE id = ? AND link_package = ? AND link_key = ?",
+                pkg, MerchantKey.of(key as String), text, planned, raw.packageName, MerchantKey.of(extract(raw, timeZone).merchant),
+            )
+        }
+        // D65: the previsto its "Repete" made goes with it while none of its occurrences has a lançamento left.
+        deletePlanned(
+            c, "source_transaction IN ($ids) AND id NOT IN (SELECT d.planned_id FROM planned_dates d JOIN transactions t ON t.occurrence_id = d.id " +
+                "WHERE t.id NOT IN ($ids))",
+        )
+        c.exec("DELETE FROM installments WHERE transaction_id IN ($ids)")
+        c.exec("DELETE FROM transaction_tags WHERE transaction_id IN ($ids)")
+        c.exec("DELETE FROM refunds WHERE transaction_id IN ($ids)")
+        c.exec("UPDATE planned SET source_transaction = 0 WHERE source_transaction IN ($ids)")
+        c.exec("DELETE FROM transactions WHERE id IN ($ids)")
     }
 
     private companion object {
@@ -1357,7 +1424,11 @@ class Db(
          * v1: the schema of architecture §4, plus merchant_key on transactions (alias and suggestion lookups).
          * Budget and transaction ids are AUTOINCREMENT: a deleted one never comes back (D38).
          */
-        val SCHEMA_V1 = listOf(
+        /**
+         * The one schema (D67, 2026-10-23: the old v1–v5 migrations dropped, nobody but the author used them).
+         * The next change is a migration from this v1 (architecture §4).
+         */
+        val SCHEMA = listOf(
             "CREATE TABLE settings(key TEXT PRIMARY KEY, value TEXT NOT NULL)",
             "CREATE TABLE sources(package TEXT PRIMARY KEY, label TEXT NOT NULL, added_at INTEGER NOT NULL)",
             "CREATE TABLE notices(id INTEGER PRIMARY KEY, package TEXT NOT NULL, app_label TEXT NOT NULL, key TEXT NOT NULL, " +
@@ -1367,94 +1438,49 @@ class Db(
             "CREATE TABLE budgets(id INTEGER PRIMARY KEY AUTOINCREMENT, name TEXT NOT NULL COLLATE NOCASE UNIQUE, position INTEGER NOT NULL)",
             "CREATE TABLE budget_months(budget_id INTEGER NOT NULL, month TEXT NOT NULL, limit_cents INTEGER NOT NULL, PRIMARY KEY(budget_id, month))",
             "CREATE TABLE week_steps(budget_id INTEGER NOT NULL, week_start TEXT NOT NULL, cents INTEGER NOT NULL, PRIMARY KEY(budget_id, week_start))",
+            "CREATE TABLE ceiling_months(month TEXT PRIMARY KEY, cents INTEGER NOT NULL)",
+            // occurrence_id: the occurrence it closed (0 = none, D59); prev_link_*: the previsto's link before this
+            // lançamento rewrote it, given back when it is deleted (D65).
             "CREATE TABLE transactions(id INTEGER PRIMARY KEY AUTOINCREMENT, notice_id INTEGER NOT NULL, budget_id INTEGER NOT NULL, " +
                 "merchant TEXT NOT NULL, merchant_key TEXT NOT NULL, date TEXT NOT NULL, time TEXT NOT NULL, " +
-                "total_cents INTEGER NOT NULL, corrected INTEGER NOT NULL DEFAULT 0)",
+                "total_cents INTEGER NOT NULL, corrected INTEGER NOT NULL DEFAULT 0, caption TEXT NOT NULL DEFAULT '', " +
+                "occurrence_id INTEGER NOT NULL DEFAULT 0, prev_link_package TEXT NOT NULL DEFAULT '', " +
+                "prev_link_key TEXT NOT NULL DEFAULT '', prev_link_text TEXT NOT NULL DEFAULT '')",
             "CREATE TABLE installments(transaction_id INTEGER NOT NULL, k INTEGER NOT NULL, date TEXT NOT NULL, cents INTEGER NOT NULL, " +
                 "PRIMARY KEY(transaction_id, k))",
             "CREATE TABLE refunds(estorno_notice_id INTEGER PRIMARY KEY, transaction_id INTEGER NOT NULL, notice_id INTEGER NOT NULL)",
             "CREATE TABLE tags(id INTEGER PRIMARY KEY, name TEXT NOT NULL COLLATE NOCASE UNIQUE)",
             "CREATE TABLE transaction_tags(transaction_id INTEGER NOT NULL, tag_id INTEGER NOT NULL, PRIMARY KEY(transaction_id, tag_id))",
-            "CREATE TABLE merchant_aliases(merchant_key TEXT PRIMARY KEY, alias TEXT NOT NULL)",
+            "CREATE TABLE merchant_aliases(merchant_key TEXT PRIMARY KEY, alias TEXT NOT NULL, alias_key TEXT NOT NULL DEFAULT '')",
+            // source_transaction: the lançamento whose "Repete" created it (0 = Salvar previsto, D65).
+            "CREATE TABLE planned(id INTEGER PRIMARY KEY AUTOINCREMENT, name TEXT NOT NULL, budget_id INTEGER NOT NULL, " +
+                "cents INTEGER NOT NULL, day INTEGER NOT NULL, repeats INTEGER NOT NULL, link_package TEXT NOT NULL DEFAULT '', " +
+                "link_key TEXT NOT NULL DEFAULT '', link_text TEXT NOT NULL DEFAULT '', source_transaction INTEGER NOT NULL DEFAULT 0)",
+            "CREATE TABLE planned_tags(planned_id INTEGER NOT NULL, tag_id INTEGER NOT NULL, PRIMARY KEY(planned_id, tag_id))",
+            "CREATE TABLE planned_dates(id INTEGER PRIMARY KEY AUTOINCREMENT, planned_id INTEGER NOT NULL, month TEXT NOT NULL, " +
+                "skipped INTEGER NOT NULL DEFAULT 0, UNIQUE(planned_id, month))",
             "CREATE INDEX notices_key ON notices(key, posted_at)",
             "CREATE INDEX notices_posted_at ON notices(posted_at)",
             "CREATE INDEX transactions_notice ON transactions(notice_id)",
             "CREATE INDEX transactions_budget ON transactions(budget_id)",
             "CREATE INDEX transactions_merchant ON transactions(merchant_key)",
+            "CREATE INDEX transactions_occurrence ON transactions(occurrence_id)",
             "CREATE INDEX installments_date ON installments(date)",
             "CREATE INDEX refunds_transaction ON refunds(transaction_id)",
             "CREATE INDEX refunds_notice ON refunds(notice_id)",
             "CREATE INDEX transaction_tags_tag ON transaction_tags(tag_id)",
-        )
-
-        /** v2: the teto (D42, D58). Its default lives in settings under "ceiling" (absent = 0, no ceiling). */
-        val SCHEMA_V2 = listOf(
-            "CREATE TABLE ceiling_months(month TEXT PRIMARY KEY, cents INTEGER NOT NULL)",
-        )
-
-        /** v3: the legenda (D52). Old rows read caption '' (no legenda): zero is initialization. */
-        val SCHEMA_V3 = listOf(
-            "ALTER TABLE transactions ADD COLUMN caption TEXT NOT NULL DEFAULT ''",
-        )
-
-        /**
-         * v4: the previsto (D59) and the alias key (D61). Old rows read occurrence_id 0 (not from a previsto)
-         * and alias_key '' (filled by the user's script, R3): zero is initialization. No key is recomputed.
-         */
-        val SCHEMA_V4 = listOf(
-            "ALTER TABLE transactions ADD COLUMN occurrence_id INTEGER NOT NULL DEFAULT 0",
-            "ALTER TABLE merchant_aliases ADD COLUMN alias_key TEXT NOT NULL DEFAULT ''",
-            "CREATE TABLE planned(id INTEGER PRIMARY KEY AUTOINCREMENT, name TEXT NOT NULL, budget_id INTEGER NOT NULL, " +
-                "cents INTEGER NOT NULL, day INTEGER NOT NULL, repeats INTEGER NOT NULL, link_package TEXT NOT NULL DEFAULT '', " +
-                "link_key TEXT NOT NULL DEFAULT '', link_text TEXT NOT NULL DEFAULT '')",
-            "CREATE TABLE planned_tags(planned_id INTEGER NOT NULL, tag_id INTEGER NOT NULL, PRIMARY KEY(planned_id, tag_id))",
-            "CREATE TABLE planned_dates(id INTEGER PRIMARY KEY AUTOINCREMENT, planned_id INTEGER NOT NULL, month TEXT NOT NULL, " +
-                "skipped INTEGER NOT NULL DEFAULT 0, UNIQUE(planned_id, month))",
-            "CREATE INDEX planned_dates_planned ON planned_dates(planned_id)",
-            "CREATE INDEX transactions_occurrence ON transactions(occurrence_id)",
-            "CREATE INDEX planned_link ON planned(link_package, link_key)",
             "CREATE INDEX planned_tags_tag ON planned_tags(tag_id)",
         )
 
-        /** v5: the lançamento whose "Repete" created a previsto (D65); v4 previstos read 0 (none). */
-        val SCHEMA_V5 = listOf(
-            "ALTER TABLE planned ADD COLUMN source_transaction INTEGER NOT NULL DEFAULT 0",
-        )
+        const val SCHEMA_VERSION = 1L
 
-        /** The schema version = how many SCHEMA_Vn migrations exist (v1 is SCHEMA_V1): a new migration can't be forgotten here. */
-        val SCHEMA_VERSION = listOf(SCHEMA_V1, SCHEMA_V2, SCHEMA_V3, SCHEMA_V4, SCHEMA_V5).size.toLong()
-
-        /** One `if (v < N)` per version, each in a transaction that ends by writing N (architecture §4). */
+        /** Creates the schema on an empty file; later versions add one `if (v < N)` each, in a transaction that ends by writing N (§4). */
         fun migrate(c: SQLiteConnection) {
             val v = c.long("PRAGMA user_version")
             if (v < 1) {
                 c.execSQL("BEGIN IMMEDIATE")
-                SCHEMA_V1.forEach(c::execSQL)
+                SCHEMA.forEach(c::execSQL)
                 c.execSQL("PRAGMA user_version = 1")
-                c.execSQL("COMMIT")
-            }
-            if (v < 2) {
-                c.execSQL("BEGIN IMMEDIATE")
-                SCHEMA_V2.forEach(c::execSQL)
-                c.execSQL("PRAGMA user_version = 2")
-                c.execSQL("COMMIT")
-            }
-            if (v < 3) {
-                c.execSQL("BEGIN IMMEDIATE")
-                SCHEMA_V3.forEach(c::execSQL)
-                c.execSQL("PRAGMA user_version = 3")
-                c.execSQL("COMMIT")
-            }
-            if (v < 4) {
-                c.execSQL("BEGIN IMMEDIATE")
-                SCHEMA_V4.forEach(c::execSQL)
-                c.execSQL("PRAGMA user_version = 4")
-                c.execSQL("COMMIT")
-            }
-            if (v < 5) {
-                c.execSQL("BEGIN IMMEDIATE")
-                SCHEMA_V5.forEach(c::execSQL)
-                c.execSQL("PRAGMA user_version = 5")
                 c.execSQL("COMMIT")
             }
         }
@@ -1525,6 +1551,13 @@ internal fun SQLiteConnection.long(sql: String, vararg args: Any): Long =
 
 /** A legenda (and a previsto's name) as stored (spec §2.12, D53, D62): breaks to spaces, edges trimmed, storable. */
 private fun cleanCaption(s: String): String = storable(CLEAN_BREAKS.replace(s, " ").trim(::isEdgeSpace))
+
+/**
+ * A previsto's name (D62, D64): the legenda, else the alias, else the merchant (the bank text, or the manual's name),
+ * cleaned like the legenda. Over [MAX_CAPTION] the form is refused; screens check it first (spec §7.3).
+ */
+fun plannedName(caption: String, alias: String, merchant: String): String =
+    cleanCaption(cleanCaption(caption).ifEmpty { alias.trim().ifEmpty { storable(merchant.trim()) } })
 
 /** An occurrence's date (P8): [day] in [month], or the month's last day when it has none. */
 private fun occurrenceDate(month: YearMonth, day: Int): LocalDate = month.onDay(minOf(day, month.numberOfDays))

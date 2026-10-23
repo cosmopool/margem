@@ -23,7 +23,7 @@ import kotlinx.io.files.SystemTemporaryDirectory
  * Edge cases of the legenda do lançamento (spec §2.12, D52–D55), through the public API only: the
  * 80-unit limit of accept, addManual and edit, the cleaning of TransactionForm.caption, removing on
  * edit (the §2.10 contrast with the apelido), deleteTransaction, suggestion, the Leitura reads,
- * refundCandidates and the migration of a v1 database (open and importFrom).
+ * refundCandidates.
  * Expected values come from spec §2.5, §2.8, §2.10, §2.12, §7.3–§7.5, architecture D52–D55 and the
  * KDoc of the contract, computed by hand.
  *
@@ -392,99 +392,6 @@ class LegendaEdgeTest {
 
     // ---- Migração (D52): um banco v1 lê sem legenda e os dados ficam intactos ----
 
-    @Test
-    fun `banco v1 migrado e restaurado por importFrom mantém os dados e lê sem legenda`() = runTest(timeout = 60.seconds) {
-        val path = Path(SystemTemporaryDirectory, "margem-legenda-${Random.nextLong().toULong()}.db").toString()
-        val a = "$path.v1a"
-        val b = "$path.v1b"
-        try {
-            // (a) opened by the Db: the migration fills the new columns and nothing else moves.
-            writeV1(a)
-            var db = Db(BundledSQLiteDriver(), a, timeZone = TimeZone.of("America/Sao_Paulo"))
-            assertV1Intact(db, "aberto")
-            db.close()
-            db = Db(BundledSQLiteDriver(), a, timeZone = TimeZone.of("America/Sao_Paulo")) // reopening is idempotent
-            assertV1Intact(db, "reaberto")
-            val tx = db.addManual(form(BudgetId(1), 900, caption = "Bolo da Ana")).transaction
-            assertNotEquals(TransactionId(0), tx, "the migrated database writes the legenda")
-            assertEquals("Bolo da Ana", db.transaction(tx).row.caption)
-            db.close()
-
-            // (b) restored with importFrom: the same reads, and restoring again changes nothing.
-            writeV1(b)
-            val live = Db(BundledSQLiteDriver(), path, timeZone = TimeZone.of("America/Sao_Paulo"))
-            assertTrue(live.importFrom(b), "a v1 backup imports")
-            assertV1Intact(live, "importado")
-            assertTrue(live.importFrom(b), "importing it again")
-            assertV1Intact(live, "importado de novo")
-            live.close()
-        } finally {
-            for (p in listOf(path, a, b)) {
-                for (suffix in listOf("", "-wal", "-shm")) SystemFileSystem.delete(Path(p + suffix), mustExist = false)
-            }
-        }
-    }
-
-    /** A Margem v1 database at [file] (DDL of SCHEMA_V1) with one lançamento and one pending recado. */
-    private fun writeV1(file: String) {
-        val c = BundledSQLiteDriver().open(file)
-        for (ddl in V1_DDL) c.execSQL(ddl)
-        c.exec("INSERT INTO settings(key, value) VALUES ('month_start_day', '1')")
-        c.exec("INSERT INTO sources(package, label, added_at) VALUES (?, ?, ?)", NU, "Nubank", 0L)
-        c.exec(
-            "INSERT INTO notices(id, package, app_label, key, posted_at, when_ms, title, text, big_text, sub_text, text_lines, " +
-                "category, channel_id, extras_json, content_hash, dismissed) VALUES (1, ?, 'Nubank', 'legenda-v1|1', ?, ?, 'Nubank', ?, '', '', '', '', '', '{}', 'old', 0)",
-            NU, T, T, PURCHASE_TEXT,
-        )
-        c.exec(
-            "INSERT INTO notices(id, package, app_label, key, posted_at, when_ms, title, text, big_text, sub_text, text_lines, " +
-                "category, channel_id, extras_json, content_hash, dismissed) VALUES (2, ?, 'Nubank', 'legenda-v1|2', ?, ?, 'Nubank', ?, '', '', '', '', '', '{}', 'old', 0)",
-            NU, T + MIN, T + MIN, PURCHASE_TEXT_2,
-        )
-        c.exec("INSERT INTO budgets(id, name, position) VALUES (1, 'Mercado', 0)")
-        c.exec("INSERT INTO budget_months(budget_id, month, limit_cents) VALUES (1, '2026-10', 60000)")
-        c.exec(
-            "INSERT INTO transactions(id, notice_id, budget_id, merchant, merchant_key, date, time, total_cents, corrected) " +
-                "VALUES (1, 1, 1, 'PADARIA DO ZE', 'padariadoze', '2026-10-06', '12:00', 3150, 0)",
-        )
-        c.exec("INSERT INTO installments(transaction_id, k, date, cents) VALUES (1, 1, '2026-10-06', 3150)")
-        c.exec("INSERT INTO tags(id, name) VALUES (1, 'feira')")
-        c.exec("INSERT INTO transaction_tags(transaction_id, tag_id) VALUES (1, 1)")
-        c.exec("INSERT INTO merchant_aliases(merchant_key, alias) VALUES ('padariadoze', 'Padaria do Zé')")
-        c.execSQL("PRAGMA user_version = 1")
-        c.close()
-    }
-
-    /** What a v1 database must still give after the migration: the rows intact, no legenda anywhere. */
-    private suspend fun assertV1Intact(db: Db, tag: String) {
-        val rows = db.transactions()
-        assertEquals(1, rows.size, tag)
-        val row = rows.single()
-        assertEquals(TransactionId(1), row.id, tag)
-        assertEquals(NoticeId(1) to BudgetId(1), row.notice to row.budget, tag)
-        assertEquals("Mercado" to "PADARIA DO ZE", row.budgetName to row.merchant, tag)
-        assertEquals("Padaria do Zé" to "Padaria do Zé", row.alias to row.name, tag)
-        assertEquals(Cents(3150) to 1, row.total to row.installments, tag)
-        assertEquals(OCT_6 to NOON, row.date to row.time, tag)
-        assertEquals(listOf("feira"), row.tags, tag)
-        assertFalse(row.corrected, tag)
-        assertEquals(NoticeId(0), row.estorno, tag)
-        // D52: the rows of before the legenda read as none.
-        assertEquals("", row.caption, tag)
-        assertEquals(row.name, row.title, tag)
-
-        assertEquals(NoticeStatus.PROCESSED, db.notice(NoticeId(1)).status, tag)
-        assertEquals(NoticeStatus.PENDING, db.notice(NoticeId(2)).status, tag)
-        assertEquals("Padaria do Zé", db.notice(NoticeId(1)).alias, tag)
-        assertEquals(listOf(NoticeId(2)), db.pending().map { it.id }, tag)
-
-        db.ensureMonths(ym(2026, 10))
-        val detail = db.budgetDetail(BudgetId(1), ym(2026, 10), TODAY)
-        assertEquals(Cents(3150), detail.month.spent, tag)
-        assertEquals(listOf(TransactionId(1)), detail.lines.map { it.row.id }, tag)
-        assertEquals(Suggestion(BudgetId(1), listOf("feira")), db.suggestion("PADARIA DO ZE"), tag)
-    }
-
     private companion object {
         const val NU = "com.nu.production"
         const val MIN = 60_000L
@@ -499,35 +406,5 @@ class LegendaEdgeTest {
         const val PURCHASE_TEXT = "Compra de R$ 31,50 APROVADA em PADARIA DO ZE para o cartão com final 1234."
         const val PURCHASE_TEXT_2 = "Compra de R$ 20,00 APROVADA em FEIRA DA ESQUINA para o cartão com final 1234."
 
-        /** The v1 DDL of the Margem (copied from SCHEMA_V1 in Db.kt): the database the legenda found. */
-        val V1_DDL = listOf(
-            "CREATE TABLE settings(key TEXT PRIMARY KEY, value TEXT NOT NULL)",
-            "CREATE TABLE sources(package TEXT PRIMARY KEY, label TEXT NOT NULL, added_at INTEGER NOT NULL)",
-            "CREATE TABLE notices(id INTEGER PRIMARY KEY, package TEXT NOT NULL, app_label TEXT NOT NULL, key TEXT NOT NULL, " +
-                "posted_at INTEGER NOT NULL, when_ms INTEGER NOT NULL, title TEXT NOT NULL, text TEXT NOT NULL, big_text TEXT NOT NULL, " +
-                "sub_text TEXT NOT NULL, text_lines TEXT NOT NULL, category TEXT NOT NULL, channel_id TEXT NOT NULL, " +
-                "extras_json TEXT NOT NULL, content_hash TEXT NOT NULL, dismissed INTEGER NOT NULL DEFAULT 0)",
-            "CREATE TABLE budgets(id INTEGER PRIMARY KEY AUTOINCREMENT, name TEXT NOT NULL COLLATE NOCASE UNIQUE, position INTEGER NOT NULL)",
-            "CREATE TABLE budget_months(budget_id INTEGER NOT NULL, month TEXT NOT NULL, limit_cents INTEGER NOT NULL, PRIMARY KEY(budget_id, month))",
-            "CREATE TABLE week_steps(budget_id INTEGER NOT NULL, week_start TEXT NOT NULL, cents INTEGER NOT NULL, PRIMARY KEY(budget_id, week_start))",
-            "CREATE TABLE transactions(id INTEGER PRIMARY KEY AUTOINCREMENT, notice_id INTEGER NOT NULL, budget_id INTEGER NOT NULL, " +
-                "merchant TEXT NOT NULL, merchant_key TEXT NOT NULL, date TEXT NOT NULL, time TEXT NOT NULL, " +
-                "total_cents INTEGER NOT NULL, corrected INTEGER NOT NULL DEFAULT 0)",
-            "CREATE TABLE installments(transaction_id INTEGER NOT NULL, k INTEGER NOT NULL, date TEXT NOT NULL, cents INTEGER NOT NULL, " +
-                "PRIMARY KEY(transaction_id, k))",
-            "CREATE TABLE refunds(estorno_notice_id INTEGER PRIMARY KEY, transaction_id INTEGER NOT NULL, notice_id INTEGER NOT NULL)",
-            "CREATE TABLE tags(id INTEGER PRIMARY KEY, name TEXT NOT NULL COLLATE NOCASE UNIQUE)",
-            "CREATE TABLE transaction_tags(transaction_id INTEGER NOT NULL, tag_id INTEGER NOT NULL, PRIMARY KEY(transaction_id, tag_id))",
-            "CREATE TABLE merchant_aliases(merchant_key TEXT PRIMARY KEY, alias TEXT NOT NULL)",
-            "CREATE INDEX notices_key ON notices(key, posted_at)",
-            "CREATE INDEX notices_posted_at ON notices(posted_at)",
-            "CREATE INDEX transactions_notice ON transactions(notice_id)",
-            "CREATE INDEX transactions_budget ON transactions(budget_id)",
-            "CREATE INDEX transactions_merchant ON transactions(merchant_key)",
-            "CREATE INDEX installments_date ON installments(date)",
-            "CREATE INDEX refunds_transaction ON refunds(transaction_id)",
-            "CREATE INDEX refunds_notice ON refunds(notice_id)",
-            "CREATE INDEX transaction_tags_tag ON transaction_tags(tag_id)",
-        )
     }
 }

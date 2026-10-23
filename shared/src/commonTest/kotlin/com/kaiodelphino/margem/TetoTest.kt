@@ -137,30 +137,4 @@ class TetoTest {
         assertEquals(Cents(0), db.ceiling(oct).cents)
     }
 
-    @Test
-    fun v1DatabaseMigratesAndBackupKeepsTheCeiling() = runTest {
-        db.createBudget("Mercado", Cents(124_000), oct9)
-        db.close()
-        // Back to v1: what the app had before the teto, the legenda and the previsto.
-        BundledSQLiteDriver().open(path).let {
-            it.execSQL("DROP TABLE planned")
-            it.execSQL("DROP TABLE planned_tags")
-            it.execSQL("DROP TABLE planned_dates")
-            it.execSQL("DROP INDEX transactions_occurrence")
-            it.execSQL("ALTER TABLE transactions DROP COLUMN occurrence_id")
-            it.execSQL("ALTER TABLE merchant_aliases DROP COLUMN alias_key")
-            it.execSQL("DROP TABLE ceiling_months")
-            it.execSQL("ALTER TABLE transactions DROP COLUMN caption")
-            it.execSQL("PRAGMA user_version = 1")
-            it.close()
-        }
-        db = Db(BundledSQLiteDriver(), path, timeZone = TimeZone.of("America/Sao_Paulo"))
-        db.ensureMonths(oct)
-        assertTrue(db.setCeiling(Cents(410_000), onward = true, oct9))
-        assertEquals(Cents(124_000), db.ceiling(oct).limits)
-        assertTrue(db.exportTo("$path.copy"))
-        db.setCeiling(Cents(0), onward = true, oct9)
-        assertTrue(db.importFrom("$path.copy"))
-        assertEquals(Ceiling(oct, Cents(410_000), Cents(410_000), Cents(124_000)), db.ceiling(oct))
-    }
 }

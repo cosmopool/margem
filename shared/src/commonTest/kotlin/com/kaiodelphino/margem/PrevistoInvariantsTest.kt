@@ -549,6 +549,8 @@ private class PrevistoInvariantRun(val db: Db, val seed: Int, val startDay: Int)
     fun dropTx(t: PvInvTx): OccurrenceId? {
         txs.remove(t.id)
         goneTx.add(t.id)
+        // D65 (2026-10-23): the previsto its "Repete" made goes with it while none of its occurrences has a lançamento.
+        t.started?.let { s -> if (s in plans && s.occs.values.none { it.state == PvInvState.CLOSED }) dropPlan(s) }
         val p = t.plan ?: return null
         if (p !in plans) return null
         val o = p.occs.getValue(t.month)
