@@ -432,6 +432,8 @@ class LegendaUiTest {
         assertTrue("diálogo: ${texts(TransactionTags.DELETE_DIALOG)}", shows(TransactionTags.DELETE_DIALOG, "O recado volta à Pauta."))
         assertTrue("diálogo sem legenda", !shows(TransactionTags.DELETE_DIALOG, LEGENDA))
         click(TransactionTags.DELETE_DIALOG_CONFIRM)
+        // Back on Lançamentos first: the edit form has no rows, so "row gone" alone holds before the screen leaves.
+        waitFor(TransactionTags.LIST)
         waitGone(TransactionTags.ROW + tx.v)
 
         openTab("Verbas", BudgetTags.LIST)

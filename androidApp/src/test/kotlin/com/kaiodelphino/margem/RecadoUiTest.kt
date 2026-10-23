@@ -336,6 +336,8 @@ class RecadoUiTest {
         waitFor(TransactionTags.DELETE_DIALOG)
         compose.onNodeWithTag(TransactionTags.DELETE_DIALOG).assertTextContains("O recado volta à Pauta.", substring = true)
         click(TransactionTags.DELETE_DIALOG_CONFIRM)
+        // Back on Lançamentos first: the edit form has no rows, so "row gone" alone holds before the delete lands.
+        waitFor(TransactionTags.LIST)
         waitGone(TransactionTags.ROW + fromNotice.v)
         assertEquals(listOf(notice), runBlocking { db.pending() }.map { it.id })
     }

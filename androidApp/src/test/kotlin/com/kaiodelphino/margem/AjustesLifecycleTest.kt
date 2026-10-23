@@ -223,8 +223,11 @@ class AjustesLifecycleTest {
             pressBack()
             await("voltar de $row leva a Ajustes") { exists(SettingsTags.LIST) && exists(row) }
         }
-        assertTrue("subtítulos", shows(SettingsTags.DISMISSED, "trazer recados de volta à pauta") && shows(SettingsTags.TAGS, "renomear, juntar, apagar") &&
-            shows(SettingsTags.BACKUP, "exportar · importar") && shows(SettingsTags.COBUDGET, "recados de um backup do app antigo"))
+        // The rows after Marcadores come with Db.settings(), read again on coming back: wait for them, don't race them.
+        await("subtítulos", SettingsTags.DISMISSED, SettingsTags.TAGS, SettingsTags.BACKUP, SettingsTags.COBUDGET) {
+            shows(SettingsTags.DISMISSED, "trazer recados de volta à pauta") && shows(SettingsTags.TAGS, "renomear, juntar, apagar") &&
+                shows(SettingsTags.BACKUP, "exportar · importar") && shows(SettingsTags.COBUDGET, "recados de um backup do app antigo")
+        }
     }
 
     @Test
@@ -623,7 +626,8 @@ class AjustesLifecycleTest {
         await("semana de volta: desabilitado") { selected(SettingsTags.START_WEEK + "monday") && !enabled(SettingsTags.START_SAVE) }
 
         pressBack()
-        await("Ajustes") { exists(SettingsTags.LIST) }
+        // START_DAYS comes with Db.settings(), read again on coming back.
+        await("Ajustes") { exists(SettingsTags.LIST) && exists(SettingsTags.START_DAYS) }
         assertTrue(fora { db.setMonthStartDay(2, DIA) })
         tap(SettingsTags.START_DAYS)
         await("começa no dia 2") { textIs(SettingsTags.START_DAY, "2") }
@@ -1014,7 +1018,8 @@ class AjustesLifecycleTest {
 
         // Resultado some ao sair da tela.
         pressBack()
-        await("Ajustes") { exists(SettingsTags.LIST) }
+        // COBUDGET comes with Db.settings(), read again on coming back.
+        await("Ajustes") { exists(SettingsTags.LIST) && exists(SettingsTags.COBUDGET) }
         tap(SettingsTags.COBUDGET)
         await("tela de novo") { exists(SettingsTags.COBUDGET_PICK) }
         assertFalse("sem resultado depois de sair", exists(SettingsTags.COBUDGET_RESULT))
