@@ -489,7 +489,7 @@ object TransactionTags {
     /**
      * The sheet "Qual previsto é este recado?" (Lançar; "Só desta vez: nos próximos meses, o recado “ENEL SP”
      * chega ligado." under it, the bank text) or "Qual previsto é este lançamento?" (manual). One
-     * [LINK_CANDIDATE] per Db.planned(today), closest date to the form's first, then closest value; the first
+     * [LINK_CANDIDATE] per Db.planned(today), closest value to the form's first, then closest date; the first
      * reads "mais provável". [LINK_SUBMIT] "Ligar à Conta de luz" (disabled until one is chosen) links the form.
      */
     const val LINK_SHEET = "txForm.linkSheet"
@@ -602,7 +602,7 @@ private fun TransactionLine(t: TransactionRow, onClick: () -> Unit, onUndoRefund
 private fun repeatsText(p: Planned) = (if (p.repeats == Repeats.MONTHLY) "Todo mês" else "Só uma vez") + ", dia ${p.day}"
 
 /** "5 out" */
-private fun dayMonth(d: LocalDate) = "${d.day} ${monthShort(d.month)}"
+private fun dayMonth(d: LocalDate) = "${d.day}\u00A0${monthShort(d.month)}" // NBSP: "24 nov" never splits
 
 /** The snack of a lançado previsto (book 7.3): "Lançado: Internet, em Casa. O próximo é 10 nov." */
 fun launchedText(p: Planned, budgetName: String): String =
@@ -744,7 +744,8 @@ private fun PlannedSheet(db: Db, p: Planned, today: LocalDate, go: (Screen) -> U
 @Composable
 private fun LinkSheet(rows: List<Planned>, notice: NoticeRow, date: LocalDate, total: Cents, link: (Planned) -> Unit, close: () -> Unit) {
     val c = Margem.colors
-    val sorted = rows.sortedWith(compareBy<Planned> { abs(it.date.toEpochDays() - date.toEpochDays()) }.thenBy { abs(it.cents.v - total.v) })
+    // Closest value first, then closest day (decided 2026-10-23: a bill's value says more than its day).
+    val sorted = rows.sortedWith(compareBy<Planned> { abs(it.cents.v - total.v) }.thenBy { abs(it.date.toEpochDays() - date.toEpochDays()) })
     var chosen by rememberSaveable { mutableLongStateOf(0L) }
     BottomSheet(close, Modifier.testTag(TransactionTags.LINK_SHEET)) {
         val isPost = notice.id.v != 0L
@@ -1228,7 +1229,7 @@ private fun TxForm(
                 Text("REPETE", sans(11f, 600, 14f, 0.12f), Modifier.padding(top = 18.dp), c.inkTertiary)
                 FlowRow(Modifier.padding(top = 6.dp).testTag(TransactionTags.FORM_REPEATS), horizontalArrangement = Arrangement.spacedBy(8.dp)) {
                     BudgetOption("Só uma vez", !monthly, Modifier.testTag(TransactionTags.FORM_REPEATS_ONCE)) { monthly = false }
-                    BudgetOption("Todo mês, dia ${day.day}", monthly, Modifier.testTag(TransactionTags.FORM_REPEATS_MONTHLY)) { monthly = true }
+                    BudgetOption("Todo mês, dia ${data.detail.day.takeIf { isEdit && it != 0 } ?: day.day}", monthly, Modifier.testTag(TransactionTags.FORM_REPEATS_MONTHLY)) { monthly = true }
                 }
                 if (isPost && monthly && merchant.isNotBlank()) Text(
                     "Em ${monthLong(day.yearMonth.plusMonth().month)}, o recado “${merchant.trim()}” chega ligado.", sans(13.5f, 400, 18f),

@@ -184,6 +184,7 @@ class PrevistoTest {
         // D65: the edit opens "Repete" as its previsto is.
         val detail = db.transaction(t.transaction)
         assertEquals(t.planned to Repeats.MONTHLY, detail.planned to detail.repeats)
+        assertEquals(8, detail.day, "the edit's \"Todo mês, dia N\" is its previsto's day")
         // Todo mês again creates no second previsto.
         assertTrue(db.edit(t.transaction, form(casa, 5_000, LocalDate(2026, 10, 8), "BAR", repeats = Repeats.MONTHLY)))
         assertEquals(listOf(t.planned), db.planned(LocalDate(2026, 10, 30)).map { it.planned })

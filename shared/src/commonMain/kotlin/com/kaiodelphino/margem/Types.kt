@@ -275,6 +275,8 @@ data class TransactionDetail(
     val planned: PlannedId = PlannedId(0),
     /** That previsto's repetition; ONCE when there is none. */
     val repeats: Repeats = Repeats.ONCE,
+    /** That previsto's day (1..31): the edit's "Todo mês, dia N"; 0 when there is none. */
+    val day: Int = 0,
 )
 
 /** Budget and tags of the merchant's last transaction (spec §2.5); zero = no history. */

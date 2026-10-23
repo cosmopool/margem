@@ -388,7 +388,7 @@ class PrevistoUiTest {
 
         val a = rows[0]
         assertShows(a, "Academia")
-        assertShows(a, "esperando desde 5 out")
+        assertShows(a, "esperando desde 5\u00A0out")
         assertShows(a, money(Cents(8990)))
         assertShows(a, "out")
         assertShows(a, "5")
@@ -430,7 +430,7 @@ class PrevistoUiTest {
 
         waitFor(TransactionTags.PLANNED_LAUNCH_NO_NOTICE)
         assertShows(TransactionTags.PLANNED_LAUNCH_NO_NOTICE, "Lançar sem recado")
-        assertShows(TransactionTags.PLANNED_LAUNCH_NO_NOTICE, "vira um lançamento de 5 out, sem ligação")
+        assertShows(TransactionTags.PLANNED_LAUNCH_NO_NOTICE, "vira um lançamento de 5\u00A0out, sem ligação")
         assertShows(TransactionTags.PLANNED_SKIP, "Pular este mês")
         assertShows(TransactionTags.PLANNED_SKIP, "some sem lançar; volta em 5 de novembro")
         assertShows(TransactionTags.PLANNED_EDIT, "Editar previsto")
@@ -466,7 +466,7 @@ class PrevistoUiTest {
         openSheet(occ("Mensalidade"))
 
         waitFor(TransactionTags.PLANNED_LAUNCH_NO_NOTICE)
-        assertShows(TransactionTags.PLANNED_LAUNCH_NO_NOTICE, "vira um lançamento de 9 out, sem ligação")
+        assertShows(TransactionTags.PLANNED_LAUNCH_NO_NOTICE, "vira um lançamento de 9\u00A0out, sem ligação")
         assertNotShows(TransactionTags.PLANNED_SHEET, "Esperando o recado")
     }
 
@@ -789,7 +789,7 @@ class PrevistoUiTest {
         waitFor(l)
         waitFor(e)
         assertEquals("um candidato por previsto em aberto", 2, countPrefix(TransactionTags.LINK_CANDIDATE))
-        assertTrue("dia mais perto primeiro (12 antes de 15, recado de 9)", top(l) < top(e))
+        assertTrue("valor mais perto primeiro (180,00 a 7,40 de 187,40; 150,00 a 37,40; decided 2026-10-23)", top(l) < top(e))
         assertShows(l, "Conta de luz")
         // Triage: "mais provável" is a rubric, drawn in capitals (book 8.11 `.likely`): matched ignoring case.
         assertTrue(texts(l).any { it.contains("mais provável", ignoreCase = true) })
@@ -933,7 +933,7 @@ class PrevistoUiTest {
         click(InboxTags.PLANNED_LAUNCH + id.v)
         waitGone(InboxTags.CARD + id.v)
         waitFor(SnackTags.TEXT)
-        assertShows(SnackTags.TEXT, "Lançado: Internet, em Casa. O próximo é 10 nov.")
+        assertShows(SnackTags.TEXT, "Lançado: Internet, em Casa. O próximo é 10\u00A0nov.") // NBSP keeps "10 nov" together
         assertShows(SnackTags.ACTION, "Desfazer")
         compose.waitUntil(5_000) { runBlocking { db.transactions() }.any { it.date == OCT_9 } }
         val t = runBlocking { db.transactions() }.first { it.date == OCT_9 }

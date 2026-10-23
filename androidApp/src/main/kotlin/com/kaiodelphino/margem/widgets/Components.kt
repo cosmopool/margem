@@ -1112,7 +1112,8 @@ fun DayStamp(date: LocalDate, late: Boolean, modifier: Modifier = Modifier) {
 /** Book 8.11: a sheet from the bottom, radius 16, with its handle. Back or a touch above it calls [onDismiss]. */
 @Composable
 fun BottomSheet(onDismiss: () -> Unit, modifier: Modifier = Modifier, content: @Composable ColumnScope.() -> Unit) {
-    Dialog(onDismiss, DialogProperties(usePlatformDefaultWidth = false)) {
+    // Edge to edge: the sheet's paper runs under the gesture bar (book 8.11), its content stays above it.
+    Dialog(onDismiss, DialogProperties(usePlatformDefaultWidth = false, decorFitsSystemWindows = false)) {
         val c = Margem.colors
         (LocalView.current.parent as? DialogWindowProvider)?.window?.let {
             it.setDimAmount(if (c.isDark) 0.6f else 0.45f)
@@ -1120,8 +1121,8 @@ fun BottomSheet(onDismiss: () -> Unit, modifier: Modifier = Modifier, content: @
         }
         val shape = RoundedCornerShape(topStart = 16.dp, topEnd = 16.dp)
         Column(
-            modifier.fillMaxWidth().background(c.surface, shape).verticalScroll(rememberScrollState())
-                .padding(start = 24.dp, end = 24.dp, top = 10.dp, bottom = 30.dp),
+            modifier.fillMaxWidth().background(c.surface, shape).windowInsetsPadding(WindowInsets.navigationBars)
+                .verticalScroll(rememberScrollState()).padding(start = 24.dp, end = 24.dp, top = 10.dp, bottom = 30.dp),
         ) {
             Box(Modifier.align(Alignment.CenterHorizontally).padding(bottom = 14.dp).size(32.dp, 4.dp).background(c.ruleStrong, RoundedCornerShape(2.dp)))
             content()

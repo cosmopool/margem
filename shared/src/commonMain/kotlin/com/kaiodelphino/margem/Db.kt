@@ -439,6 +439,7 @@ class Db(
         val own = ownPlanned(c, id.v)
         TransactionDetail(
             planned = PlannedId(own?.first ?: 0), repeats = own?.second ?: Repeats.ONCE,
+            day = own?.let { c.long("SELECT day FROM planned WHERE id = ?", it.first).toInt() } ?: 0,
             row = row,
             installments = c.query("SELECT k, date, cents FROM installments WHERE transaction_id = ? ORDER BY k", id.v) {
                 Installment(it.getInt(0), LocalDate.parse(it.getText(1)), Cents(it.getLong(2)))
