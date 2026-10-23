@@ -50,7 +50,7 @@ mutation: ## Mutation testing of shared on the JVM (PIT, Kotlin + SQL mutants); 
 	$(GRADLE) :shared:mutation
 	@echo "  report: shared/build/reports/pitest/index.html"
 
-check: test ios debug mutation ## Everything a block must pass: tests, iOS compile, debug build, mutation score
+check: test ios debug ## Everything a block must pass: tests, iOS compile, debug build (mutation runs apart: make mutation, D48)
 
 clean: ## Delete build outputs
 	$(GRADLE) clean
