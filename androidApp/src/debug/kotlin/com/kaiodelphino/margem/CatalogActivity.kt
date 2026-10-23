@@ -33,6 +33,7 @@ import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.unit.dp
+import com.kaiodelphino.margem.widgets.BottomSheet
 import com.kaiodelphino.margem.widgets.ButtonKind
 import com.kaiodelphino.margem.widgets.Button
 import com.kaiodelphino.margem.widgets.CapturePaused
@@ -40,6 +41,7 @@ import com.kaiodelphino.margem.widgets.Check
 import com.kaiodelphino.margem.widgets.ChipState
 import com.kaiodelphino.margem.widgets.DayHeader
 import com.kaiodelphino.margem.widgets.DayPicker
+import com.kaiodelphino.margem.widgets.DayStamp
 import com.kaiodelphino.margem.widgets.DialogCard
 import kotlinx.datetime.LocalTime
 import com.kaiodelphino.margem.widgets.time
@@ -52,6 +54,7 @@ import com.kaiodelphino.margem.widgets.Gap
 import com.kaiodelphino.margem.widgets.HomeBar
 import com.kaiodelphino.margem.widgets.Icon
 import com.kaiodelphino.margem.widgets.IconButton
+import com.kaiodelphino.margem.widgets.InfoBand
 import com.kaiodelphino.margem.widgets.ListRow
 import com.kaiodelphino.margem.widgets.Margem
 import com.kaiodelphino.margem.widgets.MargemDialog
@@ -192,6 +195,28 @@ private fun Catalog(dark: Boolean, setDark: (Boolean) -> Unit) {
                     NoticeCard(notice("Cartão Ipê", "Estorno de compra: R$ 59,90 — LOJA ESTACAO.", 5990, "Loja Estação", refund = true), {}, {}, time = "ontem, 21:03")
                     NoticeCard(notice("PagFácil", "Você ganhou 10% de cashback em lojas parceiras! Confira."), {}, {}, time = "08:05")
                     NoticeCard(notice("PagFácil", "Você ganhou 10% de cashback em lojas parceiras! Confira.", new = true), {}, {}, time = "08:05", acceptEnabled = false)
+                }
+
+                SectionLine("8.11 Previsto")
+                val academia = Planned(
+                    occurrence = OccurrenceId(1), planned = PlannedId(1), name = "Academia", budget = BudgetId(1), budgetName = "Lazer",
+                    tags = listOf("academia"), cents = Cents(8990), day = 5, repeats = Repeats.MONTHLY, date = LocalDate(2026, 10, 5),
+                    next = LocalDate(2026, 11, 5), linked = true, linkText = "SMARTFIT", linkSource = "Cartão Ipê", late = true,
+                )
+                Column(Modifier.padding(top = 10.dp), verticalArrangement = Arrangement.spacedBy(10.dp)) {
+                    NoticeCard(notice("Cartão Ipê", "Compra aprovada: R$ 89,90 em SMARTFIT.", 8990, "SMARTFIT"), {}, {}, time = "07:30", planned = academia)
+                    Row(verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(12.dp)) {
+                        DayStamp(LocalDate(2026, 10, 5), late = true)
+                        DayStamp(LocalDate(2026, 10, 12), late = false)
+                    }
+                    InfoBand(R.drawable.i_ligar, "Ligado a “Academia”", "Todo mês, dia 5. Verba, marcadores e nome vieram do previsto.", action = "Desligar")
+                    InfoBand(R.drawable.i_previsto, "", "Data à frente: vira previsto. Fica em Lançamentos esperando o recado, sem contar na verba.")
+                    var sheet by remember { mutableStateOf(false) }
+                    Button("Abrir folha", { sheet = true }, kind = ButtonKind.SECONDARY)
+                    if (sheet) BottomSheet({ sheet = false }) {
+                        Text("Academia", serif(20, 500, 26))
+                        Text("Esperando o recado desde 5 de outubro. Ligado a “SMARTFIT” · Cartão Ipê.", sans(14f, 400, 20f), color = c.inkSecondary)
+                    }
                 }
 
                 SectionLine("8.5 Régua")

@@ -76,6 +76,7 @@ import com.kaiodelphino.margem.BudgetSummary
 import com.kaiodelphino.margem.Cents
 import com.kaiodelphino.margem.Db
 import com.kaiodelphino.margem.MAX_CAPTION
+import com.kaiodelphino.margem.plannedName
 import com.kaiodelphino.margem.NO_DATE
 import com.kaiodelphino.margem.NO_MONTH
 import com.kaiodelphino.margem.NO_TIME
@@ -132,6 +133,7 @@ import kotlinx.datetime.DayOfWeek
 import kotlinx.datetime.LocalDate
 import kotlinx.datetime.LocalTime
 import kotlinx.datetime.TimeZone
+import kotlinx.datetime.onDay
 import kotlinx.datetime.plusMonth
 import kotlinx.datetime.toLocalDateTime
 import kotlinx.datetime.yearMonth
@@ -215,7 +217,7 @@ object TransactionTags {
 
     /**
      * The previsto sheet (book 8.11): stamp, name, "Lazer · academia · todo mês, dia 5", value; then
-     * "Esperando o recado desde 5 de outubro." when late and "Ligado a SMARTFIT, do Cartão Ipê." (Planned.linkText,
+     * "Esperando o recado desde 5 de outubro." when late and "Ligado a “SMARTFIT” · Cartão Ipê." (Planned.linkText,
      * linkSource) when linked, in one line; then the actions. Back or a touch outside closes it.
      */
     const val PLANNED_SHEET = "transactions.plannedSheet"
@@ -411,7 +413,7 @@ object TransactionTags {
     const val TAG_RESULT = "txForm.tagSearch.result."
 
     /**
-     * "Criar “festa junina”" (the clean text) and "novo, só é gravado ao lançar", last under the results,
+     * "Criar “festa junina”" (the clean text) and "novo, só é gravado ao lançar" ("ao salvar" when the button says Salvar), last under the results,
      * while the clean text is not blank and is neither the name of an existing tag nor of a chosen one.
      * Click adds it as a chosen chip (not "sugerido"), empties the text, focus stays.
      */
@@ -490,14 +492,14 @@ object TransactionTags {
      * The sheet "Qual previsto é este recado?" (Lançar; "Só desta vez: nos próximos meses, o recado “ENEL SP”
      * chega ligado." under it, the bank text) or "Qual previsto é este lançamento?" (manual). One
      * [LINK_CANDIDATE] per Db.planned(today), closest value to the form's first, then closest date; the first
-     * reads "mais provável". [LINK_SUBMIT] "Ligar à Conta de luz" (disabled until one is chosen) links the form.
+     * reads "mais provável". [LINK_SUBMIT] "Ligar a “Conta de luz”" (disabled until one is chosen) links the form.
      */
     const val LINK_SHEET = "txForm.linkSheet"
     const val LINK_CANDIDATE = "txForm.linkSheet.candidate."
     const val LINK_SUBMIT = "txForm.linkSheet.submit"
 
     /**
-     * The linked state: the anil band "Ligado à Conta de luz", "Todo mês, dia 12. Verba, marcadores e nome
+     * The linked state: the anil band "Ligado a “Conta de luz”", "Todo mês, dia 12. Verba, marcadores e nome
      * vieram do previsto." with [FORM_UNLINK] "Desligar". Budget and tags of the previsto selected and
      * confirmed (not suggested), the caption field open with its name; total, bank text, date and time stay
      * the recado's (P7: no emenda, no previsto value). [FORM_REPEATS] is absent. Saving closes the occurrence
@@ -711,7 +713,7 @@ private fun PlannedSheet(db: Db, p: Planned, today: LocalDate, go: (Screen) -> U
         }
         val about = listOfNotNull(
             if (p.late) "Esperando o recado desde ${p.date.day} de ${monthLong(p.date.month)}." else null,
-            if (p.linked) "Ligado a ${p.linkText}, do ${p.linkSource}." else null,
+            if (p.linked) "Ligado a “${p.linkText}” · ${p.linkSource}." else null,
         ).joinToString(" ")
         if (about.isNotEmpty()) Text(about, sans(14f, 400, 20f), Modifier.padding(top = 2.dp, bottom = 8.dp), c.inkSecondary)
         // R6: lançar sem recado only from the occurrence's day on.
@@ -772,7 +774,7 @@ private fun LinkSheet(rows: List<Planned>, notice: NoticeRow, date: LocalDate, t
                     Text(
                         buildAnnotatedString {
                             append(listOfNotNull("dia ${p.day}", p.budgetName, if (p.late) "atrasado" else null).joinToString(" · "))
-                            if (p.linked) append(" · ligado a ${p.linkText}")
+                            if (p.linked) append(" · ligado a “${p.linkText}”")
                             if (i == 0) {
                                 append(" · ")
                                 withStyle(SpanStyle(color = c.info, fontWeight = FontWeight.SemiBold, letterSpacing = 1.sp)) { append("MAIS PROVÁVEL") }
@@ -786,7 +788,7 @@ private fun LinkSheet(rows: List<Planned>, notice: NoticeRow, date: LocalDate, t
         }
         val pick = sorted.firstOrNull { it.occurrence.v == chosen }
         Button(
-            if (pick != null) "Ligar à ${pick.name}" else "Ligar", { pick?.let(link) },
+            if (pick != null) "Ligar a “${pick.name}”" else "Ligar", { pick?.let(link) },
             Modifier.padding(top = 12.dp).fillMaxWidth().testTag(TransactionTags.LINK_SUBMIT), icon = R.drawable.i_ligar, enabled = pick != null,
         )
     }
@@ -915,20 +917,27 @@ private fun TxForm(
     var tagFocused by remember { mutableStateOf(false) }
     // Nova verba (D66): the greatest budget id known when it was tapped; -1 = not waiting for one.
     var knownBudget by rememberSaveable { mutableLongStateOf(-1L) }
+    // Editar previsto: the previsto and its day, fixed on load (its occurrence may leave the list while the form is open).
+    var editId by rememberSaveable { mutableLongStateOf(0L) }
+    var editDay by rememberSaveable { mutableIntStateOf(0) }
 
     fun link(p: Planned) {
+        // D62: what comes from the previsto is formFrom's, the one owner of that rule.
+        val f = formFrom(p, data?.notice ?: NoticeRow())
         preBudget = budget
         preChips = chips
         preCaption = caption
         preCaptionOpen = captionOpen
         preSuggested = suggested
         suggested = false
-        if (data?.budgets?.any { it.id == p.budget } == true) budget = p.budget.v
-        chips = chipList(p.tags.associateWith { 'C' })
-        caption = cutCaption(p.name)
+        if (data?.budgets?.any { it.id == f.budget } == true) budget = f.budget.v
+        chips = chipList(f.tags.associateWith { 'C' })
+        caption = cutCaption(f.caption)
         captionOpen = true
         linked = p.occurrence.v
         linking = false
+        // Linked takes no day ahead (spec §7.3): a lançamento paid before the day is dated today.
+        if (!isPost && LocalDate.parse(date) > today) date = today.toString()
     }
 
     fun unlink() {
@@ -996,6 +1005,8 @@ private fun TxForm(
                 budget = p.budget.v
                 chips = chipList(p.tags.associateWith { 'C' })
                 monthly = p.repeats == Repeats.MONTHLY
+                editId = p.planned.v
+                editDay = p.day
             }
             else -> {
                 val now = Clock.System.now().toLocalDateTime(TimeZone.currentSystemDefault()).time
@@ -1005,9 +1016,10 @@ private fun TxForm(
         // Opened from a previsto: the card's body (linked Lançar) or Lançar sem recado (the occurrence's value and date).
         data.planned.firstOrNull { it.occurrence == from && from.v != 0L }?.let { p ->
             if (!isPost) {
-                total = p.cents.v
-                date = p.date.toString()
-                hour = time(NO_TIME)
+                val f = formFrom(p, NoticeRow())
+                total = f.total.v
+                date = f.date.toString()
+                hour = time(f.time)
             }
             link(p)
         }
@@ -1025,6 +1037,8 @@ private fun TxForm(
     // Margins of the month of the form's date, the preview's month (D66); a budget without a limit row there has none.
     val monthMargins = query(db, date, today) { d ->
         val m = d.monthOf(day)
+        // D30: a month screen fills the months first; a date ahead may be in one not filled yet.
+        d.ensureMonths(m)
         m to d.budgetsOverview(m, today, BudgetOrder.MANUAL).associate { it.id.v to it.month.remaining }
     }
     val margins = monthMargins?.second.orEmpty()
@@ -1054,20 +1068,27 @@ private fun TxForm(
     val linkedPlanned = data?.planned?.firstOrNull { it.occurrence.v == linked }
     // Data à frente (spec §7.3): only a new manual one becomes a previsto.
     val ahead = isManual && !isEditPlanned && day > today
-    val plannedId = if (isEditPlanned) data?.planned?.firstOrNull { it.occurrence == editPlanned }?.planned ?: PlannedId(0) else PlannedId(0)
+    val plannedId = PlannedId(if (isEditPlanned) editId else 0L)
+    // Spec §7.3 (2026-10-23): a previsto this form makes or edits can't be named over 80; the form says so first.
+    val makesPlanned = isEditPlanned || ahead || (monthly && linked == 0L && !(isEdit && data?.detail?.planned?.v != 0L))
+    val longName = makesPlanned && plannedName(caption, if (ahead || isEditPlanned) "" else alias, merchant).length > MAX_CAPTION
 
     fun form() = TransactionForm(
         BudgetId(budget), selectedTags, Cents(total), installments, merchant, day, at, alias, caption,
-        occurrence = OccurrenceId(linked), repeats = if (monthly && linked == 0L) Repeats.MONTHLY else Repeats.ONCE, planned = plannedId,
+        occurrence = if (isEditPlanned) editPlanned else OccurrenceId(linked),
+        repeats = if (monthly && linked == 0L) Repeats.MONTHLY else Repeats.ONCE, planned = plannedId,
     )
 
     fun submit() {
-        if (busy || missing.isNotEmpty()) return
+        if (busy || missing.isNotEmpty() || longName) return
         busy = true
         scope.launch {
             val f = form()
             val margin = db.previewAccept(f.budget, f.date, f.total, f.installments, today, edit).after
             val p = linkedPlanned
+            // A refusal names what is gone: the recado (Lançar), else the previsto the form is linked to.
+            val gone = if (isPost) InboxTags.GONE_TEXT else GONE_PLANNED
+            var stay = false
             when {
                 isEdit -> {
                     if (!db.edit(edit, f)) snack.show(Snack(GONE_TX))
@@ -1076,20 +1097,24 @@ private fun TxForm(
                     if (db.addManual(f, today).planned.v == 0L) snack.show(Snack(GONE_PLANNED))
                 }
                 ahead -> {
-                    if (db.addManual(f, today).planned.v == 0L) snack.show(Snack(GONE_TX))
+                    // Spec §2.13 (2026-10-23): a refusal the form didn't foresee keeps what was typed.
+                    if (db.addManual(f, today).planned.v == 0L) {
+                        snack.show(Snack("Não deu para salvar o previsto."))
+                        stay = true
+                    }
                 }
                 p != null -> {
                     val id = if (isPost) db.accept(notice, f) else db.addManual(f, today).transaction
-                    if (id.v == 0L) snack.show(Snack(InboxTags.GONE_TEXT))
+                    if (id.v == 0L) snack.show(Snack(gone))
                     else snack.show(Snack(launchedText(p, budgetName), "Desfazer") { db.deleteTransaction(id) })
                 }
                 else -> {
                     val id = if (isPost) db.accept(notice, f) else db.addManual(f, today).transaction
-                    if (id.v == 0L) snack.show(Snack(InboxTags.GONE_TEXT))
+                    if (id.v == 0L) snack.show(Snack(if (linked != 0L) gone else InboxTags.GONE_TEXT))
                     else snack.show(Snack("Lançado em $budgetName. Margem: ${marginText(margin)}.", "Desfazer") { db.deleteTransaction(id) })
                 }
             }
-            back()
+            if (stay) busy = false else back()
         }
     }
 
@@ -1129,7 +1154,7 @@ private fun TxForm(
             @Composable
             fun LinkLine() {
                 if (linkedPlanned != null) InfoBand(
-                    R.drawable.i_ligar, "Ligado à ${linkedPlanned.name}", "${repeatsText(linkedPlanned)}. Verba, marcadores e nome vieram do previsto.",
+                    R.drawable.i_ligar, "Ligado a “${linkedPlanned.name}”", "${repeatsText(linkedPlanned)}. Verba, marcadores e nome vieram do previsto.",
                     Modifier.padding(top = 10.dp).testTag(TransactionTags.FORM_LINKED), "Desligar", ::unlink, TransactionTags.FORM_UNLINK,
                 ) else if (data.planned.isNotEmpty()) Row(
                     Modifier.fillMaxWidth().heightIn(min = 44.dp).testTag(TransactionTags.FORM_LINK_OPEN).semantics(mergeDescendants = true) {}
@@ -1160,7 +1185,10 @@ private fun TxForm(
                     editingBank = false
                 }, TransactionTags.FORM_BANK_EMENDA)
             } else {
-                Field(merchant, { merchant = it }, "Estabelecimento", placeholder = "Feira, por exemplo", tag = TransactionTags.FORM_NAME)
+                Field(
+                    merchant, { merchant = it }, "Estabelecimento", placeholder = "Feira, por exemplo", tag = TransactionTags.FORM_NAME,
+                    error = if (longName) "O nome do previsto tem até 80 letras." else "",
+                )
                 if (!isEditPlanned) LinkLine()
             }
 
@@ -1229,11 +1257,21 @@ private fun TxForm(
                 Text("REPETE", sans(11f, 600, 14f, 0.12f), Modifier.padding(top = 18.dp), c.inkTertiary)
                 FlowRow(Modifier.padding(top = 6.dp).testTag(TransactionTags.FORM_REPEATS), horizontalArrangement = Arrangement.spacedBy(8.dp)) {
                     BudgetOption("Só uma vez", !monthly, Modifier.testTag(TransactionTags.FORM_REPEATS_ONCE)) { monthly = false }
-                    BudgetOption("Todo mês, dia ${data.detail.day.takeIf { isEdit && it != 0 } ?: day.day}", monthly, Modifier.testTag(TransactionTags.FORM_REPEATS_MONTHLY)) { monthly = true }
+                    // The previsto's own day: in Editar previsto, the occurrence's date may be cut to the month's last day (P8).
+                    val repeatDay = when {
+                        isEdit && data.detail.day != 0 -> data.detail.day
+                        isEditPlanned && editDay != 0 && day == day.yearMonth.onDay(minOf(editDay, day.yearMonth.numberOfDays)) -> editDay
+                        else -> day.day
+                    }
+                    BudgetOption("Todo mês, dia $repeatDay", monthly, Modifier.testTag(TransactionTags.FORM_REPEATS_MONTHLY)) { monthly = true }
                 }
-                if (isPost && monthly && merchant.isNotBlank()) Text(
-                    "Em ${monthLong(day.yearMonth.plusMonth().month)}, o recado “${merchant.trim()}” chega ligado.", sans(13.5f, 400, 18f),
+                // D62: the link comes from the recado's own bank text, never the amended "No banco".
+                if (isPost && monthly && parsed != null && parsed.merchant.isNotBlank()) Text(
+                    "Em ${monthLong(day.yearMonth.plusMonth().month)}, o recado “${parsed.merchant}” chega ligado.", sans(13.5f, 400, 18f),
                     Modifier.padding(top = 6.dp).testTag(TransactionTags.FORM_REPEATS_HINT), c.inkTertiary,
+                )
+                if (longName && source != null) Text(
+                    "O nome do previsto tem até 80 letras. Escreva uma legenda.", sans(13.5f, 400, 18f), Modifier.padding(top = 6.dp), c.overrun,
                 )
             }
 
@@ -1261,7 +1299,10 @@ private fun TxForm(
             }
 
             Text("MARCADORES", sans(11f, 600, 14f, 0.12f), Modifier.padding(top = 18.dp), c.inkTertiary)
-            TagPicker(states, data.tags, tagQuery, { tagQuery = it }, { tagFocused = it }, ::chooseTag, ::removeTag, with(LocalDensity.current) { room.toDp() })
+            TagPicker(
+                states, data.tags, tagQuery, { tagQuery = it }, { tagFocused = it }, ::chooseTag, ::removeTag, with(LocalDensity.current) { room.toDp() },
+                if (isEdit || isEditPlanned || ahead) "salvar" else "lançar",
+            )
 
             if (preview != null && preview.month != NO_MONTH && !ahead && !isEditPlanned) Text(
                 "$budgetName: margem ${marginText(preview.before)} → ${marginText(preview.after)}", sans(15f, 500, 20f, tabular = true),
@@ -1307,14 +1348,14 @@ private fun TxForm(
                     else -> "Lançar ${money(Cents(total))}"
                 },
                 ::submit, Modifier.weight(1.4f).testTag(TransactionTags.FORM_SUBMIT),
-                icon = if (isEdit || isEditPlanned || ahead) 0 else R.drawable.i_lancar, enabled = missing.isEmpty(),
+                icon = if (isEdit || isEditPlanned || ahead) 0 else R.drawable.i_lancar, enabled = missing.isEmpty() && !longName,
             )
         }
     }
     if (picking && data != null) DateTimeDialog(day, at, today, data.weekStart, { d, t ->
         date = d.toString()
         hour = time(t)
-    }, { picking = false }, future = isManual)
+    }, { picking = false }, future = isManual && linked == 0L, oneMonth = isEditPlanned)
     if (sheet && data != null) BudgetSheet(data.budgets, margins, budget, budgetQuery, { budgetQuery = it }, {
         budget = it.v
         suggested = false
@@ -1456,7 +1497,7 @@ private fun usesText(n: Int): String = if (n == 1) "1 lançamento" else "$n lan�
 @Composable
 private fun TagPicker(
     chips: Map<String, Char>, tags: List<TagRow>, query: String, onQuery: (String) -> Unit, onFocus: (Boolean) -> Unit,
-    choose: (String) -> Unit, remove: (String) -> Unit, room: Dp,
+    choose: (String) -> Unit, remove: (String) -> Unit, room: Dp, verb: String,
 ) {
     val c = Margem.colors
     var focused by remember { mutableStateOf(false) }
@@ -1520,8 +1561,17 @@ private fun TagPicker(
                     verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(10.dp),
                 ) {
                     if (on) Icon(R.drawable.i_lancar, tint = c.ink, size = 18.dp)
-                    Text(t.name, sans(16f, 500, 20f), Modifier.weight(1f), if (on) c.ink else c.inkSecondary, maxLines = 1)
-                    if (t.uses >= 0) Text(usesText(t.uses), sans(13f, 400, 16f, tabular = true), color = c.inkTertiary)
+                    // Book 8.12: the part found, folded like the search, in bold.
+                    val at = fold(t.name).indexOf(q)
+                    Text(
+                        buildAnnotatedString {
+                            append(t.name)
+                            if (at >= 0) addStyle(SpanStyle(fontWeight = FontWeight.Bold), at, at + q.length)
+                        },
+                        sans(16f, 500, 20f), Modifier.weight(1f), if (on) c.ink else c.inkSecondary, maxLines = 1,
+                    )
+                    // Spec §7.3: a chosen one shows its ✓ and nothing more.
+                    if (!on && t.uses >= 0) Text(usesText(t.uses), sans(13f, 400, 16f, tabular = true), color = c.inkTertiary)
                 }
             }
             if (create) Row(
@@ -1531,7 +1581,7 @@ private fun TagPicker(
             ) {
                 Icon(R.drawable.i_mais, tint = c.info, size = 20.dp)
                 Text("Criar “$clean”", sans(16f, 600, 20f), Modifier.weight(1f), c.info, maxLines = 1)
-                Text("novo, só é gravado ao lançar", sans(13f, 400, 16f), color = c.inkTertiary)
+                Text("novo, só é gravado ao $verb", sans(13f, 400, 16f), color = c.inkTertiary)
             }
         }
     }

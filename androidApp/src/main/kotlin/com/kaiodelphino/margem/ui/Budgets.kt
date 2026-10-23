@@ -558,7 +558,7 @@ fun NewBudget(db: Db, back: () -> Unit) = BudgetForm(db, BudgetId(0), back, back
 @Composable
 fun EditBudget(db: Db, id: BudgetId, back: () -> Unit, home: () -> Unit) = BudgetForm(db, id, back, home)
 
-private class Loaded(val name: String, val limit: Cents, val count: Int)
+private class Loaded(val name: String, val limit: Cents, val count: Int, val planned: Int)
 
 /** The one form of Nova verba ([id] 0) and Editar verba. Inputs survive recreation (D19). */
 @Composable
@@ -578,7 +578,7 @@ private fun BudgetForm(db: Db, id: BudgetId, back: () -> Unit, home: () -> Unit)
         val month = it.monthOf(today)
         it.ensureMonths(month)
         val d = it.budgetDetail(id, month, today)
-        Loaded(d.name, d.month.limit, it.transactions().count { t -> t.budget == id })
+        Loaded(d.name, d.month.limit, it.transactions().count { t -> t.budget == id }, d.planned)
     }
     LaunchedEffect(current) {
         if (current == null || loaded) return@LaunchedEffect
@@ -663,7 +663,9 @@ private fun BudgetForm(db: Db, id: BudgetId, back: () -> Unit, home: () -> Unit)
     )
     if (askDelete && current != null) MargemDialog(
         "Apagar ${current.name}?",
-        "A verba tem ${current.count} ${if (current.count == 1) "lançamento" else "lançamentos"}. " +
+        "A verba tem ${current.count} ${if (current.count == 1) "lançamento" else "lançamentos"}" +
+            // D59: its previstos go too.
+            (if (current.planned == 0) "" else " e ${current.planned} ${if (current.planned == 1) "previsto" else "previstos"}") + ". " +
             "Eles também serão apagados, e os recados deles voltam à Pauta. Não dá para desfazer.",
         "Apagar", { askDelete = false; scope.launch { db.deleteBudget(id); home() } }, { askDelete = false }, tag = BudgetTags.DELETE_DIALOG,
     )

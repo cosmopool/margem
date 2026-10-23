@@ -245,8 +245,10 @@ fun Inbox(db: Db, granted: Boolean, snack: SnackHost, go: (Screen) -> Unit) {
     val scope = rememberCoroutineScope()
     val today = LocalToday.current()
     val pending = query(db, today) { it.pending(today) }
-    // "Não é" (D60): sets the band aside while the Pauta is open; nothing is written.
-    var notIt by remember { mutableStateOf(setOf<Long>()) }
+    // "Não é" (D60): sets the band aside while the Pauta is open, across recreation and a Lançar and back; nothing is written.
+    var notIt by rememberSaveable { mutableStateOf(longArrayOf()) }
+    // Lançar previsto writing (no second tap while it runs, so its Desfazer isn't replaced by a refusal).
+    var launching by remember { mutableStateOf(setOf<Long>()) }
     // Notices posted since the last visit stay "new" while the person is here: the visit is marked seen
     // on opening (no write on leaving), and the new marks use the previous visit, kept across recreation.
     val openedAt = rememberSaveable { Clock.System.now().toEpochMilliseconds() }
@@ -287,10 +289,15 @@ fun Inbox(db: Db, granted: Boolean, snack: SnackHost, go: (Screen) -> Unit) {
                         onAccept = {
                             when {
                                 // Lançar previsto (P5): no form, the previsto's budget, tags and name with the recado's values.
-                                recognized -> scope.launch {
-                                    val id = db.accept(n.id, formFrom(p, n))
-                                    if (id.v == 0L) snack.show(Snack(InboxTags.GONE_TEXT))
-                                    else snack.show(Snack(launchedText(p, p.budgetName), "Desfazer") { db.deleteTransaction(id) })
+                                // In the snack's scope: leaving the Pauta while it writes still shows Desfazer.
+                                recognized -> if (n.id.v !in launching) {
+                                    launching = launching + n.id.v
+                                    snack.scope.launch {
+                                        val id = db.accept(n.id, formFrom(p, n))
+                                        if (id.v == 0L) snack.show(Snack(InboxTags.GONE_TEXT))
+                                        else snack.show(Snack(launchedText(p, p.budgetName), "Desfazer") { db.deleteTransaction(id) })
+                                        launching = launching - n.id.v
+                                    }
                                 }
                                 n.parsed.isRefund && !n.looksLikeAd -> go(Screen.Refund(n.id))
                                 else -> go(Screen.Post(n.id))
@@ -300,7 +307,7 @@ fun Inbox(db: Db, granted: Boolean, snack: SnackHost, go: (Screen) -> Unit) {
                         modifier = Modifier.testTag(InboxTags.CARD + n.id.v).semantics(mergeDescendants = true) {},
                         acceptTag = (if (recognized) InboxTags.PLANNED_LAUNCH else InboxTags.ACCEPT) + n.id.v,
                         dismissTag = InboxTags.DISMISS + n.id.v, newTag = InboxTags.NEW + n.id.v,
-                        planned = p, onNotIt = { notIt = notIt + n.id.v },
+                        planned = p, onNotIt = { notIt = notIt + n.id.v }, acceptEnabled = n.id.v !in launching,
                         bandTag = InboxTags.PLANNED_BAND + n.id.v, notItTag = InboxTags.PLANNED_NOT_IT + n.id.v,
                         onBody = if (recognized) ({ go(Screen.Post(n.id, p.occurrence)) }) else null,
                     )

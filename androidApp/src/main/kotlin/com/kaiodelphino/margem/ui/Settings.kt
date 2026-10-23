@@ -407,6 +407,11 @@ fun Tags(db: Db, back: () -> Unit) {
             0 -> "Nenhum lançamento é apagado."
             1 -> "1 lançamento fica sem marcador e é apagado; o recado dele volta à Pauta."
             else -> "${doomed.soleUses} lançamentos ficam sem marcador e são apagados; os recados deles voltam à Pauta."
+        } + when (doomed.solePlanned) {
+            // D59: a previsto left without tags goes too.
+            0 -> ""
+            1 -> " 1 previsto fica sem marcador e é apagado."
+            else -> " ${doomed.solePlanned} previstos ficam sem marcador e são apagados."
         },
         "Apagar", { deleting = 0; scope.launch { db.deleteTag(doomed.id) } }, { deleting = 0 }, tag = SettingsTags.TAG_DELETE_DIALOG,
     )

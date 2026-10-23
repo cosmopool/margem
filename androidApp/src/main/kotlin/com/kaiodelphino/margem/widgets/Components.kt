@@ -1276,14 +1276,15 @@ object DateTimeTags {
 
 /**
  * Book 8.9: date and time of a transaction. Opens on [date] and [time]; days after [today] can't be chosen
- * unless [future] (the manual form, where a day ahead makes a previsto).
+ * unless [future] (the manual form, where a day ahead makes a previsto). [oneMonth] keeps it on [date]'s month
+ * (Editar previsto: only the day is the previsto's).
  * [weekStart] orders the grid (Settings.weekStart). [onDone] receives the choice; [onDismiss] closes it
  * either way. Tags: [DateTimeTags].
  */
 @Composable
 fun DateTimeDialog(
     date: LocalDate, time: LocalTime, today: LocalDate, weekStart: DayOfWeek,
-    onDone: (LocalDate, LocalTime) -> Unit, onDismiss: () -> Unit, future: Boolean = false,
+    onDone: (LocalDate, LocalTime) -> Unit, onDismiss: () -> Unit, future: Boolean = false, oneMonth: Boolean = false,
 ) {
     val c = Margem.colors
     var chosen by rememberSaveable { mutableStateOf(date.toString()) }
@@ -1303,9 +1304,9 @@ fun DateTimeDialog(
             Text("DATA E HORA", sans(11f, 600, 14f, 0.12f), Modifier.padding(horizontal = 24.dp), c.inkTertiary)
             Text(dateLong(day), serif(22, 500, 28), Modifier.padding(start = 24.dp, end = 24.dp, top = 4.dp, bottom = 6.dp).testTag(DateTimeTags.TITLE))
             Row(Modifier.fillMaxWidth().padding(horizontal = 12.dp), verticalAlignment = Alignment.CenterVertically) {
-                IconButton(R.drawable.i_voltar, { shown = month.minusMonth().toString() }, Modifier.testTag(DateTimeTags.PREV))
+                IconButton(R.drawable.i_voltar, { shown = month.minusMonth().toString() }, Modifier.testTag(DateTimeTags.PREV), dim = oneMonth, enabled = !oneMonth)
                 Text(monthTitle(month), serif(17, 500, 22), Modifier.weight(1f).testTag(DateTimeTags.MONTH), align = TextAlign.Center)
-                val canNext = future || month < today.yearMonth
+                val canNext = !oneMonth && (future || month < today.yearMonth)
                 IconButton(R.drawable.i_avancar, { shown = month.plusMonth().toString() }, Modifier.testTag(DateTimeTags.NEXT), dim = !canNext, enabled = canNext)
             }
             val order = List(7) { DayOfWeek((weekStart.isoDayNumber - 1 + it) % 7 + 1) }
