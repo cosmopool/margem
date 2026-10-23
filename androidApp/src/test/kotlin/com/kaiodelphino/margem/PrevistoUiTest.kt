@@ -10,6 +10,7 @@ import androidx.compose.ui.semantics.SemanticsNode
 import androidx.compose.ui.semantics.SemanticsProperties
 import androidx.compose.ui.semantics.getOrNull
 import androidx.compose.ui.test.SemanticsMatcher
+import androidx.compose.ui.test.junit4.StateRestorationTester
 import androidx.compose.ui.test.assertIsEnabled
 import androidx.compose.ui.test.assertIsNotEnabled
 import androidx.compose.ui.test.assertIsNotSelected
@@ -437,7 +438,7 @@ class PrevistoUiTest {
         assertShows(s, "Lazer · academia · todo mês, dia 5")
         assertShows(s, money(Cents(8990)))
         assertShows(s, "Esperando o recado desde 5 de outubro.")
-        assertShows(s, "Ligado a SMARTFIT, do Cartão Ipê.")
+        assertShows(s, "Ligado a “SMARTFIT” · Cartão Ipê.")
 
         waitFor(TransactionTags.PLANNED_LAUNCH_NO_NOTICE)
         assertShows(TransactionTags.PLANNED_LAUNCH_NO_NOTICE, "Lançar sem recado")
@@ -809,12 +810,12 @@ class PrevistoUiTest {
 
         click(l)
         compose.onNodeWithTag(TransactionTags.LINK_SUBMIT).assertIsEnabled()
-        assertShows(TransactionTags.LINK_SUBMIT, "Ligar à Conta de luz")
+        assertShows(TransactionTags.LINK_SUBMIT, "Ligar a “Conta de luz”")
         click(TransactionTags.LINK_SUBMIT)
         waitGone(TransactionTags.LINK_SHEET)
 
         waitFor(TransactionTags.FORM_LINKED)
-        assertShows(TransactionTags.FORM_LINKED, "Ligado à Conta de luz")
+        assertShows(TransactionTags.FORM_LINKED, "Ligado a “Conta de luz”")
         assertShows(TransactionTags.FORM_LINKED, "Todo mês, dia 12. Verba, marcadores e nome vieram do previsto.")
         assertShows(TransactionTags.FORM_UNLINK, "Desligar")
         assertEquals("a faixa toma o lugar do link", 0, count(TransactionTags.FORM_LINK_OPEN))
@@ -898,7 +899,7 @@ class PrevistoUiTest {
         click(TransactionTags.LINK_CANDIDATE + luz.v)
         click(TransactionTags.LINK_SUBMIT)
         waitFor(TransactionTags.FORM_LINKED)
-        assertShows(TransactionTags.FORM_LINKED, "Ligado à Conta de luz")
+        assertShows(TransactionTags.FORM_LINKED, "Ligado a “Conta de luz”")
         assertEquals(0, count(TransactionTags.FORM_REPEATS))
     }
 
@@ -1019,7 +1020,7 @@ class PrevistoUiTest {
         waitFor(TransactionTags.FORM_TITLE)
         compose.waitUntil(5_000) { shows(TransactionTags.FORM_TITLE, "Lançar recado") }
         waitFor(TransactionTags.FORM_LINKED)
-        assertShows(TransactionTags.FORM_LINKED, "Ligado à Internet")
+        assertShows(TransactionTags.FORM_LINKED, "Ligado a “Internet”")
         assertShows(TransactionTags.FORM_LINKED, "Todo mês, dia 10.")
         assertEquals("ligado, sem Repete", 0, count(TransactionTags.FORM_REPEATS))
         assertEquals("ligado, sem o link", 0, count(TransactionTags.FORM_LINK_OPEN))
@@ -1319,6 +1320,111 @@ class PrevistoUiTest {
         waitFor(SnackTags.TEXT)
         assertShows(SnackTags.TEXT, "Lançado: Internet")
         assertShows(SnackTags.ACTION, "Desfazer")
+    }
+
+    // ---- Perguntas da review (spec §2.13, §7.2, §7.3; 2026-10-23) ----
+
+    @Test
+    fun `um candidato ja ligado diz o texto do banco entre aspas`() {
+        four()
+        val academia = occ("Academia")
+        val id = post("Compra aprovada: R$ 89,90 em ACADEMIA DO BAIRRO", at(8, 0))
+        open()
+        openPauta()
+        click(InboxTags.ACCEPT + id.v)
+        click(TransactionTags.FORM_LINK_OPEN)
+        waitFor(TransactionTags.LINK_CANDIDATE + academia.v)
+        assertShows(TransactionTags.LINK_CANDIDATE + academia.v, "ligado a “SMARTFIT”")
+        assertEquals("sem ligação, sem a parte", 0, texts(TransactionTags.LINK_CANDIDATE + occ("Conta de luz").v).count { "ligado" in it })
+    }
+
+    private fun hasAnyText(s: String) = compose.onAllNodes(hasText(s, substring = true), useUnmergedTree = true).fetchSemanticsNodes().isNotEmpty()
+
+    @Test
+    fun `nome do previsto acima de 80 avisa no manual e desliga o botao`() {
+        open()
+        openTransactions()
+        click(TransactionTags.NEW)
+        waitFor(TransactionTags.FORM_NAME)
+        compose.onNodeWithTag(TransactionTags.FORM_NAME).performTextReplacement("m".repeat(81))
+        compose.onNodeWithTag(TransactionTags.FORM_TOTAL).performTextReplacement("4600")
+        chooseBudget(lazer)
+        addTag("feira")
+        compose.onNodeWithTag(TransactionTags.FORM_SUBMIT).assertIsEnabled()
+        assertTrue("Só uma vez: nenhum previsto, nenhum aviso", !hasAnyText("O nome do previsto tem até 80 letras."))
+
+        click(TransactionTags.FORM_REPEATS_MONTHLY)
+        compose.waitUntil(5_000) { hasAnyText("O nome do previsto tem até 80 letras.") }
+        compose.onNodeWithTag(TransactionTags.FORM_SUBMIT).assertIsNotEnabled()
+
+        // Salvar previsto: the same.
+        click(TransactionTags.FORM_REPEATS_ONCE)
+        pickDate(OCT_12)
+        compose.waitUntil(5_000) { shows(TransactionTags.FORM_SUBMIT, "Salvar previsto") }
+        assertTrue(hasAnyText("O nome do previsto tem até 80 letras."))
+        compose.onNodeWithTag(TransactionTags.FORM_SUBMIT).assertIsNotEnabled()
+
+        compose.onNodeWithTag(TransactionTags.FORM_NAME).performTextReplacement("m".repeat(80))
+        compose.waitUntil(5_000) { !hasAnyText("O nome do previsto tem até 80 letras.") }
+        compose.onNodeWithTag(TransactionTags.FORM_SUBMIT).assertIsEnabled()
+    }
+
+    @Test
+    fun `texto do banco longo com todo mes pede uma legenda sob o repete`() {
+        val id = post("Compra aprovada: R$ 89,90 em ACADEMIA ${"X".repeat(80)}", at(8, 0))
+        open()
+        openPauta()
+        click(InboxTags.ACCEPT + id.v)
+        waitFor(TransactionTags.FORM_REPEATS)
+        chooseBudget(lazer)
+        addTag("academia")
+        click(TransactionTags.FORM_REPEATS_MONTHLY)
+        compose.waitUntil(5_000) { hasAnyText("O nome do previsto tem até 80 letras. Escreva uma legenda.") }
+        compose.onNodeWithTag(TransactionTags.FORM_SUBMIT).assertIsNotEnabled()
+        assertTrue("o aviso fica sob o Repete", top(TransactionTags.FORM_REPEATS) < compose.onAllNodes(hasText("O nome do previsto tem até 80 letras.", substring = true), useUnmergedTree = true).fetchSemanticsNodes().first().boundsInRoot.top)
+
+        click(TransactionTags.FORM_CAPTION_OPEN)
+        waitFor(TransactionTags.FORM_CAPTION)
+        compose.onNodeWithTag(TransactionTags.FORM_CAPTION).performTextReplacement("Academia")
+        compose.waitUntil(5_000) { !hasAnyText("O nome do previsto tem até 80 letras.") }
+        compose.onNodeWithTag(TransactionTags.FORM_SUBMIT).assertIsEnabled()
+    }
+
+    @Test
+    fun `nao e sobrevive a ida a um lancar e a volta`() {
+        val id = internetWithRecado()
+        val other = post("Compra aprovada: R$ 12,00 em PADARIA", at(8, 0))
+        open()
+        openPauta()
+        waitFor(InboxTags.PLANNED_BAND + id.v)
+        click(InboxTags.PLANNED_NOT_IT + id.v)
+        waitGone(InboxTags.PLANNED_BAND + id.v)
+
+        click(InboxTags.ACCEPT + other.v)
+        waitFor(TransactionTags.FORM_TITLE)
+        pressBack(InboxTags.LIST)
+        waitFor(InboxTags.CARD + id.v)
+        compose.waitForIdle()
+        assertEquals("a faixa continua fora", 0, count(InboxTags.PLANNED_BAND + id.v))
+    }
+
+    @Test
+    fun `nao e sobrevive a recriacao da tela`() {
+        val id = internetWithRecado()
+        val restore = StateRestorationTester(compose)
+        restore.setContent {
+            if (gone) return@setContent
+            MargemTheme(dark = false) { CompositionLocalProvider(LocalToday provides { OCT_9 }) { App(db, null) {} } }
+        }
+        openPauta()
+        waitFor(InboxTags.PLANNED_BAND + id.v)
+        click(InboxTags.PLANNED_NOT_IT + id.v)
+        waitGone(InboxTags.PLANNED_BAND + id.v)
+
+        restore.emulateSavedInstanceStateRestore()
+        waitFor(InboxTags.CARD + id.v)
+        compose.waitForIdle()
+        assertEquals("girar a tela não traz a faixa", 0, count(InboxTags.PLANNED_BAND + id.v))
     }
 
     private companion object {

@@ -770,6 +770,82 @@ class PrevistoEdgeTest {
         assertEquals(listOf("Escola", "Mercado", "Natal").sorted(), db.transactions().map { it.caption }.sorted())
     }
 
+    // ---- Desfazer desfaz o que o lançamento fez (spec §2.13 S1, D65; 2026-10-23) ----
+
+    @Test
+    fun `desfazer o todo mês leva o previsto que ele criou e lançar de novo cria um só`() = withDb { db ->
+        val casa = db.budget("Casa")
+        val tx = db.linkedMonthly(d(9, 5), "VIVO FIBRA", "Internet", casa)
+        assertEquals(listOf("Internet"), db.planned(TODAY).map { it.name })
+
+        db.deleteTransaction(tx)
+        assertTrue(db.planned(d(10, 26)).isEmpty(), "nothing of it was launched: the previsto goes with the lançamento")
+        val again = db.pending(TODAY).single()
+        assertEquals(Planned(), again.planned)
+        val p = again.parsed
+        db.accept(again.id, TransactionForm(casa, listOf("casa"), p.cents, 1, p.merchant, p.date, p.time, caption = "Internet", repeats = Repeats.MONTHLY))
+        assertEquals(1, db.planned(d(10, 26)).map { it.planned }.distinct().size, "one previsto, not two")
+    }
+
+    @Test
+    fun `apagar o todo mês mantém o previsto que já tem lançamento`() = withDb { db ->
+        val casa = db.budget("Casa")
+        val tx = db.linkedMonthly(d(9, 5), "VIVO FIBRA", "Internet", casa)
+        val r = db.purchase(d(10, 5), "VIVO FIBRA")
+        assertNotEquals(TransactionId(0), db.accept(r, db.launchForm(r, db.pending(TODAY).single { it.id == r }.planned)))
+
+        db.deleteTransaction(tx)
+        assertEquals(listOf(d(11, 5)), db.planned(d(10, 26)).map { it.date }, "October was launched: the previsto stays")
+    }
+
+    @Test
+    fun `desfazer um ligar à mão volta a ligação anterior`() = withDb { db ->
+        val casa = db.budget("Casa")
+        db.linkedMonthly(d(9, 5), "VIVO FIBRA", "Internet", casa)
+        val oct = db.only(TODAY, "Internet")
+        val r = db.purchase(d(10, 6), "VIVO INTERNET")
+        assertEquals(Planned(), db.pending(TODAY).single { it.id == r }.planned, "another bank text: not recognized")
+        val tx = db.accept(r, db.launchForm(r, oct))
+        assertEquals("VIVO INTERNET", db.planned(d(10, 26)).single().linkText, "ligar à mão rewrites the link (D62)")
+
+        db.deleteTransaction(tx)
+        assertEquals("VIVO FIBRA", db.only(TODAY, "Internet").linkText)
+        assertEquals(Planned(), db.pending(TODAY).single { it.id == r }.planned)
+        assertEquals("Internet", db.seen(d(10, 7), "VIVO FIBRA", TODAY).name, "the old bank text is recognized again")
+    }
+
+    // ---- Todo mês antigo e Só uma vez (spec §2.13, D64; 2026-10-23) ----
+
+    @Test
+    fun `todo mês num lançamento antigo cria todos os meses desde o seguinte`() = withDb { db ->
+        // Intentional (review Q4): the months already gone come late; the person skips what they don't want.
+        val casa = db.budget("Casa")
+        db.addManual(manual(casa, d(3, 10), "Escola", repeats = Repeats.MONTHLY), today = TODAY)
+        val rows = db.planned(TODAY)
+        assertEquals((4..10).map { d(it, 10) }, rows.map { it.date })
+        assertTrue(rows.all { it.late == it.date < TODAY })
+    }
+
+    @Test
+    fun `editar previsto para só uma vez deixa só a ocorrência editada`() = withDb { db ->
+        val casa = db.budget("Casa")
+        val today = d(10, 30)
+        val pid = db.addManual(manual(casa, d(10, 5), "Internet", repeats = Repeats.MONTHLY), today = d(10, 1)).planned
+        val (oct, nov) = db.planned(today)
+        assertEquals(d(10, 5) to d(11, 5), oct.date to nov.date)
+
+        val s = db.addManual(manual(casa, d(11, 5), "Internet", occurrence = nov.occurrence).copy(planned = pid), today = today)
+        assertEquals(Saved(planned = pid), s)
+        assertEquals(listOf(nov.occurrence), db.planned(today).map { it.occurrence }, "the edited one stays, October goes")
+        assertEquals(listOf(nov.occurrence), db.planned(d(12, 20)).map { it.occurrence }, "no December")
+
+        // No occurrence given: the oldest open one stays.
+        val luz = db.addManual(manual(casa, d(10, 7), "Luz", repeats = Repeats.MONTHLY), today = d(10, 1)).planned
+        val (luzOct, _) = db.planned(today).filter { it.planned == luz }
+        assertEquals(Saved(planned = luz), db.addManual(manual(casa, d(10, 7), "Luz").copy(planned = luz), today = today))
+        assertEquals(listOf(luzOct.occurrence), db.planned(today).filter { it.planned == luz }.map { it.occurrence })
+    }
+
     // ---- Estorno (spec §2.8, D60) ----
 
     @Test
@@ -1019,6 +1095,22 @@ class PrevistoEdgeTest {
     }
 
     /** A Margem v3 database (DDL of SCHEMA_V1..V3): one lançamento with a legenda, one pending recado, a teto. */
+    @Test
+    fun `backup de um banco anterior ao schema único é recusado`() = runTest(timeout = 120.seconds) {
+        // D67 (2026-10-23): one schema, no migrations of the old versions; the real backup is converted once outside the app.
+        val path = Path(SystemTemporaryDirectory, "PrevistoEdge-${Random.nextLong().toULong()}.db").toString()
+        val old = Path(SystemTemporaryDirectory, "PrevistoEdge-v3-${Random.nextLong().toULong()}.db").toString()
+        writeV3(old)
+        val db = Db(BundledSQLiteDriver(), path, timeZone = TZ)
+        try {
+            assertFalse(db.importFrom(old))
+            assertTrue(db.pending().isEmpty() && db.transactions().isEmpty(), "nothing imported")
+        } finally {
+            db.close()
+            for (f in listOf(path, old)) for (suffix in listOf("", "-wal", "-shm")) SystemFileSystem.delete(Path(f + suffix), mustExist = false)
+        }
+    }
+
     private fun writeV3(file: String) {
         val c = BundledSQLiteDriver().open(file)
         for (ddl in V3_DDL) c.execSQL(ddl)
