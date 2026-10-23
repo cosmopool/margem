@@ -276,8 +276,9 @@ class EscolhaFuzzTest {
             assertTrue("$msg: $tag mostra o nome: ${texts(tag)}", shows(tag, name))
             assertEquals("$msg: $tag marcado ✓ só se escolhido", name in chosen, selected(tag))
             val uses = tagUses[name] ?: 0
-            // "33 lançamentos" ("1 lançamento"); zero uses is not spelled out by the contract.
-            if (uses > 0) assertTrue("$msg: $tag mostra $uses lançamento(s): ${texts(tag)}", usesText(uses).containsMatchIn(texts(tag).joinToString(" ")))
+            // "33 lançamentos" ("1 lançamento"); zero uses is not spelled out by the contract. A chosen one: ✓ and nothing more.
+            if (name in chosen) assertTrue("$msg: $tag escolhido sem contagem: ${texts(tag)}", texts(tag).none { "lançamento" in it })
+            else if (uses > 0) assertTrue("$msg: $tag mostra $uses lançamento(s): ${texts(tag)}", usesText(uses).containsMatchIn(texts(tag).joinToString(" ")))
         }
         if (!ambiguous) {
             assertEquals("$msg: TAG_CREATE presente (limpo \"$clean\")", create, count(TransactionTags.TAG_CREATE) > 0)

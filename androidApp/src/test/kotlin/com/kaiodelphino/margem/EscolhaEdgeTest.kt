@@ -598,6 +598,41 @@ class EscolhaEdgeTest {
     }
 
     @Test
+    fun `a chosen result shows its check and no count`() {
+        // Spec §7.3: the chosen one is a result "com ✓ e nada mais".
+        uses("luz" to 1, "lugar" to 2)
+        open()
+        openManual()
+        searchTag("lu")
+        click(TransactionTags.TAG_RESULT + "luz")
+        waitFor(TransactionTags.TAG + "luz")
+
+        searchTag("lu")
+        assertTrue(selected(TransactionTags.TAG_RESULT + "luz"))
+        assertNotShows(TransactionTags.TAG_RESULT + "luz", "lançamento")
+        assertShows(TransactionTags.TAG_RESULT + "lugar", "2 lançamentos")
+    }
+
+    /** The ranges drawn bold (weight 600 or more) in the Text reading [text], in the node with [tag] and below. */
+    private fun boldRanges(tag: String, text: String): List<IntRange> = node(tag)?.let { n ->
+        subtree(n).flatMap { it.config.getOrNull(SemanticsProperties.Text).orEmpty() }.filter { it.text == text }
+            .flatMap { a -> a.spanStyles.filter { (it.item.fontWeight?.weight ?: 0) >= 600 }.map { it.start until it.end } }
+    }.orEmpty()
+
+    @Test
+    fun `the found part of each result is bold`() {
+        // Book 8.12 (D66): the part found, folded like the search (case and accents ignored), in bold.
+        uses("café" to 2, "cafeteria" to 5, "descafeinado" to 1)
+        open()
+        openManual()
+        searchTag("CAFE")
+        assertEquals(listOf("cafeteria", "café", "descafeinado"), order(TransactionTags.TAG_RESULT))
+        assertEquals(listOf(0 until 4), boldRanges(TransactionTags.TAG_RESULT + "cafeteria", "cafeteria"))
+        assertEquals(listOf(0 until 4), boldRanges(TransactionTags.TAG_RESULT + "café", "café"))
+        assertEquals(listOf(3 until 7), boldRanges(TransactionTags.TAG_RESULT + "descafeinado", "descafeinado"))
+    }
+
+    @Test
     fun `uppercase text with spaces offers criar in lowercase trimmed and nenhum`() {
         uses("feira" to 2)
         open()

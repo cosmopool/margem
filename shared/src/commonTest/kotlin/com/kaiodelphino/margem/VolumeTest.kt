@@ -11,6 +11,7 @@ import kotlinx.coroutines.test.runTest
 import kotlinx.datetime.DateTimeUnit
 import kotlinx.datetime.DayOfWeek
 import kotlinx.datetime.LocalDate
+import kotlinx.datetime.LocalTime
 import kotlinx.datetime.TimeZone
 import kotlinx.datetime.YearMonth
 import kotlinx.datetime.atTime
@@ -121,6 +122,28 @@ class VolumeTest {
             }
             month = month.plus(1, DateTimeUnit.MONTH)
         }
+        // Previstos (D59–D64), outside the seeded sequence: 12 linked "Todo mês" from recados of September, each with its
+        // October recado waiting in the Pauta; 6 "Salvar previsto" ahead; one "Todo mês" left unlaunched since 2021
+        // (every month open and late: the worst A caminho).
+        for (i in 0 until 12) {
+            val merchant = merchants[i * 7]
+            val on = LocalDate(2026, 9, 1 + i * 2)
+            val at = on.atTime(9, 0).toInstant(tz).toEpochMilliseconds()
+            val text = "Compra de R$ 99,90 APROVADA em $merchant para o cartão com final 1234."
+            assertTrue(capture(db, RawNotice(NU, "Nubank", "p$i", at, at, "Nubank", text, text)))
+            val id = db.pending().first { it.raw.key == "p$i" }.id
+            val p = db.notice(id).parsed
+            val tx = db.accept(id, TransactionForm(budgets[i % budgets.size], listOf("assinatura"), p.cents, 1, p.merchant, p.date, p.time, caption = "Previsto $i", repeats = Repeats.MONTHLY))
+            assertTrue(tx.v != 0L)
+            val oct = LocalDate(2026, 10, 1 + i).atTime(9, 0).toInstant(tz).toEpochMilliseconds()
+            assertTrue(capture(db, RawNotice(NU, "Nubank", "q$i", oct, oct, "Nubank", text, text)))
+        }
+        for (i in 0 until 6) {
+            val ahead = TransactionForm(budgets[i], listOf("conta"), Cents(15000), 1, "Conta $i", LocalDate(2026, 10, 18 + i), LocalTime(9, 0), repeats = Repeats.MONTHLY)
+            assertTrue(db.addManual(ahead, today).planned.v != 0L)
+        }
+        val old = TransactionForm(budgets[0], listOf("conta"), Cents(5000), 1, "Desde 2021", LocalDate(2021, 10, 20), LocalTime(9, 0), repeats = Repeats.MONTHLY)
+        assertTrue(db.addManual(old, today).planned.v != 0L)
         db.setWeekStart(DayOfWeek.SUNDAY, today)
         db.setMonthStartDay(5, today)
         val generation = t0.elapsedNow()
@@ -136,6 +159,9 @@ class VolumeTest {
             Triple("budgetDetail (every budget)", CEIL_DETAIL) { for (b in budgets) db.budgetDetail(b, current, today) },
             Triple("history (all months)", CEIL_HISTORY) { db.history(from, current) },
             Triple("pending", CEIL_PENDING) { db.pending() },
+            // D60: the recognition loop over the Pauta, "medido pelo teste de volume".
+            Triple("pending(today)", CEIL_PENDING_TODAY) { db.pending(today) },
+            Triple("planned(today)", CEIL_PLANNED) { db.planned(today) },
             Triple("dismissed", CEIL_DISMISSED) { db.dismissed() },
             Triple("transactions", CEIL_TRANSACTIONS) { db.transactions(today) },
             Triple("tagRanking (month)", CEIL_RANK_MONTH) { db.tagRanking(monthStart, today) },
@@ -156,6 +182,35 @@ class VolumeTest {
         assertTrue(failures.isEmpty(), failures.joinToString("; "))
     }
 
+    /**
+     * D60: planned(today) reads the Pauta only to mark the occurrences whose recado is waiting, which only a linked
+     * previsto can have. With none linked, a big Pauta must not cost it anything: it stays well under pending(), which
+     * reads and parses every waiting recado.
+     */
+    @Test
+    fun `planned without a linked previsto does not read the pauta`() = runTest(timeout = 5.minutes) {
+        val today = LocalDate(2026, 10, 16)
+        val clock = TimeSource.Monotonic
+        db.addSource(NU, "Nubank", 0)
+        val casa = db.createBudget("Casa", Cents(500000), today)
+        for (i in 0 until 3000) {
+            val at = LocalDate(2026, 10, 1 + i % 15).atTime(8, 0).toInstant(tz).toEpochMilliseconds() + i
+            val text = "Compra de R$ ${cents(500L + i)} APROVADA em LOJA $i para o cartão com final 1234."
+            assertTrue(capture(db, RawNotice(NU, "Nubank", "v$i", at, at, "Nubank", text, text)))
+        }
+        val ahead = TransactionForm(casa, listOf("luz"), Cents(18000), 1, "Conta de luz", LocalDate(2026, 10, 20), LocalTime(9, 0), repeats = Repeats.MONTHLY)
+        assertTrue(db.addManual(ahead, today).planned.v != 0L)
+
+        suspend fun median(read: suspend () -> Unit): Double {
+            repeat(2) { read() }
+            return List(5) { val m = clock.markNow(); read(); m.elapsedNow().inWholeMicroseconds / 1000.0 }.sorted()[2]
+        }
+        val planned = median { db.planned(today) }
+        val pending = median { db.pending() }
+        println("VOLUME planned(today) without a link: median $planned ms; pending() of 3000: median $pending ms")
+        assertTrue(planned < pending / 4, "planned(today) $planned ms vs pending() $pending ms: it reads the Pauta with no linked previsto")
+    }
+
     private companion object {
         const val NU = "com.nu.production"
 
@@ -164,6 +219,8 @@ class VolumeTest {
         const val CEIL_DETAIL = 350L
         const val CEIL_HISTORY = 1_200L
         const val CEIL_PENDING = 15L
+        const val CEIL_PENDING_TODAY = 45L
+        const val CEIL_PLANNED = 45L
         const val CEIL_DISMISSED = 50L
         const val CEIL_TRANSACTIONS = 200L
         const val CEIL_RANK_MONTH = 10L

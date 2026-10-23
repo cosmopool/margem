@@ -770,7 +770,54 @@ class PrevistoEdgeTest {
         assertEquals(listOf("Escola", "Mercado", "Natal").sorted(), db.transactions().map { it.caption }.sorted())
     }
 
+    // ---- Estorno (spec §2.8, D60) ----
+
+    @Test
+    fun `estorno com o texto do banco ligado não é reconhecido e a compra do mesmo dia é`() = withDb { db ->
+        val lazer = db.budget("Lazer")
+        db.linkedMonthly(d(9, 5), "SMARTFIT", "Academia", lazer)
+        val estorno = db.post(d(10, 6), "A compra em SMARTFIT no valor de R$ 99,90 foi estornada no seu cartão.")
+        assertTrue(db.notice(estorno).parsed.isRefund, "the recado is an estorno")
+
+        // §2.8: an estorno's button is "Registrar estorno", never "Lançar previsto".
+        assertEquals(Planned(), db.pending(TODAY).single { it.id == estorno }.planned)
+        assertFalse(db.only(TODAY, "Academia").noticeInPauta, "an estorno is not the previsto's recado")
+
+        val compra = db.purchase(d(10, 6), "SMARTFIT")
+        assertEquals("Academia", db.pending(TODAY).single { it.id == compra }.planned.name, "the purchase still is")
+        assertEquals(Planned(), db.pending(TODAY).single { it.id == estorno }.planned)
+        assertTrue(db.only(TODAY, "Academia").noticeInPauta)
+    }
+
+    // ---- Leituras da Pauta (D6, D60) ----
+
+    @Test
+    fun `marcar a pauta como vista não muda version`() = withDb { db ->
+        // Opening the Pauta marks it seen; a bump would re-run pending(today) at once (D6: screens re-query on change).
+        db.purchase(d(10, 6), "PADARIA")
+        db.pending(TODAY)
+        val before = db.version.value
+        db.markPautaSeen(d(10, 9).atTime(NOON).toInstant(TZ).toEpochMilliseconds())
+        assertEquals(before, db.version.value)
+        assertFalse(db.pending(TODAY).single().isNew, "the visit is still recorded")
+    }
+
     // ---- Recusas (D64) ----
+
+    @Test
+    fun `data à frente com ocorrência ligada é recusada sem gravar nada`() = withDb { db ->
+        // Lançar sem recado or "É um previsto? Ligar" with a date after today: "linked" and "Salvar previsto" at once.
+        val casa = db.budget("Casa")
+        db.addManual(manual(casa, d(10, 5), "Internet", repeats = Repeats.MONTHLY), today = d(10, 1))
+        val open = db.only(TODAY, "Internet")
+        assertTrue(open.late)
+        val before = db.snapshot(TODAY)
+        for (repeats in Repeats.entries) {
+            val form = manual(casa, d(10, 12), "Internet", repeats = repeats, occurrence = open.occurrence)
+            assertEquals(Saved(), db.addManual(form, today = TODAY), "$repeats")
+            assertEquals(before, db.snapshot(TODAY), "$repeats: no second previsto, the occurrence stays open")
+        }
+    }
 
     @Test
     fun `recusas de previsto não gravam nada`() = withDb { db ->

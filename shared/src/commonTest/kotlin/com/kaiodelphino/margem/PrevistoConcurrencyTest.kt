@@ -3,6 +3,7 @@
 package com.kaiodelphino.margem
 
 import androidx.sqlite.driver.bundled.BundledSQLiteDriver
+import androidx.sqlite.execSQL
 import kotlin.concurrent.atomics.AtomicBoolean
 import kotlin.concurrent.atomics.AtomicInt
 import kotlin.concurrent.atomics.ExperimentalAtomicApi
@@ -873,5 +874,53 @@ class PrevistoConcurrencyTest {
             lastOpen = open
             closeDb(copy)
         }
+    }
+
+    // ---- The occurrence creation and the writer ----
+
+    @Test
+    fun `reads with today need no writer when every occurrence already exists`() = conc {
+        val path = tempPath()
+        val db = openDb(path)
+        val budget = seeded(db)
+        savePlanned(db, budget, "Internet", LocalDate(2026, 10, 12), Repeats.MONTHLY)
+        db.planned(PC_TODAY)
+        // Another writer holds the file (a backup, a long write): the occurrences up to today + 10 exist, so pending(today)
+        // and planned(today) have nothing to create and must not wait for it.
+        val other = BundledSQLiteDriver().open(path)
+        other.execSQL("BEGIN IMMEDIATE")
+        val reads = async { db.pending(PC_TODAY).size to db.planned(PC_TODAY).size }
+        delay(1500)
+        val done = reads.isCompleted
+        other.execSQL("ROLLBACK")
+        other.close()
+        assertEquals(0 to 1, reads.await())
+        assertTrue(done, "pending(today) / planned(today) waited for the writer with nothing to create")
+    }
+
+    @Test
+    fun `close waits for a write in flight`() = conc {
+        // A fill of pending(today) can't be paused from outside: the internal write stands in for any write in flight.
+        val db = Db(BundledSQLiteDriver(), tempPath(), timeZone = PC_TZ)
+        val entered = AtomicBoolean(false)
+        val release = AtomicBoolean(false)
+        val writing = async {
+            runCatching {
+                db.write { c ->
+                    entered.store(true)
+                    while (!release.load()) Unit
+                    c.long("SELECT 1")
+                }
+            }
+        }
+        while (!entered.load()) delay(5)
+        val closing = async(Dispatchers.Default) { db.close() }
+        delay(300)
+        val closedEarly = closing.isCompleted
+        release.store(true)
+        val written = writing.await()
+        closing.await()
+        assertFalse(closedEarly, "close() returned while a write was in flight")
+        assertTrue(written.isSuccess, "the write in flight met a closed Db: ${written.exceptionOrNull()}")
     }
 }

@@ -27,10 +27,12 @@ import androidx.compose.ui.test.performTextReplacement
 import androidx.compose.ui.test.performTouchInput
 import androidx.compose.ui.test.percentOffset
 import androidx.sqlite.driver.AndroidSQLiteDriver
+import androidx.sqlite.execSQL
 import com.kaiodelphino.margem.ui.App
 import com.kaiodelphino.margem.ui.BudgetTags
 import com.kaiodelphino.margem.ui.InboxTags
 import com.kaiodelphino.margem.ui.LocalToday
+import com.kaiodelphino.margem.ui.SettingsTags
 import com.kaiodelphino.margem.ui.TransactionTags
 import com.kaiodelphino.margem.widgets.DateTimeTags
 import com.kaiodelphino.margem.widgets.MargemTheme
@@ -1027,6 +1029,298 @@ class PrevistoUiTest {
         assertEquals(0, count(TransactionTags.FORM_TOTAL_EMENDA))
     }
 
+    // ---- Dia 29–31, data à frente e recusas no formulário (spec §2.13, §7.3; D62, D64) ----
+
+    @Test
+    fun `editar previsto do dia 31 com a ocorrencia de setembro guarda o dia 31`() {
+        // P8: Todo mês keeps the day. Its September occurrence falls on the 30th; editing only the value keeps 31.
+        ahead("Aluguel", casa, listOf("aluguel"), 250000, AUG_31, Repeats.MONTHLY, today = AUG_1)
+        runBlocking { db.skipOccurrence(plannedNow().single { it.name == "Aluguel" && it.date == AUG_31 }.occurrence) }
+        val sep = plannedNow().single { it.name == "Aluguel" }
+        assertEquals(SEP_30, sep.date)
+        open()
+        openTransactions()
+        openSheet(sep.occurrence)
+        click(TransactionTags.PLANNED_EDIT)
+        waitFor(TransactionTags.FORM_REPEATS)
+        assertShows(TransactionTags.FORM_REPEATS_MONTHLY, "Todo mês, dia 31")
+
+        compose.onNodeWithTag(TransactionTags.FORM_TOTAL).performTextReplacement("260000")
+        click(TransactionTags.FORM_SUBMIT)
+        compose.waitUntil(5_000) { plannedNow().single { it.name == "Aluguel" }.cents == Cents(260000) }
+        val p = plannedNow().single { it.name == "Aluguel" }
+        assertEquals("o dia continua 31", 31, p.day)
+        assertEquals("outubro cai no dia 31", OCT_31, p.next)
+    }
+
+    @Test
+    fun `lancar sem recado nunca mostra ligado e salvar previsto juntos`() {
+        four()
+        val academia = occ("Academia")
+        open()
+        openTransactions()
+        openSheet(academia)
+        click(TransactionTags.PLANNED_LAUNCH_NO_NOTICE)
+        waitFor(TransactionTags.FORM_LINKED)
+
+        click(TransactionTags.FORM_DATE)
+        waitFor(DateTimeTags.DIALOG)
+        val enabled = compose.onAllNodes(hasTestTag(DateTimeTags.DAY + OCT_12)).fetchSemanticsNodes()
+            .firstOrNull()?.config?.getOrNull(SemanticsProperties.Disabled) == null
+        if (!enabled) return // the linked form takes no day ahead: no contradiction to show
+        click(DateTimeTags.DAY + OCT_12)
+        click(DateTimeTags.DONE)
+        waitGone(DateTimeTags.DIALOG)
+        compose.waitForIdle()
+        assertTrue(
+            "ligado e Salvar previsto ao mesmo tempo: ${texts(TransactionTags.FORM_LINKED)} / ${texts(TransactionTags.FORM_SUBMIT)}",
+            !(count(TransactionTags.FORM_LINKED) > 0 && shows(TransactionTags.FORM_SUBMIT, "Salvar previsto")),
+        )
+    }
+
+    @Test
+    fun `apagar marcador ou verba de um previsto diz que o previsto vai junto`() {
+        // D59: a previsto left without tags, or in a deleted budget, goes with them.
+        ahead("Estacionamento", transporte, listOf("estacionamento"), 15000, OCT_15, Repeats.ONCE)
+        val tag = runBlocking { db.tags() }.single { it.name == "estacionamento" }.id
+        open()
+        openTab("Ajustes", SettingsTags.LIST)
+        click(SettingsTags.TAGS)
+        click(SettingsTags.TAG_ROW + tag.v)
+        click(SettingsTags.TAG_DELETE)
+        waitFor(SettingsTags.TAG_DELETE_DIALOG)
+        assertShows(SettingsTags.TAG_DELETE_DIALOG, "previsto")
+        click(SettingsTags.TAG_DELETE_DIALOG + ".cancel")
+        waitGone(SettingsTags.TAG_DELETE_DIALOG)
+
+        openTab("Verbas", BudgetTags.LIST)
+        click(BudgetTags.ROW + transporte.v)
+        click(BudgetTags.DETAIL_EDIT)
+        click(BudgetTags.FORM_DELETE)
+        waitFor(BudgetTags.DELETE_DIALOG)
+        assertShows(BudgetTags.DELETE_DIALOG, "previsto")
+    }
+
+    /**
+     * After a submit: never a snack saying the recado or the lançamento is gone (it isn't), and a refused form stays
+     * open with what was typed ([name] in the manual's name field, when given).
+     */
+    private fun assertKeptOrSaved(name: String?) {
+        runCatching { compose.waitUntil(3_000) { count(SnackTags.TEXT) > 0 || runBlocking { db.transactions() }.isNotEmpty() } }
+        compose.waitForIdle()
+        for (gone in listOf(InboxTags.GONE_TEXT, "não existe mais")) assertNotShows(SnackTags.TEXT, gone)
+        if (runBlocking { db.transactions() }.isEmpty()) {
+            assertEquals("recusado, o formulário fica aberto", 1, count(TransactionTags.FORM_SUBMIT))
+            if (name != null) assertEquals("recusado, o nome digitado fica", name, editable(TransactionTags.FORM_NAME))
+        }
+    }
+
+    @Test
+    fun `todo mes com nome acima de 80 nunca diz que o lancamento sumiu`() {
+        val name = "m".repeat(81)
+        open()
+        openTransactions()
+        click(TransactionTags.NEW)
+        waitFor(TransactionTags.FORM_NAME)
+        compose.onNodeWithTag(TransactionTags.FORM_NAME).performTextReplacement(name)
+        compose.onNodeWithTag(TransactionTags.FORM_TOTAL).performTextReplacement("4600")
+        chooseBudget(lazer)
+        addTag("feira")
+        click(TransactionTags.FORM_REPEATS_MONTHLY)
+        click(TransactionTags.FORM_SUBMIT)
+        assertKeptOrSaved(name)
+    }
+
+    @Test
+    fun `todo mes num recado de texto do banco longo nunca diz que o recado sumiu`() {
+        val bank = "ACADEMIA " + "X".repeat(80)
+        val id = post("Compra aprovada: R$ 89,90 em $bank", at(8, 0))
+        assertEquals(bank, runBlocking { db.notice(id) }.parsed.merchant)
+        open()
+        openPauta()
+        click(InboxTags.ACCEPT + id.v)
+        waitFor(TransactionTags.FORM_REPEATS)
+        chooseBudget(lazer)
+        addTag("academia")
+        click(TransactionTags.FORM_REPEATS_MONTHLY)
+        click(TransactionTags.FORM_SUBMIT)
+        assertKeptOrSaved(null)
+    }
+
+    @Test
+    fun `salvar previsto no mes seguinte mostra a margem das verbas`() {
+        open()
+        openTransactions()
+        click(TransactionTags.NEW)
+        waitFor(TransactionTags.FORM_NAME)
+        compose.onNodeWithTag(TransactionTags.FORM_NAME).performTextReplacement("Conta de luz")
+        compose.onNodeWithTag(TransactionTags.FORM_TOTAL).performTextReplacement("18000")
+        chooseBudget(casa)
+        click(TransactionTags.FORM_DATE)
+        waitFor(DateTimeTags.DIALOG)
+        click(DateTimeTags.NEXT)
+        click(DateTimeTags.DAY + NOV_2)
+        click(DateTimeTags.DONE)
+        waitGone(DateTimeTags.DIALOG)
+        compose.waitUntil(5_000) { shows(TransactionTags.FORM_SUBMIT, "Salvar previsto") }
+        // The margins are read again for November's date.
+        Thread.sleep(500)
+        compose.waitForIdle()
+
+        // Casa has a cota every month since September: November's is there.
+        assertNotShows(TransactionTags.FORM_BUDGET, "sem cota")
+        assertShows(TransactionTags.FORM_BUDGET, "margem")
+        click(TransactionTags.FORM_BUDGET)
+        waitFor(TransactionTags.BUDGET + lazer.v)
+        for (b in listOf(lazer, casa, transporte)) assertNotShows(TransactionTags.BUDGET + b.v, "sem cota")
+    }
+
+    @Test
+    fun `a dica do repete cita o texto do banco do recado e nao a emenda`() {
+        // D62: the link comes from the recado's own bank text, never the amended "No banco".
+        val id = post("Compra aprovada: R$ 21,90 em SPOTIFY", at(8, 0))
+        open()
+        openPauta()
+        click(InboxTags.ACCEPT + id.v)
+        click(TransactionTags.FORM_BANK)
+        waitFor(TransactionTags.FORM_BANK_INPUT)
+        compose.onNodeWithTag(TransactionTags.FORM_BANK_INPUT).performTextReplacement("Spotify Premium")
+        click(TransactionTags.FORM_REPEATS_MONTHLY)
+        waitFor(TransactionTags.FORM_REPEATS_HINT)
+        assertShows(TransactionTags.FORM_REPEATS_HINT, "“SPOTIFY”")
+        assertNotShows(TransactionTags.FORM_REPEATS_HINT, "Spotify Premium")
+
+        compose.onNodeWithTag(TransactionTags.FORM_BANK_INPUT).performTextReplacement("")
+        compose.waitForIdle()
+        assertShows(TransactionTags.FORM_REPEATS_HINT, "“SPOTIFY”")
+    }
+
+    @Test
+    fun `criar marcador no salvar previsto nao promete gravar ao lancar`() {
+        open()
+        openTransactions()
+        click(TransactionTags.NEW)
+        waitFor(TransactionTags.FORM_NAME)
+        pickDate(OCT_12)
+        compose.waitUntil(5_000) { shows(TransactionTags.FORM_SUBMIT, "Salvar previsto") }
+        compose.onNodeWithTag(TransactionTags.TAG_SEARCH).performTextReplacement("festa")
+        waitFor(TransactionTags.TAG_CREATE)
+        assertNotShows(TransactionTags.TAG_CREATE, "ao lançar")
+        pressBack(TransactionTags.NEW)
+
+        four()
+        openSheet(occ("Conta de luz"))
+        click(TransactionTags.PLANNED_EDIT)
+        compose.waitUntil(5_000) { shows(TransactionTags.FORM_TITLE, "Editar previsto") }
+        waitFor(TransactionTags.TAG_SEARCH)
+        compose.onNodeWithTag(TransactionTags.TAG_SEARCH).performTextReplacement("festa")
+        waitFor(TransactionTags.TAG_CREATE)
+        assertNotShows(TransactionTags.TAG_CREATE, "ao lançar")
+    }
+
+    // ---- Corridas da Pauta e do formulário ----
+
+    @Test
+    fun `dois toques em lancar previsto mantem o desfazer`() {
+        val id = internetWithRecado()
+        open()
+        openPauta()
+        waitFor(InboxTags.PLANNED_LAUNCH + id.v)
+        compose.onNodeWithTag(InboxTags.PLANNED_LAUNCH + id.v).performTouchInput {
+            click()
+            advanceEventTime(80)
+            click()
+        }
+        compose.waitUntil(5_000) { runBlocking { db.transactions() }.any { it.date == OCT_9 } }
+        // Both taps are done once the second has had the writer.
+        Thread.sleep(1_000)
+        compose.waitForIdle()
+        assertEquals("um lançamento só", 1, runBlocking { db.transactions() }.count { it.date == OCT_9 })
+        waitFor(SnackTags.TEXT)
+        assertShows(SnackTags.TEXT, "Lançado: Internet")
+        assertShows(SnackTags.ACTION, "Desfazer")
+    }
+
+    @Test
+    fun `manual ligado recusado diz que o previsto sumiu`() {
+        four()
+        val academia = occ("Academia")
+        open()
+        openTransactions()
+        openSheet(academia)
+        click(TransactionTags.PLANNED_LAUNCH_NO_NOTICE)
+        waitFor(TransactionTags.FORM_LINKED)
+        // Pulado por outro caminho com a tela aberta: the occurrence is no longer open.
+        assertTrue(runBlocking { db.skipOccurrence(academia) })
+        waitGone(TransactionTags.FORM_LINKED)
+        click(TransactionTags.FORM_SUBMIT)
+        waitFor(SnackTags.TEXT)
+        assertShows(SnackTags.TEXT, "Este previsto não existe mais.")
+    }
+
+    @Test
+    fun `editar previsto segue editando o mesmo previsto quando a ocorrencia sai da lista`() {
+        four()
+        val luz = occ("Conta de luz")
+        open()
+        openTransactions()
+        openSheet(luz)
+        click(TransactionTags.PLANNED_EDIT)
+        compose.waitUntil(5_000) { shows(TransactionTags.FORM_TITLE, "Editar previsto") }
+        waitFor(TransactionTags.FORM_TOTAL)
+        assertTrue(runBlocking { db.skipOccurrence(luz) })
+        Thread.sleep(500)
+        compose.waitForIdle()
+
+        compose.onNodeWithTag(TransactionTags.FORM_TOTAL).performTextReplacement("19000")
+        click(TransactionTags.FORM_SUBMIT)
+        compose.waitUntil(5_000) { runBlocking { db.planned(NOV_10) }.any { it.name == "Conta de luz" && it.cents == Cents(19000) } }
+        val luzes = runBlocking { db.planned(NOV_10) }.filter { it.name == "Conta de luz" }
+        assertEquals("o mesmo previsto, sem um segundo: $luzes", listOf(NOV_12 to Cents(19000)), luzes.map { it.date to it.cents })
+        assertEquals("editar previsto não lança", 2, runBlocking { db.transactions() }.size)
+    }
+
+    @Test
+    fun `editar previsto nao oferece outro mes`() {
+        // Only the day goes to the previsto: a month picked here would be dropped without a word.
+        four()
+        open()
+        openTransactions()
+        openSheet(occ("Estacionamento"))
+        click(TransactionTags.PLANNED_EDIT)
+        compose.waitUntil(5_000) { shows(TransactionTags.FORM_TITLE, "Editar previsto") }
+        waitFor(TransactionTags.FORM_TOTAL)
+        if (count(TransactionTags.FORM_DATE) == 0) return
+        click(TransactionTags.FORM_DATE)
+        compose.waitForIdle()
+        for (arrow in listOf(DateTimeTags.PREV, DateTimeTags.NEXT)) {
+            if (count(arrow) > 0) compose.onNodeWithTag(arrow).assertIsNotEnabled()
+        }
+    }
+
+    @Test
+    fun `lancar previsto mostra o desfazer mesmo saindo da pauta durante a escrita`() {
+        val id = internetWithRecado()
+        open()
+        openPauta()
+        waitFor(InboxTags.PLANNED_LAUNCH + id.v)
+        // Another writer holds the file, so Lançar previsto is still writing when the Pauta leaves.
+        val other = AndroidSQLiteDriver().open(path)
+        other.execSQL("BEGIN IMMEDIATE")
+        try {
+            click(InboxTags.PLANNED_LAUNCH + id.v)
+            compose.onNode(hasText("Lançamentos") and hasClickAction()).performClick()
+            waitGone(InboxTags.LIST)
+        } finally {
+            other.execSQL("ROLLBACK")
+            other.close()
+        }
+        compose.waitUntil(5_000) { runBlocking { db.transactions() }.any { it.date == OCT_9 } }
+        waitFor(SnackTags.TEXT)
+        assertShows(SnackTags.TEXT, "Lançado: Internet")
+        assertShows(SnackTags.ACTION, "Desfazer")
+    }
+
     private companion object {
         const val BANK = "com.cartaoipe"
         val ZONE = TimeZone.of("America/Sao_Paulo")
@@ -1040,7 +1334,14 @@ class PrevistoUiTest {
         val OCT_9: LocalDate = LocalDate(2026, 10, 9)
         val OCT_12: LocalDate = LocalDate(2026, 10, 12)
         val OCT_15: LocalDate = LocalDate(2026, 10, 15)
+        val AUG_1: LocalDate = LocalDate(2026, 8, 1)
+        val AUG_31: LocalDate = LocalDate(2026, 8, 31)
+        val SEP_30: LocalDate = LocalDate(2026, 9, 30)
+        val OCT_31: LocalDate = LocalDate(2026, 10, 31)
         val NOV_1: LocalDate = LocalDate(2026, 11, 1)
+        val NOV_2: LocalDate = LocalDate(2026, 11, 2)
+        val NOV_10: LocalDate = LocalDate(2026, 11, 10)
+        val NOV_12: LocalDate = LocalDate(2026, 11, 12)
         val NOV_9: LocalDate = LocalDate(2026, 11, 9)
     }
 }
