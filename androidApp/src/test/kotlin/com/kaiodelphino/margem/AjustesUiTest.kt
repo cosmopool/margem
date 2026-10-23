@@ -1,5 +1,8 @@
 package com.kaiodelphino.margem
 
+import androidx.compose.runtime.setValue
+import androidx.compose.runtime.getValue
+import androidx.compose.runtime.mutableStateOf
 import android.app.Application
 import android.net.Uri
 import androidx.activity.compose.LocalActivityResultRegistryOwner
@@ -77,10 +80,18 @@ class AjustesUiTest {
         runBlocking { db.addSource(BANK, "Cartão Ipê", 0) }
     }
 
+    /** Set by the teardown: the screen leaves before the Db closes, so no query in flight meets a closed Db. */
+    private var gone by mutableStateOf(false)
+
     @After
-    fun tearDown() = db.close()
+    fun tearDown() {
+        gone = true
+        compose.waitForIdle()
+        db.close()
+    }
 
     private fun open() = compose.setContent {
+        if (gone) return@setContent
         MargemTheme(dark = false) {
             CompositionLocalProvider(LocalToday provides { OCT_14 }, LocalActivityResultRegistryOwner provides owner) { App(db, Screen.Settings) {} }
         }

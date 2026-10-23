@@ -1,5 +1,8 @@
 package com.kaiodelphino.margem
 
+import androidx.compose.runtime.setValue
+import androidx.compose.runtime.getValue
+import androidx.compose.runtime.mutableStateOf
 import android.app.Application
 import androidx.compose.runtime.CompositionLocalProvider
 import androidx.compose.ui.semantics.SemanticsProperties
@@ -50,10 +53,18 @@ class LeituraUiTest {
         db = Db(AndroidSQLiteDriver(), tmp.newFile("margem.db").also { it.delete() }.path)
     }
 
+    /** Set by the teardown: the screen leaves before the Db closes, so no query in flight meets a closed Db. */
+    private var gone by mutableStateOf(false)
+
     @After
-    fun tearDown() = db.close()
+    fun tearDown() {
+        gone = true
+        compose.waitForIdle()
+        db.close()
+    }
 
     private fun open(today: LocalDate = OCT_9) = compose.setContent {
+        if (gone) return@setContent
         MargemTheme(dark = false) { CompositionLocalProvider(LocalToday provides { today }) { App(db, Screen.Insights) {} } }
     }
 
