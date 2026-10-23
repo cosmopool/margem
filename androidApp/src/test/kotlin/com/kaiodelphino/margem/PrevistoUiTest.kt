@@ -211,11 +211,19 @@ class PrevistoUiTest {
         compose.waitUntil(5_000) { shows(TransactionTags.FORM_DATE, dateLong(day)) }
     }
 
+    /** Book 8.12: types [name] in the search and taps its result, or "Criar" when there is none. */
     private fun addTag(name: String) {
-        click(TransactionTags.TAG_NEW)
-        compose.onNodeWithTag(TransactionTags.TAG_INPUT).performTextReplacement(name)
-        click(TransactionTags.TAG_ADD)
+        compose.onNodeWithTag(TransactionTags.TAG_SEARCH).performTextReplacement(name)
+        compose.waitUntil(5_000) { count(TransactionTags.TAG_RESULT + name) + count(TransactionTags.TAG_CREATE) > 0 }
+        click(if (count(TransactionTags.TAG_RESULT + name) > 0) TransactionTags.TAG_RESULT + name else TransactionTags.TAG_CREATE)
         waitFor(TransactionTags.TAG + name)
+    }
+
+    /** Book 8.12: the verba field opens the sheet; a row chooses and closes it. */
+    private fun chooseBudget(id: BudgetId) {
+        click(TransactionTags.FORM_BUDGET)
+        click(TransactionTags.BUDGET + id.v)
+        waitGone(TransactionTags.BUDGET_SHEET)
     }
 
     // ---- Data, through the public Db API ----
@@ -510,7 +518,7 @@ class PrevistoUiTest {
         compose.waitUntil(5_000) { shows(TransactionTags.FORM_SUBMIT, "Lançar ${money(Cents(8990))}") }
         assertEquals("sem recado no formulário", 0, count(TransactionTags.FORM_NOTICE))
         compose.waitUntil(5_000) { shows(TransactionTags.FORM_DATE, dateLong(OCT_5)) }
-        compose.onNodeWithTag(TransactionTags.BUDGET + lazer.v).assertIsSelected()
+        assertShows(TransactionTags.FORM_BUDGET, "Lazer")
         compose.onNodeWithTag(TransactionTags.TAG + "academia").assertIsSelected()
         assertEquals("legenda = nome do previsto", "Academia", editable(TransactionTags.FORM_CAPTION))
 
@@ -537,7 +545,7 @@ class PrevistoUiTest {
         compose.onNodeWithTag(TransactionTags.FORM_REPEATS_MONTHLY).assertIsSelected()
         compose.onNodeWithTag(TransactionTags.FORM_REPEATS_ONCE).assertIsNotSelected()
         assertShows(TransactionTags.FORM_REPEATS_MONTHLY, "Todo mês, dia 12")
-        compose.onNodeWithTag(TransactionTags.BUDGET + casa.v).assertIsSelected()
+        assertShows(TransactionTags.FORM_BUDGET, "Casa")
         compose.onNodeWithTag(TransactionTags.TAG + "luz").assertIsSelected()
         assertTrue(
             "o nome do previsto está no formulário: ${texts(TransactionTags.FORM_NAME)} / ${texts(TransactionTags.FORM_CAPTION)}",
@@ -623,7 +631,7 @@ class PrevistoUiTest {
         openPauta()
         click(InboxTags.ACCEPT + id.v)
         waitFor(TransactionTags.FORM_REPEATS)
-        click(TransactionTags.BUDGET + lazer.v)
+        chooseBudget(lazer)
         addTag("música")
         click(TransactionTags.FORM_REPEATS_MONTHLY)
         click(TransactionTags.FORM_SUBMIT)
@@ -667,7 +675,7 @@ class PrevistoUiTest {
         waitFor(TransactionTags.FORM_NAME)
         compose.onNodeWithTag(TransactionTags.FORM_NAME).performTextReplacement("Conta de luz")
         compose.onNodeWithTag(TransactionTags.FORM_TOTAL).performTextReplacement("18000")
-        click(TransactionTags.BUDGET + casa.v)
+        chooseBudget(casa)
         addTag("luz")
         waitFor(TransactionTags.FORM_PREVIEW)
         assertEquals("hoje não é data à frente", 0, count(TransactionTags.FORM_FUTURE))
@@ -745,7 +753,7 @@ class PrevistoUiTest {
         click(TransactionTags.NEW)
         waitFor(TransactionTags.FORM_NAME)
         compose.onNodeWithTag(TransactionTags.FORM_NAME).performTextReplacement("Conta de luz")
-        click(TransactionTags.BUDGET + casa.v)
+        chooseBudget(casa)
         addTag("luz")
         pickDate(OCT_12)
         waitFor(TransactionTags.FORM_FUTURE)
@@ -800,7 +808,7 @@ class PrevistoUiTest {
         assertShows(TransactionTags.FORM_UNLINK, "Desligar")
         assertEquals("a faixa toma o lugar do link", 0, count(TransactionTags.FORM_LINK_OPEN))
         assertEquals("ligado, sem Repete", 0, count(TransactionTags.FORM_REPEATS))
-        compose.onNodeWithTag(TransactionTags.BUDGET + casa.v).assertIsSelected()
+        assertShows(TransactionTags.FORM_BUDGET, "Casa")
         compose.onNodeWithTag(TransactionTags.TAG + "luz").assertIsSelected()
         compose.onNodeWithTag(TransactionTags.TAG + "contas").assertIsSelected()
         assertTrue("marcadores cheios, não sugeridos", !suggested(TransactionTags.TAG + "luz") && !suggested(TransactionTags.TAG + "contas"))
@@ -819,7 +827,7 @@ class PrevistoUiTest {
         openPauta()
         click(InboxTags.ACCEPT + id.v)
         waitFor(TransactionTags.FORM_REPEATS)
-        assertTrue("sem sugestão, nenhuma verba", !selected(TransactionTags.BUDGET + casa.v))
+        assertTrue("sem sugestão, nenhuma verba", !shows(TransactionTags.FORM_BUDGET, "Casa"))
 
         click(TransactionTags.FORM_LINK_OPEN)
         click(TransactionTags.LINK_CANDIDATE + luz.v)
@@ -830,7 +838,7 @@ class PrevistoUiTest {
         waitGone(TransactionTags.FORM_LINKED)
         waitFor(TransactionTags.FORM_LINK_OPEN)
         waitFor(TransactionTags.FORM_REPEATS)
-        assertTrue("a verba volta a nenhuma", !selected(TransactionTags.BUDGET + casa.v))
+        assertTrue("a verba volta a nenhuma", !shows(TransactionTags.FORM_BUDGET, "Casa"))
         assertTrue("os marcadores do previsto saem", !selected(TransactionTags.TAG + "luz") && !selected(TransactionTags.TAG + "contas"))
         assertEquals("a legenda volta recolhida", 0, count(TransactionTags.FORM_CAPTION))
         waitFor(TransactionTags.FORM_CAPTION_OPEN)
@@ -1005,7 +1013,7 @@ class PrevistoUiTest {
         assertEquals("ligado, sem Repete", 0, count(TransactionTags.FORM_REPEATS))
         assertEquals("ligado, sem o link", 0, count(TransactionTags.FORM_LINK_OPEN))
         assertEquals("Internet", editable(TransactionTags.FORM_CAPTION))
-        compose.onNodeWithTag(TransactionTags.BUDGET + casa.v).assertIsSelected()
+        assertShows(TransactionTags.FORM_BUDGET, "Casa")
         assertShows(TransactionTags.FORM_SUBMIT, "Lançar ${money(Cents(12490))}")
         assertEquals(0, count(TransactionTags.FORM_TOTAL_EMENDA))
     }

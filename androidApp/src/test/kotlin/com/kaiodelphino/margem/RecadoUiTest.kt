@@ -106,6 +106,22 @@ class RecadoUiTest {
 
     private val suggested = SemanticsMatcher.expectValue(SemanticsProperties.StateDescription, "sugerido")
 
+    /** Book 8.12: the verba field opens the sheet; a row chooses and closes it. */
+    private fun chooseBudget(id: BudgetId) {
+        click(TransactionTags.FORM_BUDGET)
+        click(TransactionTags.BUDGET + id.v)
+        waitGone(TransactionTags.BUDGET_SHEET)
+    }
+
+    /** Book 8.12: types [text] in the search and taps its result, or "Criar" when there is none. */
+    private fun pickTag(text: String) {
+        val clean = text.trim().lowercase()
+        compose.onNodeWithTag(TransactionTags.TAG_SEARCH).performTextReplacement(text)
+        compose.waitUntil(5_000) { count(TransactionTags.TAG_RESULT + clean) + count(TransactionTags.TAG_CREATE) > 0 }
+        click(if (count(TransactionTags.TAG_RESULT + clean) > 0) TransactionTags.TAG_RESULT + clean else TransactionTags.TAG_CREATE)
+        waitFor(TransactionTags.TAG + clean)
+    }
+
     @Test
     fun `a notice is launched with a budget a tag and installments`() {
         val id = post("Compra aprovada: R$ 1.200,00 em MOVELARIA REAL")
@@ -118,12 +134,9 @@ class RecadoUiTest {
         waitFor(TransactionTags.FORM_SUBMIT)
         compose.onNodeWithTag(TransactionTags.FORM_SUBMIT).assertIsNotEnabled()
         compose.onNodeWithTag(TransactionTags.FORM_MISSING).assertTextContains("Falta a verba e um marcador.")
-        click(TransactionTags.BUDGET + lazer.v)
+        chooseBudget(lazer)
         compose.onNodeWithTag(TransactionTags.FORM_MISSING).assertTextContains("Falta um marcador.")
-        click(TransactionTags.TAG_NEW)
-        compose.onNodeWithTag(TransactionTags.TAG_INPUT).performTextReplacement(" Móveis ")
-        click(TransactionTags.TAG_ADD)
-        waitFor(TransactionTags.TAG + "móveis")
+        pickTag(" Móveis ")
         compose.onNodeWithTag(TransactionTags.TAG + "móveis").assertIsSelected()
         waitGone(TransactionTags.FORM_MISSING)
         repeat(9) { click(TransactionTags.INSTALLMENTS_PLUS) }
@@ -166,12 +179,11 @@ class RecadoUiTest {
         openPauta()
         click(InboxTags.ACCEPT + second.v)
         waitFor(TransactionTags.TAG + "padaria")
-        compose.onNodeWithTag(TransactionTags.BUDGET + lazer.v).assertIsSelected()
+        compose.onNodeWithTag(TransactionTags.FORM_BUDGET).assertTextContains("Lazer", substring = true)
+            .assert(SemanticsMatcher.expectValue(SemanticsProperties.StateDescription, "sugerida"))
         compose.onNodeWithTag(TransactionTags.TAG + "padaria").assertIsSelected().assert(suggested)
-        click(TransactionTags.TAG + "café") // confirm
-        compose.onNodeWithTag(TransactionTags.TAG + "café").assertIsSelected().assert(suggested.not())
-        click(TransactionTags.TAG + "café") // and take it off
-        compose.onNodeWithTag(TransactionTags.TAG + "café").assertIsNotSelected()
+        click(TransactionTags.TAG + "café") // the first touch takes it off (spec §2.5)
+        waitGone(TransactionTags.TAG + "café")
         click(TransactionTags.FORM_SUBMIT)
         waitFor(InboxTags.EMPTY)
         assertEquals(listOf("padaria"), runBlocking { db.transactions() }.first { it.notice == second }.tags)
@@ -193,10 +205,8 @@ class RecadoUiTest {
         compose.onNodeWithTag(TransactionTags.FORM_TOTAL).performTextReplacement("4600")
         compose.onNodeWithTag(TransactionTags.FORM_ALIAS).performTextReplacement("Bar do Ponto")
         compose.onNodeWithTag(TransactionTags.FORM_BANK).assertTextContains("No banco: BAR E REST PONTO CERTO")
-        click(TransactionTags.BUDGET + lazer.v)
-        click(TransactionTags.TAG_NEW)
-        compose.onNodeWithTag(TransactionTags.TAG_INPUT).performTextReplacement("bar")
-        click(TransactionTags.TAG_ADD)
+        chooseBudget(lazer)
+        pickTag("bar")
         // Book 10.3: Lazer margem 465,00 → 419,00.
         click(TransactionTags.FORM_SUBMIT)
         waitFor(InboxTags.EMPTY)
@@ -286,8 +296,8 @@ class RecadoUiTest {
         waitFor(TransactionTags.FORM_NAME)
         compose.onNodeWithTag(TransactionTags.FORM_NAME).performTextReplacement("Feira")
         compose.onNodeWithTag(TransactionTags.FORM_TOTAL).performTextReplacement("1200")
-        click(TransactionTags.BUDGET + lazer.v)
-        click(TransactionTags.TAG + "almoço")
+        chooseBudget(lazer)
+        pickTag("almoço")
         click(TransactionTags.FORM_DATE)
         waitFor(DateTimeTags.DIALOG)
         // Spec §7.3 (previsto, P4): only the manual form takes days ahead; they make a previsto.
@@ -330,8 +340,8 @@ class RecadoUiTest {
         waitFor(TransactionTags.FORM_NAME)
         compose.onNodeWithTag(TransactionTags.FORM_NAME).performTextReplacement("Feira")
         compose.typeComposing(TransactionTags.FORM_TOTAL, "123456")
-        click(TransactionTags.BUDGET + lazer.v)
-        click(TransactionTags.TAG + "almoço")
+        chooseBudget(lazer)
+        pickTag("almoço")
         click(TransactionTags.FORM_DATE)
         waitFor(DateTimeTags.DIALOG)
         compose.onNodeWithTag(DateTimeTags.TIME).performTextReplacement("")

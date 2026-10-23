@@ -171,7 +171,7 @@ class RecadoLifecycleTest {
     /**
      * Abre Lançar de [n], escolhe [budget] e um marcador novo ("petisco"), roda [porFora] direto no Db e
      * toca Lançar (se a tela ainda estiver aberta): o snack diz GONE_TEXT, a tela volta à Pauta, o card
-     * some e nada do formulário é gravado (nem o marcador novo: TransactionTags.TAG_NEW).
+     * some e nada do formulário é gravado (nem o marcador novo: TransactionTags.TAG_CREATE).
      */
     private fun lancarComRecadoQueSaiu(oQueHouve: String, n: NoticeId, budget: BudgetId, porFora: suspend () -> Unit) {
         composeRule.setContent { Content() }
@@ -319,8 +319,9 @@ class RecadoLifecycleTest {
         openPost(n)
         // Pré-preenchido (TransactionTags: Lançar) — total do Parsed e a sugestão (§2.5).
         await("Lançar R$ 46,00 com Lazer e bar/amigos sugeridos", TransactionTags.FORM_SUBMIT) {
-            shows(TransactionTags.FORM_SUBMIT, money(Cents(4_600))) && selected(TransactionTags.BUDGET + lazer.v) &&
-                suggested("bar") && suggested("amigos") && exists(TransactionTags.TAG + "cafe") && !selected(TransactionTags.TAG + "cafe")
+            shows(TransactionTags.FORM_SUBMIT, money(Cents(4_600))) && shows(TransactionTags.FORM_BUDGET, "Lazer") &&
+                state(TransactionTags.FORM_BUDGET) == "sugerida" &&
+                suggested("bar") && suggested("amigos") && !exists(TransactionTags.TAG + "cafe")
         }
 
         // Emendas e escolhas.
@@ -338,15 +339,11 @@ class RecadoLifecycleTest {
             shows(TransactionTags.FORM_DATE, dateLong(LocalDate(2026, 10, 12))) && shows(TransactionTags.FORM_DATE, "19:05") &&
                 exists(TransactionTags.FORM_DATE_EMENDA)
         }
-        tap(TransactionTags.BUDGET + casa.v)
-        await("Casa selecionada no lugar de Lazer") { selected(TransactionTags.BUDGET + casa.v) && !selected(TransactionTags.BUDGET + lazer.v) }
+        chooseBudget(casa)
         tap(TransactionTags.INSTALLMENTS_PLUS)
         tap(TransactionTags.INSTALLMENTS_PLUS)
         await("3 parcelas", TransactionTags.INSTALLMENTS) { shows(TransactionTags.INSTALLMENTS, "3") }
-        tap(TransactionTags.TAG + "bar")
-        await("bar confirmado (cheio)", TransactionTags.TAG + "bar") { confirmed("bar") }
-        tap(TransactionTags.TAG + "cafe")
-        await("cafe marcado") { confirmed("cafe") }
+        addTag("cafe")
         addTag("petisco")
 
         checkFilledForm("antes da recriação", lazer, casa)
@@ -385,13 +382,13 @@ class RecadoLifecycleTest {
                 (shows(f.FORM_BANK_INPUT, "BAR PONTO CERTO LTDA") || shows(f.FORM_BANK, "BAR PONTO CERTO LTDA")) &&
                 exists(f.FORM_BANK_EMENDA) &&
                 shows(f.FORM_DATE, dateLong(LocalDate(2026, 10, 12))) && shows(f.FORM_DATE, "19:05") && exists(f.FORM_DATE_EMENDA) &&
-                selected(f.BUDGET + casa.v) && !selected(f.BUDGET + lazer.v) &&
+                shows(f.FORM_BUDGET, "Casa") && state(f.FORM_BUDGET) != "sugerida" &&
                 shows(f.INSTALLMENTS, "3") &&
                 // "n × money(total / n)" e " · última" quando a última absorve centavos: 3 × 17,63 · última 17,64.
                 shows(f.INSTALLMENTS_PREVIEW, "3 × ${money(Cents(1_763))}") && shows(f.INSTALLMENTS_PREVIEW, "última ${money(Cents(1_764))}") &&
                 // Prévia na verba escolhida: Casa 800,00 sem gasto; em outubro conta só a 1ª parcela, 17,63 → 782,37.
                 shows(f.FORM_PREVIEW, "Casa") && shows(f.FORM_PREVIEW, money(Cents(80_000))) && shows(f.FORM_PREVIEW, money(Cents(78_237))) &&
-                confirmed("bar") && suggested("amigos") && confirmed("cafe") && confirmed("petisco") &&
+                suggested("bar") && suggested("amigos") && confirmed("cafe") && confirmed("petisco") &&
                 !exists(f.FORM_MISSING) && enabled(f.FORM_SUBMIT)
         }
     }
@@ -414,7 +411,7 @@ class RecadoLifecycleTest {
         val check = { stage: String ->
             await("Novo lançamento preenchido ($stage)", TransactionTags.FORM_NAME, TransactionTags.FORM_SUBMIT, TransactionTags.FORM_DATE) {
                 shows(TransactionTags.FORM_NAME, "Feira do bairro") && shows(TransactionTags.FORM_SUBMIT, money(Cents(1_500))) &&
-                    selected(TransactionTags.BUDGET + casa.v) && shows(TransactionTags.INSTALLMENTS, "2") && confirmed("feira") &&
+                    shows(TransactionTags.FORM_BUDGET, "Casa") && shows(TransactionTags.INSTALLMENTS, "2") && confirmed("feira") &&
                     shows(TransactionTags.FORM_DATE, dateLong(LocalDate(2026, 10, 10))) && shows(TransactionTags.FORM_DATE, "08:15") &&
                     // 1500 / 2 = 750 sem resto: sem " · última".
                     shows(TransactionTags.INSTALLMENTS_PREVIEW, "2 × ${money(Cents(750))}") && !shows(TransactionTags.INSTALLMENTS_PREVIEW, "última")
@@ -473,7 +470,7 @@ class RecadoLifecycleTest {
             !exists(DateTimeTags.DIALOG) && shows(TransactionTags.FORM_DATE, dateLong(LocalDate(2026, 10, 11))) &&
                 shows(TransactionTags.FORM_DATE, "07:45")
         }
-        assertTrue("verba e marcador continuam", selected(TransactionTags.BUDGET + lazer.v) && confirmed("bar"))
+        assertTrue("verba e marcador continuam", shows(TransactionTags.FORM_BUDGET, "Lazer") && confirmed("bar"))
 
         tap(TransactionTags.FORM_SUBMIT)
         await("lançado") { fora { db.transactions() }.size == 1 }
@@ -696,7 +693,7 @@ class RecadoLifecycleTest {
         await("Lançar habilitado") { enabled(TransactionTags.FORM_SUBMIT) }
 
         fora { db.deleteBudget(lazer) }
-        await("a opção da verba apagada some do formulário") { !exists(TransactionTags.BUDGET + lazer.v) && exists(TransactionTags.BUDGET + casa.v) }
+        await("a verba apagada deixa de estar escolhida") { !shows(TransactionTags.FORM_BUDGET, "Lazer") && shows(TransactionTags.FORM_BUDGET, "Escolher a verba") }
         if (exists(TransactionTags.FORM_SUBMIT) && enabled(TransactionTags.FORM_SUBMIT)) runCatching { tap(TransactionTags.FORM_SUBMIT) }
         settle() // uma exceção na composição sairia aqui
 
@@ -705,8 +702,8 @@ class RecadoLifecycleTest {
         assertTrue("o marcador novo não foi gravado", fora { db.tags() }.none { it.name == "petisco" })
 
         if (exists(TransactionTags.FORM_TITLE)) {
-            tap(TransactionTags.BUDGET + casa.v)
-            await("Casa selecionada") { selected(TransactionTags.BUDGET + casa.v) && enabled(TransactionTags.FORM_SUBMIT) }
+            chooseBudget(casa)
+            await("Casa escolhida") { enabled(TransactionTags.FORM_SUBMIT) }
             tap(TransactionTags.FORM_SUBMIT)
             await("lançado em Casa") { fora { db.transactions() }.singleOrNull()?.budget == casa }
             awaitPauta("depois de lançar em Casa")
@@ -875,19 +872,21 @@ class RecadoLifecycleTest {
 
     // ---- Helpers: formulário ----
 
+    /** Book 8.12: o campo abre a folha; a linha escolhe e fecha (TransactionTags.BUDGET_SHEET). */
     private fun chooseBudget(b: BudgetId) {
+        await("campo da verba") { exists(TransactionTags.FORM_BUDGET) }
+        tap(TransactionTags.FORM_BUDGET)
         await("opção da verba ${b.v}") { exists(TransactionTags.BUDGET + b.v) }
         tap(TransactionTags.BUDGET + b.v)
-        await("verba ${b.v} selecionada") { selected(TransactionTags.BUDGET + b.v) }
+        await("verba ${b.v} escolhida, folha fechada") { !exists(TransactionTags.BUDGET_SHEET) }
     }
 
-    /** "+ novo", digita e confirma: vira um chip selecionado (TransactionTags.TAG_NEW). */
+    /** Digita na busca e toca o resultado, ou "Criar" quando não há (TransactionTags.TAG_SEARCH). */
     private fun addTag(name: String) {
-        tap(TransactionTags.TAG_NEW)
-        await("campo de marcador novo") { exists(TransactionTags.TAG_INPUT) }
-        composeRule.onNodeWithTag(TransactionTags.TAG_INPUT).performTextInput(name)
-        tap(TransactionTags.TAG_ADD)
-        await("marcador $name selecionado") { confirmed(name) }
+        replaceText(TransactionTags.TAG_SEARCH, name)
+        await("resultado ou Criar para $name") { exists(TransactionTags.TAG_RESULT + name) || exists(TransactionTags.TAG_CREATE) }
+        tap(if (exists(TransactionTags.TAG_RESULT + name)) TransactionTags.TAG_RESULT + name else TransactionTags.TAG_CREATE)
+        await("marcador $name escolhido") { confirmed(name) }
     }
 
     /** Abre o seletor, escolhe o dia e digita a hora ("1905" = 19:05), Pronto. */

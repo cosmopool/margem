@@ -30,6 +30,7 @@ import androidx.compose.runtime.remember
 import androidx.compose.runtime.rememberCoroutineScope
 import androidx.compose.runtime.saveable.Saver
 import androidx.compose.runtime.saveable.rememberSaveable
+import androidx.compose.runtime.saveable.rememberSaveableStateHolder
 import androidx.compose.runtime.setValue
 import androidx.compose.runtime.staticCompositionLocalOf
 import androidx.compose.ui.Alignment
@@ -213,9 +214,17 @@ fun App(db: Db, tabRequest: Screen?, onTabOpened: () -> Unit) {
     var stack by rememberSaveable(stateSaver = StackSaver) { mutableStateOf(listOf<Screen>(Screen.Budgets)) }
     var granted by remember { mutableStateOf(isAccessGranted(context)) }
     LifecycleEventEffect(Lifecycle.Event.ON_RESUME) { granted = isAccessGranted(context) }
+    // D18: the screens under the top keep their rememberSaveable state (a form while Nova verba is on top, D66);
+    // a screen that leaves the stack drops it.
+    val saved = rememberSaveableStateHolder()
+    fun keyOf(i: Int, s: List<Screen>) = "$i:${encode(s[i])}"
+    fun move(next: List<Screen>) {
+        for (i in stack.indices) if (i >= next.size || next[i] != stack[i]) saved.removeState(keyOf(i, stack))
+        stack = next
+    }
     LaunchedEffect(tabRequest) {
         if (tabRequest == null) return@LaunchedEffect
-        stack = listOf(tabRequest)
+        move(listOf(tabRequest))
         onTabOpened()
     }
     val appScope = rememberCoroutineScope()
@@ -223,10 +232,10 @@ fun App(db: Db, tabRequest: Screen?, onTabOpened: () -> Unit) {
     val pending = query(db) { it.pendingCount() } ?: 0
 
     val screen = stack.last()
-    val go: (Screen) -> Unit = { stack = stack + it }
-    val back: () -> Unit = { stack = if (stack.size > 1) stack.dropLast(1) else listOf(Screen.Budgets) }
-    val home: () -> Unit = { stack = listOf(Screen.Budgets) }
-    val replace: (Screen) -> Unit = { stack = stack.dropLast(1) + it }
+    val go: (Screen) -> Unit = { move(stack + it) }
+    val back: () -> Unit = { move(if (stack.size > 1) stack.dropLast(1) else listOf(Screen.Budgets)) }
+    val home: () -> Unit = { move(listOf(Screen.Budgets)) }
+    val replace: (Screen) -> Unit = { move(stack.dropLast(1) + it) }
     // Back from another tab's root goes to Verbas; from Verbas it leaves the app.
     BackHandler(stack.size > 1 || screen != Screen.Budgets, back)
     // Forms (lançar, editar, novo) take the whole page; everything else keeps the tab bar.
@@ -236,14 +245,14 @@ fun App(db: Db, tabRequest: Screen?, onTabOpened: () -> Unit) {
 
     Column(Modifier.fillMaxSize().background(Margem.colors.paper).windowInsetsPadding(WindowInsets.statusBars).imePadding()) {
         Box(Modifier.weight(1f)) {
-            when (screen) {
+            saved.SaveableStateProvider(keyOf(stack.lastIndex, stack)) { when (screen) {
                 Screen.Budgets -> Budgets(db, snack, go)
                 Screen.Inbox -> Inbox(db, granted, snack, go)
                 Screen.Transactions -> Transactions(db, snack, go)
                 Screen.Insights -> Insights(db)
                 Screen.Settings -> Settings(db, granted, go)
                 Screen.Sources -> Sources(db, back)
-                is Screen.Budget -> BudgetDetailScreen(db, screen.id, screen.month, go, { stack = stack.dropLast(1) + Screen.Budget(screen.id, it) }, back)
+                is Screen.Budget -> BudgetDetailScreen(db, screen.id, screen.month, go, { move(stack.dropLast(1) + Screen.Budget(screen.id, it)) }, back)
                 Screen.NewBudget -> NewBudget(db, back)
                 is Screen.EditBudget -> EditBudget(db, screen.id, back, home)
                 is Screen.Post -> PostScreen(db, screen.notice, snack, go, replace, back, screen.linked)
@@ -257,10 +266,10 @@ fun App(db: Db, tabRequest: Screen?, onTabOpened: () -> Unit) {
                 Screen.StartDays -> StartDays(db, back)
                 Screen.Backup -> BackupScreen(db, snack, back)
                 Screen.Cobudget -> CobudgetScreen(db, back)
-            }
+            } }
             SnackbarHost(snack, Modifier.align(Alignment.BottomCenter))
         }
-        if (tabs) TabBar(tabOf(screen), { stack = listOf(screenOf(it)) }, badge = pending)
+        if (tabs) TabBar(tabOf(screen), { move(listOf(screenOf(it))) }, badge = pending)
         else Spacer(Modifier.windowInsetsBottomHeight(WindowInsets.navigationBars))
     }
 }

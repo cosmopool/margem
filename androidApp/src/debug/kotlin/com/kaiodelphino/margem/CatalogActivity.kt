@@ -177,9 +177,9 @@ private fun Catalog(dark: Boolean, setDark: (Boolean) -> Unit) {
                     TagChip("mercado", state = ChipState.SELECTED)
                     TagChip("padaria", state = ChipState.SUGGESTED)
                     TagChip("café", focused = true)
-                    TagChip("+ novo marcador", state = ChipState.ADD)
                     TagChip("viagem", state = ChipState.DISABLED)
                     TagChip("café", state = ChipState.SELECTED, removable = true)
+                    TagChip("padaria", state = ChipState.SUGGESTED, removable = true)
                 }
 
                 SectionLine("8.4 Recado")

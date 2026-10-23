@@ -179,7 +179,7 @@ fun Modifier.focusRing(on: Boolean, color: Color, radius: Dp): Modifier = drawWi
     }
 }
 
-private fun DrawScope.dashedBorder(color: Color, radius: Dp) = drawRoundRect(
+fun DrawScope.dashedBorder(color: Color, radius: Dp) = drawRoundRect(
     color, Offset(0.5f.dp.toPx(), 0.5f.dp.toPx()), Size(size.width - 1.dp.toPx(), size.height - 1.dp.toPx()), CornerRadius(radius.toPx()),
     style = Stroke(1.dp.toPx(), pathEffect = PathEffect.dashPathEffect(floatArrayOf(3.dp.toPx(), 2.dp.toPx()))),
 )
@@ -533,11 +533,11 @@ fun Check(checked: Boolean, modifier: Modifier = Modifier) {
 
 // ---- 8.3 Tags ----
 
-enum class ChipState { NORMAL, SELECTED, SUGGESTED, ADD, DISABLED }
+enum class ChipState { NORMAL, SELECTED, SUGGESTED, DISABLED }
 
 /**
  * Book §8.3: a paper tag with a hole, radius 3, 32 dp drawn and 48 dp to touch. Suggested (from the
- * merchant's last transaction) is dashed until confirmed. Names are lowercase, as written by hand.
+ * merchant's last transaction) is dashed: it counts, and one touch takes it off (spec §2.5). Names are lowercase, as written by hand.
  */
 @Composable
 fun TagChip(
@@ -551,7 +551,6 @@ fun TagChip(
         ChipState.NORMAL -> c.ink
         ChipState.SELECTED -> c.paper
         ChipState.SUGGESTED -> c.inkSecondary
-        ChipState.ADD -> c.info
         ChipState.DISABLED -> c.inkTertiary
     }
     val bg = when (state) {
@@ -559,7 +558,7 @@ fun TagChip(
         ChipState.SELECTED -> c.ink
         else -> Color.Transparent
     }
-    val dashed = state == ChipState.SUGGESTED || state == ChipState.ADD
+    val dashed = state == ChipState.SUGGESTED
     val border = when (state) {
         ChipState.SELECTED -> c.ink
         ChipState.DISABLED -> c.rule
@@ -573,10 +572,10 @@ fun TagChip(
         Row(
             Modifier.height(32.dp).focusRing(isFocused, c.info, 3.dp).background(bg, shape)
                 .then(if (dashed) Modifier.drawBehind { dashedBorder(border, 3.dp) } else Modifier.border(1.dp, border, shape))
-                .padding(start = if (state == ChipState.ADD) 12.dp else 10.dp, end = 12.dp),
+                .padding(start = 10.dp, end = 12.dp),
             verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(7.dp),
         ) {
-            if (state != ChipState.ADD) Canvas(Modifier.size(7.dp)) {
+            Canvas(Modifier.size(7.dp)) {
                 if (state == ChipState.SELECTED) drawCircle(fg, 3.dp.toPx())
                 else drawCircle(fg.copy(alpha = 0.75f), (3.5f - 0.75f).dp.toPx(), style = Stroke(1.5f.dp.toPx()))
             }

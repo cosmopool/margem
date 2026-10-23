@@ -126,11 +126,19 @@ class LegendaUiTest {
         db.accept(notice, TransactionForm(budget = lazer, tags = listOf("casa"), total = p.cents, installments = 1, merchant = p.merchant, date = p.date, time = p.time, alias = alias, caption = caption))
     }
 
+    /** Book 8.12: types [name] in the search and taps its result, or "Criar" when there is none. */
     private fun addTag(name: String) {
-        click(TransactionTags.TAG_NEW)
-        compose.onNodeWithTag(TransactionTags.TAG_INPUT).performTextReplacement(name)
-        click(TransactionTags.TAG_ADD)
+        compose.onNodeWithTag(TransactionTags.TAG_SEARCH).performTextReplacement(name)
+        compose.waitUntil(5_000) { count(TransactionTags.TAG_RESULT + name) + count(TransactionTags.TAG_CREATE) > 0 }
+        click(if (count(TransactionTags.TAG_RESULT + name) > 0) TransactionTags.TAG_RESULT + name else TransactionTags.TAG_CREATE)
         waitFor(TransactionTags.TAG + name)
+    }
+
+    /** Book 8.12: the verba field opens the sheet; a row chooses and closes it. */
+    private fun chooseBudget(id: BudgetId) {
+        click(TransactionTags.FORM_BUDGET)
+        click(TransactionTags.BUDGET + id.v)
+        waitGone(TransactionTags.BUDGET_SHEET)
     }
 
     private fun openPauta() = click(BudgetTags.PAUTA_STRIP)
@@ -398,7 +406,7 @@ class LegendaUiTest {
         waitFor(TransactionTags.FORM_CAPTION_OPEN)
         click(TransactionTags.FORM_CAPTION_OPEN)
         compose.onNodeWithTag(TransactionTags.FORM_CAPTION).performTextReplacement(LEGENDA)
-        click(TransactionTags.BUDGET + lazer.v)
+        chooseBudget(lazer)
         addTag("casa")
         click(TransactionTags.FORM_SUBMIT)
 
@@ -441,7 +449,7 @@ class LegendaUiTest {
         waitFor(TransactionTags.FORM_CAPTION_OPEN)
         click(TransactionTags.FORM_CAPTION_OPEN)
         compose.onNodeWithTag(TransactionTags.FORM_CAPTION).performTextReplacement(LEGENDA)
-        click(TransactionTags.BUDGET + lazer.v)
+        chooseBudget(lazer)
         waitFor(TransactionTags.FORM_PREVIEW)
 
         // Lazer, October: cota 300,00 − 46,00 = 254,00. The name is the verba's (2026-10-20 decision:

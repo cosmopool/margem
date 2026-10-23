@@ -1,6 +1,25 @@
 package com.kaiodelphino.margem.ui
 
 import androidx.compose.foundation.background
+import androidx.compose.foundation.ExperimentalFoundationApi
+import androidx.compose.foundation.interaction.MutableInteractionSource
+import androidx.compose.foundation.interaction.collectIsFocusedAsState
+import androidx.compose.foundation.layout.WindowInsets
+import androidx.compose.foundation.layout.isImeVisible
+import androidx.compose.foundation.relocation.BringIntoViewRequester
+import androidx.compose.foundation.relocation.bringIntoViewRequester
+import androidx.compose.foundation.text.BasicTextField
+import androidx.compose.foundation.text.KeyboardActions
+import androidx.compose.foundation.text.KeyboardOptions
+import androidx.compose.ui.focus.onFocusChanged
+import androidx.compose.ui.layout.onSizeChanged
+import androidx.compose.ui.platform.LocalDensity
+import androidx.compose.ui.graphics.SolidColor
+import androidx.compose.ui.semantics.CollectionItemInfo
+import androidx.compose.ui.semantics.collectionItemInfo
+import androidx.compose.ui.text.input.ImeAction
+import com.kaiodelphino.margem.fold
+import com.kaiodelphino.margem.widgets.dashedBorder
 import androidx.compose.foundation.border
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Arrangement
@@ -48,6 +67,7 @@ import androidx.compose.ui.text.buildAnnotatedString
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextDecoration
 import androidx.compose.ui.text.withStyle
+import androidx.compose.ui.unit.Dp
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import com.kaiodelphino.margem.BudgetId
@@ -68,6 +88,7 @@ import com.kaiodelphino.margem.PlannedId
 import com.kaiodelphino.margem.R
 import com.kaiodelphino.margem.Repeats
 import com.kaiodelphino.margem.Suggestion
+import com.kaiodelphino.margem.TagRow
 import com.kaiodelphino.margem.TransactionDetail
 import com.kaiodelphino.margem.TransactionForm
 import com.kaiodelphino.margem.TransactionId
@@ -126,8 +147,8 @@ import kotlin.time.Clock
  * The form opens three ways:
  * - **Lançar** (Screen.Post, from InboxTags.ACCEPT): prefilled from the notice — total = Parsed.cents,
  *   bank text = Parsed.merchant, date and time = Parsed.date/time, alias = NoticeRow.alias — plus the
- *   suggestion (Db.suggestion of the parsed merchant, spec §2.5): its budget selected and its tags selected
- *   and suggested. A notice that looks like an ad opens with zero total and blank merchant.
+ *   suggestion (Db.suggestion of the parsed merchant, spec §2.5): its budget chosen and "sugerida", its tags chosen
+ *   and "sugerido". A notice that looks like an ad opens with zero total and blank merchant.
  * - **Editar** (Screen.Edit, from [ROW] or BudgetTags.LINE): the transaction as it is (Db.transaction):
  *   total, merchant, date, time, budget, installments, its tags selected (not suggested), alias of its
  *   merchant. A transaction from a notice shows the notice and the emendas against its Parsed.
@@ -135,7 +156,8 @@ import kotlin.time.Clock
  *   time of the system clock to the minute; no notice, no suggestion.
  *
  * Every input survives Activity recreation and process death (rememberSaveable): total, bank text,
- * alias, name, date, time, budget, installments, tags and their suggested/confirmed state.
+ * alias, name, date, time, budget and whether it is "sugerida", installments, tags and which are
+ * "sugerido", the open [TransactionTags.BUDGET_SHEET] and the text of both searches (D66).
  */
 object TransactionTags {
     // ---- Lançamentos (spec §7.4, book 10.5) ----
@@ -289,13 +311,52 @@ object TransactionTags {
     /** Present while date or time differ from the notice's Parsed; "$FORM_DATE_EMENDA.undo" puts both back. */
     const val FORM_DATE_EMENDA = "txForm.date.emenda"
 
-    /**
-     * Prefix: BUDGET + budget id: one option per budget (manual order), `selected` when chosen. Click
-     * selects it; exactly one or none is selected.
-     */
-    const val BUDGET = "txForm.budget."
+    // ---- Verba (spec §2.5, §7.3, book 8.12; D66) ----
+    // Margins: "margem " + marginText of BudgetMonth.remaining of the budget in the budget month of the
+    // form's date (Db.budgetsOverview(Db.monthOf(date), today, MANUAL)) — the month of [FORM_PREVIEW]. A
+    // budget with no limit row in that month (Db.budgetsOverview leaves it out) reads "sem cota" instead.
 
-    /** No budgets at all: "Crie uma verba antes de lançar." with "Nova verba" ([BUDGETS_NEW] opens it). */
+    /**
+     * The verba field, absent when there are no budgets ([BUDGETS_EMPTY]). Rubric "Verba"; with a budget
+     * chosen, its name and its margin ("Lazer", "margem R$ 34,00"; "margem R$ 12,00 além"; without a limit
+     * row in the month, "sem cota em setembro", the month by monthLong); with none,
+     * "Escolher a verba". A budget deleted while the form is open stops being chosen. stateDescription
+     * "sugerida" while the chosen budget is the suggestion's (Lançar, spec §2.5) and no budget was picked
+     * in [BUDGET_SHEET] since: it counts all the same. Click opens [BUDGET_SHEET].
+     */
+    const val FORM_BUDGET = "txForm.budget"
+
+    /**
+     * The sheet "Em qual verba entra?" (rubric "Verba"): [BUDGET_SEARCH], then one [BUDGET] row per budget
+     * (the form's budgets, manual order) whose name contains the search text, compared with `fold` (case
+     * and accents ignored), then [BUDGET_SHEET_NEW]. Back or a touch outside closes it, nothing changes.
+     */
+    const val BUDGET_SHEET = "txForm.budgetSheet"
+
+    /** "Nenhuma verba com “xyz”." (the trimmed search text): present while the search has text and no [BUDGET] row is shown. */
+    const val BUDGET_NONE = "txForm.budgetSheet.none"
+
+    /** "Buscar verba": the sheet's search input, always there, empty each time the sheet opens. */
+    const val BUDGET_SEARCH = "txForm.budgetSheet.search"
+
+    /**
+     * Prefix: BUDGET + budget id, in [BUDGET_SHEET]: the name and its margin ("R$ 212,40", "R$ 23,50 além";
+     * "sem cota" without a limit row in the month), `selected` for the chosen one (also when suggested). Click
+     * chooses it (no longer "sugerida") and closes the sheet; exactly one or none is chosen.
+     */
+    const val BUDGET = "txForm.budgetSheet.budget."
+
+    /**
+     * "Nova verba", last in [BUDGET_SHEET]: closes it and opens Screen.NewBudget. Back in the form, a budget
+     * created there is chosen (not "sugerida"): one with an id greater than every budget the form knew when
+     * this was tapped (budget ids only grow, D66). Coming back without creating one changes nothing.
+     */
+    const val BUDGET_SHEET_NEW = "txForm.budgetSheet.new"
+
+    /**
+     * No budgets at all: "Crie uma verba antes de lançar." with "Nova verba" ([BUDGETS_NEW] opens it; back
+     * in the form, the budget created there is chosen, as with [BUDGET_SHEET_NEW]).
+     */
     const val BUDGETS_EMPTY = "txForm.budgets.empty"
     const val BUDGETS_NEW = "txForm.budgets.new"
 
@@ -310,22 +371,54 @@ object TransactionTags {
      */
     const val INSTALLMENTS_PREVIEW = "txForm.installments.preview"
 
+    // ---- Marcadores (spec §2.5, §7.3, book 8.12; D66) ----
+    // Only the chosen tags are on the form; the others are reached through [TAG_SEARCH]. "Uses" is
+    // TagRow.uses (Db.tags). Text is compared with `fold` (case and accents ignored); a name made here is
+    // trim().lowercase(), like Db.createTag, and written only when the form is saved.
+
     /**
-     * Prefix: TAG + tag name ("txForm.tag.padaria"): one chip per existing tag (Db.tags) and per name
-     * suggested or added here, by name. `selected` when it counts. A suggested one (spec §2.5) is selected
-     * with stateDescription "sugerido" (dashed); click confirms it (selected, no stateDescription); click
-     * on a confirmed one unselects it; click on an unselected one selects it.
+     * Prefix: TAG + tag name ("txForm.tag.padaria"): one removable chip per chosen tag, in the order they
+     * were chosen (the suggestion's or the previsto's first, then the ones added here), all `selected`
+     * (they count). A suggested one (spec §2.5) has stateDescription "sugerido" (dashed). Click on any
+     * chip, suggested or not, removes it from the form.
      */
     const val TAG = "txForm.tag."
 
     /**
-     * "+ novo": shows [TAG_INPUT]. Text typed there and confirmed with [TAG_ADD] (or the keyboard's done)
-     * becomes a selected chip, trimmed and lowercased; an existing name selects that chip; blank does
-     * nothing. The tag is written only when the form is saved. The input closes after adding.
+     * "Buscar ou criar marcador", under the chips. Focused with no text: the [TAG_SHORTCUT]s. With text:
+     * the [TAG_RESULT]s, [TAG_NONE] and [TAG_CREATE], in a list that scrolls on its own and fits above
+     * the keyboard (spec §7.3: nothing behind it). The keyboard's done: marks the tag
+     * whose name is the clean text, else creates it like [TAG_CREATE]; blank does nothing; then the text
+     * empties and the focus stays. A name already chosen is never added twice.
      */
-    const val TAG_NEW = "txForm.tag.new"
-    const val TAG_INPUT = "txForm.tag.input"
-    const val TAG_ADD = "txForm.tag.add"
+    const val TAG_SEARCH = "txForm.tagSearch"
+
+    /**
+     * Prefix: TAG_SHORTCUT + tag name, under the rubric "Mais usados", while [TAG_SEARCH] is focused and
+     * empty: the 8 most used tags (uses desc, then name) among the ones not chosen; none when no tag is
+     * left. Click chooses it (not "sugerido"); focus stays.
+     */
+    const val TAG_SHORTCUT = "txForm.tagSearch.shortcut."
+
+    /**
+     * Prefix: TAG_RESULT + tag name, while [TAG_SEARCH] has non-blank text: every tag (Db.tags and the
+     * names chosen here) whose name contains the trimmed text, the ones starting with it first, then uses
+     * desc, then name; no limit (the list scrolls). Each reads the name and "33 lançamentos" ("1
+     * lançamento"; nothing for a name made here and not saved yet). A chosen one is `selected`, with a ✓
+     * and no other text, and a click on it does nothing; a click on another chooses it (not "sugerido"),
+     * empties the text, focus stays.
+     */
+    const val TAG_RESULT = "txForm.tagSearch.result."
+
+    /**
+     * "Criar “festa junina”" (the clean text) and "novo, só é gravado ao lançar", last under the results,
+     * while the clean text is not blank and is neither the name of an existing tag nor of a chosen one.
+     * Click adds it as a chosen chip (not "sugerido"), empties the text, focus stays.
+     */
+    const val TAG_CREATE = "txForm.tagSearch.create"
+
+    /** "Nenhum marcador com “pizzaria”." (the clean text): present while the search has text and no [TAG_RESULT] is. */
+    const val TAG_NONE = "txForm.tagSearch.none"
 
     /**
      * "Lazer: margem R$ 34,00 → R$ 12,00 além" (Db.previewAccept for the chosen budget, date, total and
@@ -343,6 +436,7 @@ object TransactionTags {
     /**
      * Lançar: "Lançar R$ 46,00" (money of the total); Novo lançamento the same; Editar: "Salvar".
      * Disabled while [FORM_MISSING] is shown; a second click while saving does nothing.
+     * Absent, with [FORM_DISMISS], while the keyboard is open over [TAG_SEARCH] (spec §7.3).
      * - Lançar: Db.accept; back to the Pauta with the snack "Lançado em Lazer. Margem: R$ 12,00 além." (the
      *   preview's after) and "Desfazer" (deletes it: the notice is pending again). Refused: InboxTags.GONE_TEXT, back.
      * - Novo lançamento: Db.addManual; back to Lançamentos with the same snack and "Desfazer".
@@ -745,7 +839,7 @@ private const val GONE_TX = "Este lançamento não existe mais."
 
 /** What the form reads once and again on every write: the notice or transaction, budgets, tags, week start. */
 private class FormData(
-    val notice: NoticeRow, val detail: TransactionDetail, val budgets: List<BudgetSummary>, val tags: List<String>,
+    val notice: NoticeRow, val detail: TransactionDetail, val budgets: List<BudgetSummary>, val tags: List<TagRow>,
     val weekStart: DayOfWeek, val suggestion: Suggestion, val planned: List<Planned>,
 )
 
@@ -784,7 +878,7 @@ private fun TxForm(
         val n = if (isPost) it.notice(notice) else NoticeRow()
         val d = if (isEdit) it.transaction(edit) else TransactionDetail()
         FormData(
-            n, d, it.budgetsOverview(month, today, BudgetOrder.MANUAL), it.tags().map { t -> t.name }, it.settings().weekStart,
+            n, d, it.budgetsOverview(month, today, BudgetOrder.MANUAL), it.tags(), it.settings().weekStart,
             if (isPost) it.suggestion(n.parsed.merchant) else Suggestion(), if (isEdit) emptyList() else it.planned(today),
         )
     }
@@ -800,8 +894,6 @@ private fun TxForm(
     var budget by rememberSaveable { mutableLongStateOf(0L) }
     var installments by rememberSaveable { mutableIntStateOf(1) }
     var chips by rememberSaveable { mutableStateOf(ArrayList<String>()) }
-    var addingTag by rememberSaveable { mutableStateOf(false) }
-    var newTag by rememberSaveable { mutableStateOf("") }
     var picking by rememberSaveable { mutableStateOf(false) }
     var askDelete by rememberSaveable { mutableStateOf(false) }
     var busy by remember { mutableStateOf(false) }
@@ -813,12 +905,23 @@ private fun TxForm(
     var preChips by rememberSaveable { mutableStateOf(ArrayList<String>()) }
     var preCaption by rememberSaveable { mutableStateOf("") }
     var preCaptionOpen by rememberSaveable { mutableStateOf(false) }
+    var preSuggested by rememberSaveable { mutableStateOf(false) }
+    // Book 8.12 (D66): the suggestion's budget until one is picked; the sheet and both searches.
+    var suggested by rememberSaveable { mutableStateOf(false) }
+    var sheet by rememberSaveable { mutableStateOf(false) }
+    var budgetQuery by rememberSaveable { mutableStateOf("") }
+    var tagQuery by rememberSaveable { mutableStateOf("") }
+    var tagFocused by remember { mutableStateOf(false) }
+    // Nova verba (D66): the greatest budget id known when it was tapped; -1 = not waiting for one.
+    var knownBudget by rememberSaveable { mutableLongStateOf(-1L) }
 
     fun link(p: Planned) {
         preBudget = budget
         preChips = chips
         preCaption = caption
         preCaptionOpen = captionOpen
+        preSuggested = suggested
+        suggested = false
         if (data?.budgets?.any { it.id == p.budget } == true) budget = p.budget.v
         chips = chipList(p.tags.associateWith { 'C' })
         caption = cutCaption(p.name)
@@ -832,6 +935,7 @@ private fun TxForm(
         chips = preChips
         caption = preCaption
         captionOpen = preCaptionOpen
+        suggested = preSuggested
         linked = 0L
     }
 
@@ -851,7 +955,10 @@ private fun TxForm(
                 date = n.parsed.date.toString()
                 hour = time(n.parsed.time)
                 val sug = data.suggestion
-                if (data.budgets.any { it.id == sug.budget }) budget = sug.budget.v
+                if (data.budgets.any { it.id == sug.budget }) {
+                    budget = sug.budget.v
+                    suggested = true
+                }
                 chips = chipList(sug.tags.associateWith { 'S' })
             }
             isEdit -> {
@@ -914,6 +1021,25 @@ private fun TxForm(
     val source = if (isPost) data?.notice else data?.detail?.notice?.takeIf { it.id.v != 0L }
     val parsed = source?.parsed
     val budgetName = data?.budgets?.firstOrNull { it.id.v == budget }?.name.orEmpty()
+    // Margins of the month of the form's date, the preview's month (D66); a budget without a limit row there has none.
+    val monthMargins = query(db, date, today) { d ->
+        val m = d.monthOf(day)
+        m to d.budgetsOverview(m, today, BudgetOrder.MANUAL).associate { it.id.v to it.month.remaining }
+    }
+    val margins = monthMargins?.second.orEmpty()
+    // "sem cota em setembro" (E1.1): the name of the form's budget month.
+    val marginMonth = monthMargins?.first?.let { monthLong(it.month) }.orEmpty()
+    // The height the form's scroll shows, so the marcador results fit above the keyboard (E1.6).
+    var room by remember { mutableIntStateOf(0) }
+
+    // Back from Nova verba: the budget created there is chosen (ids only grow).
+    LaunchedEffect(data, knownBudget) {
+        val created = data?.budgets?.filter { it.id.v > knownBudget }?.maxByOrNull { it.id.v }
+        if (knownBudget < 0L || created == null) return@LaunchedEffect
+        budget = created.id.v
+        suggested = false
+        knownBudget = -1L
+    }
     val preview = if (budget != 0L && total > 0 && loaded) query(db, budget, date, total, installments, edit, today) {
         it.previewAccept(BudgetId(budget), day, Cents(total), installments, today, edit)
     } else null
@@ -966,19 +1092,24 @@ private fun TxForm(
         }
     }
 
-    fun tapChip(name: String) {
-        val st = states[name] ?: 'O'
-        // Suggested → confirmed, off → confirmed, confirmed → off (spec §2.5).
-        chips = chipList(states + (name to if (st == 'C') 'O' else 'C'))
+    fun newBudget() {
+        knownBudget = data?.budgets?.maxOfOrNull { it.id.v } ?: 0L
+        sheet = false
+        go(Screen.NewBudget)
     }
 
-    fun addTag() {
-        val name = newTag.trim().lowercase()
-        if (name.isEmpty()) return
-        chips = chipList(states + (name to 'C'))
-        newTag = ""
-        addingTag = false
+    // Spec §2.5, §7.3: any chosen chip, suggested or not, goes with one touch; a name is never chosen twice.
+    // They read `chips`, not `states`: TagPicker may skip recomposing and keep an older reference to them.
+    fun removeTag(name: String) {
+        chips = chipList(chipsOf(chips) - name)
     }
+
+    fun chooseTag(name: String) {
+        val now = chipsOf(chips)
+        if (name.isNotEmpty() && name !in now) chips = chipList(now + (name to 'C'))
+        tagQuery = ""
+    }
+
 
     Column(Modifier.fillMaxSize()) {
         TopBar(
@@ -991,7 +1122,7 @@ private fun TxForm(
             Modifier.testTag(TransactionTags.FORM_TITLE).semantics(mergeDescendants = true) {}, onBack = back, close = true,
         )
         if (data == null || !loaded) return@Column
-        Column(Modifier.weight(1f).verticalScroll(rememberScrollState()).padding(start = Margem.space.page, end = Margem.space.page, bottom = 24.dp)) {
+        Column(Modifier.weight(1f).onSizeChanged { room = it.height }.verticalScroll(rememberScrollState()).padding(start = Margem.space.page, end = Margem.space.page, bottom = 24.dp)) {
             if (source != null) NoticeQuote(source, Modifier.testTag(TransactionTags.FORM_NOTICE).semantics(mergeDescendants = true) {})
 
             @Composable
@@ -1108,9 +1239,11 @@ private fun TxForm(
             Text("VERBA", sans(11f, 600, 14f, 0.12f), Modifier.padding(top = 18.dp), c.inkTertiary)
             if (data.budgets.isEmpty()) Column(Modifier.testTag(TransactionTags.BUDGETS_EMPTY).padding(top = 6.dp)) {
                 Text("Crie uma verba antes de lançar.", Margem.type.body, color = c.inkSecondary)
-                Button("Nova verba", { go(Screen.NewBudget) }, Modifier.testTag(TransactionTags.BUDGETS_NEW), kind = ButtonKind.TEXT)
-            } else FlowRow(Modifier.padding(top = 6.dp), horizontalArrangement = Arrangement.spacedBy(8.dp)) {
-                for (b in data.budgets) BudgetOption(b.name, b.id.v == budget, Modifier.testTag(TransactionTags.BUDGET + b.id.v)) { budget = b.id.v }
+                Button("Nova verba", ::newBudget, Modifier.testTag(TransactionTags.BUDGETS_NEW), kind = ButtonKind.TEXT)
+            } else BudgetField(budgetName, margins[budget], marginMonth, suggested) {
+                budgetQuery = ""
+                knownBudget = -1L
+                sheet = true
             }
 
             Text("PARCELAS", sans(11f, 600, 14f, 0.12f), Modifier.padding(top = 18.dp), c.inkTertiary)
@@ -1127,24 +1260,7 @@ private fun TxForm(
             }
 
             Text("MARCADORES", sans(11f, 600, 14f, 0.12f), Modifier.padding(top = 18.dp), c.inkTertiary)
-            FlowRow(Modifier.padding(top = 2.dp), horizontalArrangement = Arrangement.spacedBy(8.dp)) {
-                for (name in (data.tags + states.keys).distinct().sorted()) {
-                    val st = states[name] ?: 'O'
-                    TagChip(
-                        name,
-                        Modifier.testTag(TransactionTags.TAG + name).semantics {
-                            selected = st != 'O'
-                            if (st == 'S') stateDescription = "sugerido"
-                        },
-                        state = when (st) { 'S' -> ChipState.SUGGESTED; 'C' -> ChipState.SELECTED; else -> ChipState.NORMAL },
-                    ) { tapChip(name) }
-                }
-                if (!addingTag) TagChip("novo", Modifier.testTag(TransactionTags.TAG_NEW), state = ChipState.ADD) { addingTag = true }
-            }
-            if (addingTag) Row(verticalAlignment = Alignment.CenterVertically) {
-                Field(newTag, { newTag = it }, "Novo marcador", Modifier.weight(1f), placeholder = "em minúsculas", tag = TransactionTags.TAG_INPUT, onDone = ::addTag)
-                Button("Adicionar", ::addTag, Modifier.testTag(TransactionTags.TAG_ADD), kind = ButtonKind.TEXT)
-            }
+            TagPicker(states, data.tags, tagQuery, { tagQuery = it }, { tagFocused = it }, ::chooseTag, ::removeTag, with(LocalDensity.current) { room.toDp() })
 
             if (preview != null && preview.month != NO_MONTH && !ahead && !isEditPlanned) Text(
                 "$budgetName: margem ${marginText(preview.before)} → ${marginText(preview.after)}", sans(15f, 500, 20f, tabular = true),
@@ -1172,7 +1288,8 @@ private fun TxForm(
                 Modifier.padding(top = 16.dp).testTag(TransactionTags.FORM_AS_REFUND), kind = ButtonKind.TEXT,
             )
         }
-        Row(Modifier.fillMaxWidth().padding(horizontal = Margem.space.page, vertical = 12.dp), horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+        // Spec §7.3: with the keyboard open over the marcador search, the footer stays behind it.
+        if (!(tagFocused && WindowInsets.isImeVisible)) Row(Modifier.fillMaxWidth().padding(horizontal = Margem.space.page, vertical = 12.dp), horizontalArrangement = Arrangement.spacedBy(8.dp)) {
             if (isPost) Button("Riscar", {
                 if (!busy) {
                     busy = true
@@ -1197,6 +1314,11 @@ private fun TxForm(
         date = d.toString()
         hour = time(t)
     }, { picking = false }, future = isManual)
+    if (sheet && data != null) BudgetSheet(data.budgets, margins, budget, budgetQuery, { budgetQuery = it }, {
+        budget = it.v
+        suggested = false
+        sheet = false
+    }, ::newBudget) { sheet = false }
     if (linking && data != null) LinkSheet(data.planned, data.notice, day, Cents(total), ::link) { linking = false }
     if (askDelete && data != null) {
         val r = data.detail.row
@@ -1213,6 +1335,204 @@ private fun TxForm(
                 back()
             }
         }, { askDelete = false }, tag = TransactionTags.DELETE_DIALOG)
+    }
+}
+
+/** "margem R$ 34,00" / "margem R$ 12,00 além"; "sem cota em setembro" without a limit row in the month (E1.1). */
+private fun marginLine(m: Cents?, month: String): String = if (m == null) "sem cota em $month" else "margem ${marginText(m)}"
+
+/** Book 8.12: the verba field — name and margin, or "Escolher a verba"; dashed while suggested. [TransactionTags.FORM_BUDGET]. */
+@Composable
+private fun BudgetField(name: String, margin: Cents?, month: String, suggested: Boolean, onClick: () -> Unit) {
+    val c = Margem.colors
+    Row(
+        Modifier.padding(top = 2.dp).fillMaxWidth().heightIn(min = 48.dp).testTag(TransactionTags.FORM_BUDGET)
+            .semantics(mergeDescendants = true) { if (suggested && name.isNotEmpty()) stateDescription = "sugerida" }
+            .clickable(role = Role.Button, onClick = onClick)
+            .drawBehind { drawLine(c.ruleStrong, Offset(0f, size.height - 0.5f), Offset(size.width, size.height - 0.5f), 1.dp.toPx()) },
+        verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(9.dp),
+    ) {
+        if (name.isEmpty()) Text("Escolher a verba", serif(19, 400, 24, italic = true), Modifier.weight(1f), c.inkTertiary)
+        else {
+            Text(
+                name, serif(19, 400, 24), (if (suggested) Modifier.drawBehind { dashedBorder(c.ruleStrong, 3.dp) }.padding(horizontal = 8.dp, vertical = 1.dp) else Modifier),
+                if (suggested) c.inkSecondary else c.ink, maxLines = 1,
+            )
+            Spacer(Modifier.weight(1f))
+            Text(marginLine(margin, month), sans(13.5f, 400, 18f, tabular = true), color = if ((margin?.v ?: 0L) < 0L) c.overrun else c.inkTertiary)
+        }
+        Icon(R.drawable.i_avancar, tint = c.inkTertiary, size = 20.dp)
+    }
+}
+
+/** Book 8.12: a search line — lupa, the text, the rule under it; [onDone] on the keyboard's done keeps the focus. */
+@Composable
+private fun SearchLine(
+    value: String, onChange: (String) -> Unit, placeholder: String, tag: String, modifier: Modifier = Modifier, onDone: (() -> Unit)? = null,
+) {
+    val c = Margem.colors
+    val interaction = remember { MutableInteractionSource() }
+    val focused by interaction.collectIsFocusedAsState()
+    BasicTextField(
+        value, onChange, modifier.fillMaxWidth().testTag(tag), singleLine = true, interactionSource = interaction,
+        textStyle = sans(16f, 400, 20f).copy(color = c.ink), cursorBrush = SolidColor(c.info),
+        keyboardOptions = KeyboardOptions(imeAction = ImeAction.Done),
+        keyboardActions = if (onDone == null) KeyboardActions.Default else KeyboardActions(onDone = { onDone() }),
+        decorationBox = { inner ->
+            Row(
+                Modifier.fillMaxWidth().heightIn(min = 48.dp).drawBehind {
+                    val w = (if (focused) 2 else 1).dp.toPx()
+                    drawLine(if (focused) c.ink else c.ruleStrong, Offset(0f, size.height - w / 2), Offset(size.width, size.height - w / 2), w)
+                },
+                verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(10.dp),
+            ) {
+                Icon(R.drawable.i_lupa, tint = c.inkTertiary, size = 20.dp)
+                Box(Modifier.weight(1f)) {
+                    if (value.isEmpty()) Text(placeholder, sans(16f, 400, 20f), color = c.inkTertiary)
+                    inner()
+                }
+            }
+        },
+    )
+}
+
+/** Book 8.12: "Em qual verba entra?" [TransactionTags.BUDGET_SHEET]. */
+@Composable
+private fun BudgetSheet(
+    budgets: List<BudgetSummary>, margins: Map<Long, Cents>, chosen: Long, query: String, onQuery: (String) -> Unit,
+    pick: (BudgetId) -> Unit, new: () -> Unit, close: () -> Unit,
+) {
+    val c = Margem.colors
+    val q = fold(query.trim())
+    BottomSheet(close, Modifier.testTag(TransactionTags.BUDGET_SHEET)) {
+        Text("VERBA", sans(11f, 600, 14f, 0.12f), color = c.inkTertiary)
+        Text("Em qual verba entra?", Margem.type.title, Modifier.padding(top = 2.dp, bottom = 6.dp))
+        SearchLine(query, onQuery, "Buscar verba", TransactionTags.BUDGET_SEARCH)
+        val shown = budgets.filter { fold(it.name).contains(q) }
+        if (shown.isEmpty() && q.isNotEmpty()) Text(
+            "Nenhuma verba com “${query.trim()}”.", sans(13.5f, 400, 18f),
+            Modifier.padding(vertical = 14.dp).testTag(TransactionTags.BUDGET_NONE), c.inkTertiary,
+        )
+        for ((i, b) in shown.withIndex()) {
+            val on = b.id.v == chosen
+            val m = margins[b.id.v]
+            Row(
+                Modifier.fillMaxWidth().heightIn(min = 56.dp).testTag(TransactionTags.BUDGET + b.id.v)
+                    .semantics(mergeDescendants = true) {
+                        selected = on
+                        collectionItemInfo = CollectionItemInfo(i, 1, 0, 1)
+                    }
+                    .clickable(role = Role.RadioButton) { pick(b.id) }
+                    .background(if (on) c.surfaceSunken else Color.Transparent)
+                    .drawBehind { drawLine(c.rule, Offset(0f, size.height - 0.5f), Offset(size.width, size.height - 0.5f), 1.dp.toPx()) }
+                    .padding(horizontal = 4.dp),
+                verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(12.dp),
+            ) {
+                if (on) Icon(R.drawable.i_lancar, tint = c.ink, size = 20.dp) else Spacer(Modifier.size(20.dp))
+                Text(b.name, serif(19, 500, 24), Modifier.weight(1f), maxLines = 1)
+                Text(if (m == null) "sem cota" else marginText(m), sans(14f, 400, 18f, tabular = true), color = if ((m?.v ?: 0L) < 0L) c.overrun else c.inkSecondary)
+            }
+        }
+        Row(
+            Modifier.fillMaxWidth().heightIn(min = 56.dp).testTag(TransactionTags.BUDGET_SHEET_NEW).semantics(mergeDescendants = true) {}
+                .clickable(role = Role.Button, onClick = new).padding(horizontal = 4.dp),
+            verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(12.dp),
+        ) {
+            Icon(R.drawable.i_mais, tint = c.info, size = 20.dp)
+            Text("Nova verba", sans(15f, 600, 20f), color = c.info)
+        }
+    }
+}
+
+/** "33 lançamentos" / "1 lançamento". */
+private fun usesText(n: Int): String = if (n == 1) "1 lançamento" else "$n lançamentos"
+
+/**
+ * Book 8.12: the chosen chips and "Buscar ou criar marcador" with the shortcuts, results and Criar
+ * under it (spec §7.3). [TransactionTags.TAG_SEARCH].
+ */
+@OptIn(ExperimentalLayoutApi::class, ExperimentalFoundationApi::class)
+@Composable
+private fun TagPicker(
+    chips: Map<String, Char>, tags: List<TagRow>, query: String, onQuery: (String) -> Unit, onFocus: (Boolean) -> Unit,
+    choose: (String) -> Unit, remove: (String) -> Unit, room: Dp,
+) {
+    val c = Margem.colors
+    var focused by remember { mutableStateOf(false) }
+    val bring = remember { BringIntoViewRequester() }
+    val clean = query.trim().lowercase()
+    val q = fold(query.trim())
+    val byUse = compareByDescending<TagRow> { it.uses }.thenBy { it.name }
+    // E1.2: the chosen ones are results too (with a ✓); a name made here and not saved has uses −1 (no count).
+    val known = tags + chips.keys.filter { n -> tags.none { it.name == n } }.map { TagRow(name = it, uses = -1) }
+    val matches = if (clean.isEmpty()) emptyList() else known.filter { fold(it.name).contains(q) }
+        .sortedWith(compareBy<TagRow> { if (fold(it.name).startsWith(q)) 0 else 1 }.then(byUse))
+    val create = clean.isNotEmpty() && tags.none { it.name == clean } && clean !in chips
+    LaunchedEffect(query, focused) { if (focused) bring.bringIntoView() }
+
+    if (chips.isNotEmpty()) FlowRow(Modifier.padding(top = 2.dp), horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+        for ((name, st) in chips) TagChip(
+            name,
+            Modifier.testTag(TransactionTags.TAG + name).semantics {
+                selected = true
+                if (st == 'S') stateDescription = "sugerido"
+            },
+            state = if (st == 'S') ChipState.SUGGESTED else ChipState.SELECTED, removable = true,
+        ) { remove(name) }
+    }
+    // The search and what hangs from it are brought into view together, sized to the room above the keyboard.
+    Column(Modifier.bringIntoViewRequester(bring)) {
+        SearchLine(
+            query, onQuery, "Buscar ou criar marcador", TransactionTags.TAG_SEARCH,
+            Modifier.onFocusChanged {
+                focused = it.isFocused
+                onFocus(it.isFocused)
+            },
+        ) { choose(tags.firstOrNull { it.name == clean }?.name ?: clean) }
+
+        if (focused && clean.isEmpty()) {
+            val shortcuts = tags.filter { it.name !in chips }.sortedWith(byUse).take(8)
+            if (shortcuts.isNotEmpty()) {
+                Text("MAIS USADOS", sans(11f, 600, 14f, 0.12f), Modifier.padding(top = 10.dp), c.inkTertiary)
+                FlowRow(Modifier.padding(top = 2.dp), horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+                    for (t in shortcuts) TagChip(t.name, Modifier.testTag(TransactionTags.TAG_SHORTCUT + t.name)) { choose(t.name) }
+                }
+            }
+        }
+        if (clean.isNotEmpty()) Column(
+            Modifier.padding(top = 6.dp).fillMaxWidth().heightIn(max = (room - 62.dp).coerceAtLeast(96.dp))
+                .background(c.surface, RoundedCornerShape(6.dp)).border(1.dp, c.rule, RoundedCornerShape(6.dp))
+                .verticalScroll(rememberScrollState()),
+        ) {
+            if (matches.isEmpty()) Text(
+                "Nenhum marcador com “$clean”.", sans(13.5f, 400, 18f),
+                Modifier.testTag(TransactionTags.TAG_NONE).padding(horizontal = 14.dp, vertical = 11.dp), c.inkTertiary,
+            )
+            for (t in matches) {
+                val on = t.name in chips
+                Row(
+                    Modifier.fillMaxWidth().heightIn(min = 48.dp).testTag(TransactionTags.TAG_RESULT + t.name)
+                        .semantics(mergeDescendants = true) { selected = on }
+                        .clickable(role = Role.Button) { if (!on) choose(t.name) }
+                        .drawBehind { drawLine(c.rule, Offset(0f, size.height - 0.5f), Offset(size.width, size.height - 0.5f), 1.dp.toPx()) }
+                        .padding(horizontal = 14.dp),
+                    verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(10.dp),
+                ) {
+                    if (on) Icon(R.drawable.i_lancar, tint = c.ink, size = 18.dp)
+                    Text(t.name, sans(16f, 500, 20f), Modifier.weight(1f), if (on) c.ink else c.inkSecondary, maxLines = 1)
+                    if (t.uses >= 0) Text(usesText(t.uses), sans(13f, 400, 16f, tabular = true), color = c.inkTertiary)
+                }
+            }
+            if (create) Row(
+                Modifier.fillMaxWidth().heightIn(min = 48.dp).testTag(TransactionTags.TAG_CREATE).semantics(mergeDescendants = true) {}
+                    .clickable(role = Role.Button) { choose(clean) }.padding(horizontal = 14.dp),
+                verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(10.dp),
+            ) {
+                Icon(R.drawable.i_mais, tint = c.info, size = 20.dp)
+                Text("Criar “$clean”", sans(16f, 600, 20f), Modifier.weight(1f), c.info, maxLines = 1)
+                Text("novo, só é gravado ao lançar", sans(13f, 400, 16f), color = c.inkTertiary)
+            }
+        }
     }
 }
 
