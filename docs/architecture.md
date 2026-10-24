@@ -333,7 +333,7 @@ Dependências:
 - **Teclado que compõe**: `typeComposing` (`androidApp/src/test`) digita pelo `InputConnection` da view como o FlorisBoard (marca o número como palavra em composição e a troca a cada tecla, pedindo a posição do cursor); o shadow `ActiveKeyboard` faz o Robolectric ter um teclado ativo. Cobre cota (Nova e Editar verba), passo da semana, valor do lançamento e hora.
 - **Modelo** (D47): `ModelTest`, `Db` comparado a um modelo em memória a cada passo.
 - **Mutação** (D48, `make mutation`, fora do `make check` desde 2026-10-23: levava 37 min e caía com `PitError`; Q2, decisão do usuário): PIT no `jvm` com os mutadores padrão e o operador de SQL de `tools/pit-sql`; relatório em `shared/build/reports/pitest/index.html`. Cai abaixo do limite → o `make check` falha: ou o teste novo mata o mutante pela API pública, ou o mutante é equivalente e isso se diz no commit. Metade dos núcleos, unidades de 8 mutantes, `timeoutFactor` 3 e `timeoutConst` 30 s: um teste mais lento com a máquina ocupada não vira "morto por timeout" e o placar não oscila.
-- **Volume** (D49): `VolumeTest`, ~5 anos de dados, teto de tempo folgado.
+- **Volume** (D49): `VolumeTest`, ~5 anos de dados, teto de tempo folgado. Previsto (2026-10-24): `planned(today)` não lê a Pauta, com ou sem previsto ligado (menos de ¼ do `pending()`); com 200 previstos e 24 meses de ocorrências lançadas, `pending()` e `planned(today)` levam no máximo o dobro do mesmo banco sem esse histórico (mediana de 5).
 - **Quando rodar**: `make test` durante o desenvolvimento; `make check` (testes, iOS, debug) ao terminar uma feature ou implementação; `make mutation` à parte, quando o `shared` muda.
 - O alvo `iosSimulatorArm64Test` existe, mas fica fora do loop da v1.
 
