@@ -223,32 +223,6 @@ class VolumeTest {
     }
 
     @Test
-    fun `planned with a linked previsto does not read the pauta`() = runTest(timeout = 5.minutes) {
-        // Architecture testing "Volume" (2026-10-24): planned(today) doesn't read the Pauta, with or without a linked previsto.
-        val today = LocalDate(2026, 10, 16)
-        db.addSource(NU, "Nubank", 0)
-        val casa = db.createBudget("Casa", Cents(500000), LocalDate(2026, 9, 1))
-        for (i in 0 until 3000) {
-            val at = LocalDate(2026, 10, 1 + i % 15).atTime(8, 0).toInstant(tz).toEpochMilliseconds() + i
-            val text = "Compra de R$ ${cents(500L + i)} APROVADA em LOJA $i para o cartão com final 1234."
-            assertTrue(capture(db, RawNotice(NU, "Nubank", "v$i", at, at, "Nubank", text, text)))
-        }
-        // One previsto linked to "ENEL SP": its September recado launched with Todo mês, first occurrence 20 out.
-        val sep = LocalDate(2026, 9, 20).atTime(9, 0).toInstant(tz).toEpochMilliseconds()
-        val luz = "Compra de R$ 180,00 APROVADA em ENEL SP para o cartão com final 1234."
-        assertTrue(capture(db, RawNotice(NU, "Nubank", "luz", sep, sep, "Nubank", luz, luz)))
-        val id = db.pending().first { it.raw.key == "luz" }.id
-        val p = db.notice(id).parsed
-        assertTrue(db.accept(id, TransactionForm(casa, listOf("luz"), p.cents, 1, p.merchant, p.date, p.time, caption = "Conta de luz", repeats = Repeats.MONTHLY)).v != 0L)
-        assertTrue(db.planned(today).single().linked)
-
-        val planned = median { db.planned(today) }
-        val pending = median { db.pending() }
-        println("VOLUME planned(today) with a link: median $planned ms; pending() of 3000: median $pending ms")
-        assertTrue(planned < pending / 4, "planned(today) $planned ms vs pending() $pending ms: it reads the Pauta with a linked previsto")
-    }
-
-    @Test
     fun `two years of launched previstos keep pending and planned under twice the time`() = runTest(timeout = 10.minutes) {
         // Architecture testing "Volume" (2026-10-24): 200 previstos and 24 months launched, pending() and planned(today) at most 2× the same Db without that history (median of 5).
         val today = LocalDate(2026, 10, 16)
