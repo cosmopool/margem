@@ -15,8 +15,12 @@ import kotlinx.datetime.LocalTime
 import kotlinx.datetime.TimeZone
 import kotlinx.datetime.YearMonth
 import kotlinx.datetime.atTime
+import kotlinx.datetime.minusMonth
+import kotlinx.datetime.onDay
 import kotlinx.datetime.plus
+import kotlinx.datetime.plusMonth
 import kotlinx.datetime.toInstant
+import kotlinx.datetime.yearMonth
 import kotlinx.io.files.Path
 import kotlinx.io.files.SystemFileSystem
 import kotlinx.io.files.SystemTemporaryDirectory
@@ -209,6 +213,119 @@ class VolumeTest {
         val pending = median { db.pending() }
         println("VOLUME planned(today) without a link: median $planned ms; pending() of 3000: median $pending ms")
         assertTrue(planned < pending / 4, "planned(today) $planned ms vs pending() $pending ms: it reads the Pauta with no linked previsto")
+    }
+
+    /** Median of 5 runs of [read], after 2 warm-up runs, in ms. */
+    private suspend fun median(read: suspend () -> Unit): Double {
+        val clock = TimeSource.Monotonic
+        repeat(2) { read() }
+        return List(5) { val m = clock.markNow(); read(); m.elapsedNow().inWholeMicroseconds / 1000.0 }.sorted()[2]
+    }
+
+    @Test
+    fun `planned with a linked previsto does not read the pauta`() = runTest(timeout = 5.minutes) {
+        // Architecture testing "Volume" (2026-10-24): planned(today) doesn't read the Pauta, with or without a linked previsto.
+        val today = LocalDate(2026, 10, 16)
+        db.addSource(NU, "Nubank", 0)
+        val casa = db.createBudget("Casa", Cents(500000), LocalDate(2026, 9, 1))
+        for (i in 0 until 3000) {
+            val at = LocalDate(2026, 10, 1 + i % 15).atTime(8, 0).toInstant(tz).toEpochMilliseconds() + i
+            val text = "Compra de R$ ${cents(500L + i)} APROVADA em LOJA $i para o cartão com final 1234."
+            assertTrue(capture(db, RawNotice(NU, "Nubank", "v$i", at, at, "Nubank", text, text)))
+        }
+        // One previsto linked to "ENEL SP": its September recado launched with Todo mês, first occurrence 20 out.
+        val sep = LocalDate(2026, 9, 20).atTime(9, 0).toInstant(tz).toEpochMilliseconds()
+        val luz = "Compra de R$ 180,00 APROVADA em ENEL SP para o cartão com final 1234."
+        assertTrue(capture(db, RawNotice(NU, "Nubank", "luz", sep, sep, "Nubank", luz, luz)))
+        val id = db.pending().first { it.raw.key == "luz" }.id
+        val p = db.notice(id).parsed
+        assertTrue(db.accept(id, TransactionForm(casa, listOf("luz"), p.cents, 1, p.merchant, p.date, p.time, caption = "Conta de luz", repeats = Repeats.MONTHLY)).v != 0L)
+        assertTrue(db.planned(today).single().linked)
+
+        val planned = median { db.planned(today) }
+        val pending = median { db.pending() }
+        println("VOLUME planned(today) with a link: median $planned ms; pending() of 3000: median $pending ms")
+        assertTrue(planned < pending / 4, "planned(today) $planned ms vs pending() $pending ms: it reads the Pauta with a linked previsto")
+    }
+
+    @Test
+    fun `two years of launched previstos keep pending and planned under twice the time`() = runTest(timeout = 10.minutes) {
+        // Architecture testing "Volume" (2026-10-24): 200 previstos and 24 months launched, pending() and planned(today) at most 2× the same Db without that history (median of 5).
+        val today = LocalDate(2026, 10, 16)
+        val freshPath = Path(SystemTemporaryDirectory, "margem-volume-fresh-${Random.nextLong().toULong()}.db").toString()
+        val fresh = Db(BundledSQLiteDriver(), freshPath, timeZone = tz)
+        var key = 0
+
+        /** Captures a Nubank purchase of [merchant] on [on] and returns its id; [only] = it is the one pending recado. */
+        suspend fun Db.purchase(on: LocalDate, merchant: String, value: Long, only: Boolean): NoticeId {
+            val at = on.atTime(9, 0).toInstant(tz).toEpochMilliseconds() + key
+            val k = "h${key++}"
+            val text = "Compra de R$ ${cents(value)} APROVADA em $merchant para o cartão com final 1234."
+            assertTrue(capture(this, RawNotice(NU, "Nubank", k, at, at, "Nubank", text, text)))
+            return if (only) pending().single().id else pending().first { it.raw.key == k }.id
+        }
+
+        /** 200 Todo mês previstos, each linked to SERVICO i, day 1 + i % 28, from the recado of the month before [first]. */
+        suspend fun Db.previstos(first: YearMonth): BudgetId {
+            addSource(NU, "Nubank", 0)
+            val casa = createBudget("Casa", Cents(5_000_000), first.minusMonth().onDay(1))
+            for (i in 0 until 200) {
+                val r = purchase(first.minusMonth().onDay(1 + i % 28), "SERVICO $i", 5000L + i, only = true)
+                val p = notice(r).parsed
+                assertTrue(accept(r, TransactionForm(casa, listOf("conta"), p.cents, 1, p.merchant, p.date, p.time, caption = "Conta $i", repeats = Repeats.MONTHLY)).v != 0L)
+            }
+            return casa
+        }
+
+        /** The same pending recados in both: 1000 of stores and one October recado of each of 50 previstos. */
+        suspend fun Db.pauta() {
+            for (i in 0 until 1000) purchase(LocalDate(2026, 10, 1 + i % 15), "LOJA $i", 500L + i, only = false)
+            for (i in 0 until 50) purchase(LocalDate(2026, 10, 1 + i % 28).let { if (it > today) today else it }, "SERVICO $i", 5000L + i, only = false)
+        }
+
+        try {
+            // Without the history: the previstos start in October 2026.
+            fresh.previstos(YearMonth(2026, 10))
+            fresh.pauta()
+
+            // With it: they start in October 2024 and every occurrence up to September 2026 is launched from its recado.
+            val casa = db.previstos(YearMonth(2024, 10))
+            var month = YearMonth(2024, 10)
+            var launched = 0
+            while (month <= YearMonth(2026, 9)) {
+                val open = db.planned(month.onDay(month.numberOfDays)).filter { it.date.yearMonth == month }
+                assertTrue(open.size == 200, "$month: ${open.size} open")
+                for (o in open) {
+                    val i = o.name.removePrefix("Conta ").toInt()
+                    val r = db.purchase(o.date, "SERVICO $i", 5000L + i, only = true)
+                    val p = db.notice(r).parsed
+                    val form = TransactionForm(casa, o.tags, p.cents, 1, p.merchant, p.date, p.time, caption = o.name, occurrence = o.occurrence)
+                    assertTrue(db.accept(r, form).v != 0L)
+                    launched++
+                }
+                month = month.plusMonth()
+            }
+            assertTrue(launched == 200 * 24, "launched $launched")
+            db.pauta()
+            assertTrue(db.planned(today).size == fresh.planned(today).size, "the same open occurrences today")
+            assertTrue(db.pending().size == fresh.pending().size, "the same Pauta")
+
+            val freshPending = median { fresh.pending() }
+            val freshPlanned = median { fresh.planned(today) }
+            val freshPendingToday = median { fresh.pending(today) }
+            val pending = median { db.pending() }
+            val planned = median { db.planned(today) }
+            val pendingToday = median { db.pending(today) }
+            println(
+                "VOLUME 200 previstos, 24 months launched vs none: pending() $pending vs $freshPending ms; " +
+                    "planned(today) $planned vs $freshPlanned ms; pending(today) $pendingToday vs $freshPendingToday ms (not asserted)",
+            )
+            assertTrue(pending <= 2 * freshPending, "pending() $pending ms with the history vs $freshPending ms without")
+            assertTrue(planned <= 2 * freshPlanned, "planned(today) $planned ms with the history vs $freshPlanned ms without")
+        } finally {
+            fresh.close()
+            for (p in listOf(freshPath, "$freshPath-wal", "$freshPath-shm")) SystemFileSystem.delete(Path(p), mustExist = false)
+        }
     }
 
     private companion object {

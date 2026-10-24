@@ -633,6 +633,31 @@ class EscolhaEdgeTest {
     }
 
     @Test
+    fun `the bold part of strasse is the matched letters when the fold makes the name longer`() {
+        // Spec §7.3 Marcadores (2026-10-24): bold on the name's letters that matched, also with "straße" (fold reads "strasse").
+        uses("straße" to 1)
+        open()
+        openManual()
+        searchTag("e")
+        assertEquals("the e at index 5", listOf(5 until 6), boldRanges(TransactionTags.TAG_RESULT + "straße", "straße"))
+        searchTag("ss")
+        assertEquals("the ß at index 4", listOf(4 until 5), boldRanges(TransactionTags.TAG_RESULT + "straße", "straße"))
+    }
+
+    @Test
+    fun `the bold part of a name with an accent apart from its letter is the matched letters`() {
+        // Spec §7.3 Marcadores (2026-10-24): bold on the name's letters that matched, also with an accent apart from its letter.
+        val decomposed = "cafe\u0301zinho" // é as e + U+0301, stored as typed (names are only trimmed and lowercased); fold drops the mark
+        uses(decomposed to 1)
+        open()
+        openManual()
+        searchTag("e")
+        assertEquals("the é with its mark", listOf(3 until 5), boldRanges(TransactionTags.TAG_RESULT + decomposed, decomposed))
+        searchTag("zinho")
+        assertEquals("after the mark", listOf(5 until 10), boldRanges(TransactionTags.TAG_RESULT + decomposed, decomposed))
+    }
+
+    @Test
     fun `uppercase text with spaces offers criar in lowercase trimmed and nenhum`() {
         uses("feira" to 2)
         open()

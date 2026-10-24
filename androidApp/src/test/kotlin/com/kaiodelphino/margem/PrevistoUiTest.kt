@@ -6,6 +6,7 @@ import androidx.compose.runtime.mutableStateOf
 import android.app.Application
 import androidx.activity.ComponentActivity
 import androidx.compose.runtime.CompositionLocalProvider
+import androidx.compose.ui.semantics.Role
 import androidx.compose.ui.semantics.SemanticsNode
 import androidx.compose.ui.semantics.SemanticsProperties
 import androidx.compose.ui.semantics.getOrNull
@@ -1425,6 +1426,51 @@ class PrevistoUiTest {
         waitFor(InboxTags.CARD + id.v)
         compose.waitForIdle()
         assertEquals("girar a tela não traz a faixa", 0, count(InboxTags.PLANNED_BAND + id.v))
+    }
+
+    // ---- Segunda review do previsto (spec §7.2, §7.3; 2026-10-24) ----
+
+    @Test
+    fun `desligar devolve a data a frente que o ligar trouxe para hoje`() {
+        // Spec §7.3 Ligar a um previsto (2026-10-24): "Desligar" puts back the date ahead that "Ligar" brought to today.
+        ahead("Conta de luz", casa, listOf("contas", "luz"), 18000, OCT_12, Repeats.MONTHLY)
+        val luz = occ("Conta de luz")
+        open()
+        openTransactions()
+        click(TransactionTags.NEW)
+        waitFor(TransactionTags.FORM_NAME)
+        pickDate(OCT_15)
+        waitFor(TransactionTags.FORM_FUTURE)
+        compose.waitUntil(5_000) { shows(TransactionTags.FORM_SUBMIT, "Salvar previsto") }
+
+        click(TransactionTags.FORM_LINK_OPEN)
+        click(TransactionTags.LINK_CANDIDATE + luz.v)
+        click(TransactionTags.LINK_SUBMIT)
+        waitFor(TransactionTags.FORM_LINKED)
+        compose.waitUntil(5_000) { shows(TransactionTags.FORM_DATE, dateLong(OCT_9)) }
+
+        click(TransactionTags.FORM_UNLINK)
+        waitGone(TransactionTags.FORM_LINKED)
+        compose.waitForIdle()
+        assertShows(TransactionTags.FORM_DATE, dateLong(OCT_15))
+        assertShows(TransactionTags.FORM_SUBMIT, "Salvar previsto")
+        assertEquals("a faixa Data à frente volta", 1, count(TransactionTags.FORM_FUTURE))
+    }
+
+    @Test
+    fun `nao e sobrevive a um toque na aba pauta aberta`() {
+        // Spec §7.2 Recado reconhecido (2026-10-24): tapping the Pauta tab with the Pauta open doesn't bring the band back.
+        val id = internetWithRecado()
+        open()
+        openPauta()
+        waitFor(InboxTags.PLANNED_BAND + id.v)
+        click(InboxTags.PLANNED_NOT_IT + id.v)
+        waitGone(InboxTags.PLANNED_BAND + id.v)
+
+        compose.onNode(SemanticsMatcher.expectValue(SemanticsProperties.Role, Role.Tab) and hasText("Pauta")).performClick()
+        waitFor(InboxTags.CARD + id.v)
+        compose.waitForIdle()
+        assertEquals("a faixa continua fora", 0, count(InboxTags.PLANNED_BAND + id.v))
     }
 
     private companion object {

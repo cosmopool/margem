@@ -676,7 +676,7 @@ class PrevistoEdgeTest {
     @Test
     fun `apagar reabre também a ocorrência ligada à mão e a fechada sem recado`() = withDb { db ->
         val casa = db.budget("Casa")
-        // Linked by hand the first time (no link before): after delete, open and linked (spec S1).
+        // Linked by hand the first time (no link before): after delete, open and without a link (spec S1, §2.13 2026-10-24).
         val pid = db.addManual(manual(casa, d(10, 15), "Luz", repeats = Repeats.MONTHLY), today = TODAY).planned
         val luz = db.planned(TODAY).single { it.planned == pid }
         val r = db.purchase(d(10, 14), "ENEL SP", "187,50")
@@ -684,8 +684,8 @@ class PrevistoEdgeTest {
         assertNotEquals(TransactionId(0), tx)
         db.deleteTransaction(tx)
         val again = db.planned(TODAY).single { it.planned == pid }
-        assertEquals(Triple(luz.occurrence, true, "ENEL SP"), Triple(again.occurrence, again.linked, again.linkText))
-        assertEquals(luz.occurrence, db.pending(TODAY).single { it.id == r }.planned.occurrence)
+        assertEquals(Triple(luz.occurrence, false, ""), Triple(again.occurrence, again.linked, again.linkText))
+        assertEquals(OccurrenceId(0), db.pending(TODAY).single { it.id == r }.planned.occurrence)
 
         // Lançar sem recado (R6, R6b): manual, closes without a link; delete reopens.
         val gas = db.addManual(manual(casa, d(10, 12), "Gás"), today = TODAY).planned
@@ -1059,6 +1059,112 @@ class PrevistoEdgeTest {
         assertFalse(db.skipOccurrence(nov.occurrence), "closed by a lançamento")
         assertFalse(db.skipOccurrence(OccurrenceId(987654)), "unknown")
         assertEquals(listOf(d(12, 5)), db.planned(d(11, 26)).map { it.date })
+    }
+
+    // ---- Segunda review do previsto (spec §2.13, §3, §7.3; 2026-10-24) ----
+
+    /** A Todo mês previsto made by a Lazer lançamento of SMARTFIT (tag academia), then edited (Editar previsto) to [budget] and [tags]. */
+    private suspend fun Db.madeThenEdited(lazer: BudgetId, budget: BudgetId, tags: List<String>): Pair<TransactionId, Planned> {
+        val tx = linkedMonthly(d(9, 5), "SMARTFIT", "Academia", lazer, tags = listOf("academia"))
+        val oct = only(TODAY, "Academia")
+        val form = manual(budget, oct.date, "Academia", cents = 9990, repeats = Repeats.MONTHLY, tags = tags, occurrence = oct.occurrence)
+        assertEquals(Saved(planned = oct.planned), addManual(form.copy(planned = oct.planned), today = TODAY), "Editar previsto")
+        assertEquals(budget to tags.sorted(), only(TODAY, "Academia").let { it.budget to it.tags })
+        return tx to oct
+    }
+
+    @Test
+    fun `apagar a verba do lançamento não leva o previsto que ele criou e hoje é de outra verba`() = withDb { db ->
+        // Spec §3 Apagar uma verba (2026-10-24): a previsto of another budget stays, even if a lançamento of this one made it.
+        val lazer = db.budget("Lazer")
+        val casa = db.budget("Casa")
+        val (tx, oct) = db.madeThenEdited(lazer, casa, listOf("academia"))
+
+        db.deleteBudget(lazer)
+        assertTrue(db.transactions().none { it.id == tx }, "the Lazer lançamento goes")
+        assertEquals(
+            listOf(Triple(oct.occurrence, casa, "Academia")),
+            db.planned(TODAY).filter { it.planned == oct.planned }.map { Triple(it.occurrence, it.budget, it.name) },
+            "the previsto of Casa stays, with its open occurrence",
+        )
+    }
+
+    @Test
+    fun `apagar o marcador do lançamento não leva o previsto que ele criou e ainda tem outro marcador`() = withDb { db ->
+        // Spec §2.9 item 9 (2026-10-24): a previsto that still has another tag stays, even if a lançamento deleted with the tag made it.
+        val lazer = db.budget("Lazer")
+        val (tx, oct) = db.madeThenEdited(lazer, lazer, listOf("academia", "saude"))
+
+        db.deleteTag(db.tags().single { it.name == "academia" }.id)
+        assertTrue(db.transactions().none { it.id == tx }, "the lançamento had only academia")
+        assertEquals(
+            listOf(oct.occurrence to listOf("saude")),
+            db.planned(TODAY).filter { it.planned == oct.planned }.map { it.occurrence to it.tags },
+            "the previsto stays with saude",
+        )
+    }
+
+    @Test
+    fun `apagar o lançamento ainda leva o previsto que ele criou mesmo editado para outra verba`() = withDb { db ->
+        // Spec §2.13 Desfazer (2026-10-23, 2026-10-24): only deleting that lançamento takes the previsto it made, while nothing of it was launched.
+        val lazer = db.budget("Lazer")
+        val casa = db.budget("Casa")
+        val (tx, oct) = db.madeThenEdited(lazer, casa, listOf("academia"))
+
+        db.deleteTransaction(tx)
+        assertTrue(db.planned(d(10, 26)).none { it.planned == oct.planned }, "nothing of it was launched: it goes with the lançamento")
+    }
+
+    @Test
+    fun `desfazer um ligar num previsto sem ligação volta sem ligação`() = withDb { db ->
+        // Spec §2.13 Desfazer (2026-10-24): a previsto that had no link goes back without one.
+        val casa = db.budget("Casa")
+        val pid = db.addManual(manual(casa, d(10, 12), "Internet", repeats = Repeats.MONTHLY), today = TODAY).planned
+        val internet = db.only(TODAY, "Internet")
+        assertEquals(pid to false, internet.planned to internet.linked)
+        val r = db.purchase(d(10, 8), "VIVO FIBRA")
+        assertEquals(Planned(), db.pending(TODAY).single { it.id == r }.planned, "no link: not recognized")
+        val tx = db.accept(r, db.launchForm(r, internet))
+        assertNotEquals(TransactionId(0), tx, "Ligar")
+        assertTrue(db.planned(TODAY).none { it.occurrence == internet.occurrence }, "closed by the lançamento")
+
+        db.deleteTransaction(tx)
+        val back = db.only(TODAY, "Internet")
+        assertEquals(Triple(internet.occurrence, false, ""), Triple(back.occurrence, back.linked, back.linkText), "open again and without a link")
+        assertEquals(OccurrenceId(0), db.pending(TODAY).single { it.id == r }.planned.occurrence, "the recado is no longer recognized as Internet")
+    }
+
+    @Test
+    fun `apelido em branco com todo mês nomeia o previsto pelo texto do banco`() = withDb { db ->
+        // Spec §7.3 Repete (2026-10-24): with a blank Apelido, the previsto's name is the bank text even with a saved alias, which stays.
+        val lazer = db.budget("Lazer")
+        db.setAlias("SMARTFIT", "Academia")
+        val r = db.purchase(d(10, 5), "SMARTFIT")
+        assertEquals("Academia", db.notice(r).alias)
+        val p = db.notice(r).parsed
+        assertNotEquals(TransactionId(0), db.accept(r, TransactionForm(lazer, listOf("academia"), p.cents, 1, p.merchant, p.date, p.time, alias = "", repeats = Repeats.MONTHLY)))
+        assertEquals(listOf("SMARTFIT"), db.planned(d(10, 26)).map { it.name })
+        assertEquals("Academia", db.transactions().single().alias, "the saved alias stays")
+    }
+
+    @Test
+    fun `apelido em branco com todo mês e texto do banco acima de 80 é recusado sem gravar nada`() = withDb { db ->
+        // Spec §7.3 Repete (2026-10-24): blank Apelido names the previsto by the bank text, and over 80 the Db refuses.
+        val lazer = db.budget("Lazer")
+        val bank = "ACADEMIA " + "X".repeat(80)
+        val first = db.purchase(d(10, 1), bank)
+        val p1 = db.notice(first).parsed
+        assertEquals(bank, p1.merchant)
+        assertNotEquals(TransactionId(0), db.accept(first, TransactionForm(lazer, listOf("academia"), p1.cents, 1, p1.merchant, p1.date, p1.time, alias = "Academia")))
+        val second = db.purchase(d(10, 5), bank)
+        assertEquals("Academia", db.notice(second).alias, "the alias is saved")
+        val p2 = db.notice(second).parsed
+
+        val before = db.snapshot(TODAY)
+        val form = TransactionForm(lazer, listOf("academia"), p2.cents, 1, p2.merchant, p2.date, p2.time, alias = "", repeats = Repeats.MONTHLY)
+        assertEquals(TransactionId(0), db.accept(second, form), "name = bank text of 89: refused")
+        assertEquals(before, db.snapshot(TODAY), "nothing written")
+        assertEquals("Academia", db.notice(second).alias, "the saved alias stays")
     }
 
     // ---- Schema único (D67) ----
