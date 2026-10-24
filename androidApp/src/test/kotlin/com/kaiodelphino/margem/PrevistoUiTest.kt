@@ -964,16 +964,18 @@ class PrevistoUiTest {
 
     @Test
     fun `lancar previsto of a so uma vez previsto says only lancado`() {
-        // A Só uma vez previsto linked by a first launch that was then deleted: open again, waiting and linked (S1).
-        ahead("Conta de luz", casa, listOf("contas", "luz"), 18000, OCT_12, Repeats.ONCE)
-        val luz = occ("Conta de luz")
-        val id = post("Pagamento de conta: R$ 187,40 em ENEL SP", at(18, 20))
+        // A Só uma vez previsto linked to ENEL SP: made by September's recado with Todo mês, then Editar previsto
+        // to Só uma vez (a first link undone goes back without one, spec §2.13 2026-10-24).
+        monthlyFrom("Pagamento de conta: R$ 180,00 em ENEL SP", LocalDate(2026, 9, 12), casa, listOf("contas", "luz"), "Conta de luz")
+        val luz = plannedNow().first { it.name == "Conta de luz" }
         runBlocking {
-            val p = db.notice(id).parsed
-            val tx = db.accept(id, TransactionForm(budget = casa, tags = listOf("contas", "luz"), total = p.cents, installments = 1, merchant = p.merchant, date = p.date, time = p.time, caption = "Conta de luz", occurrence = luz))
-            assertTrue(tx.v != 0L)
-            db.deleteTransaction(tx)
+            val once = TransactionForm(
+                budget = casa, tags = listOf("contas", "luz"), total = luz.cents, installments = 1, merchant = "Conta de luz",
+                date = luz.date, time = LocalTime(9, 0), repeats = Repeats.ONCE, occurrence = luz.occurrence, planned = luz.planned,
+            )
+            assertEquals("Editar previsto", luz.planned, db.addManual(once, OCT_9).planned)
         }
+        val id = post("Pagamento de conta: R$ 187,40 em ENEL SP", at(18, 20))
         open()
         openPauta()
 

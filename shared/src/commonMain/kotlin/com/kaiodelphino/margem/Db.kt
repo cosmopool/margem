@@ -422,9 +422,33 @@ class Db(
      * Deletes the transaction with its installments, tag links and the estorno registered on it:
      * its notice and that estorno notice become pending again (spec §2.8). The legenda goes with the
      * transaction (spec §2.12): the notice returns to the Pauta without one, no extra warning. A lançamento
-     * from a previsto reopens its occurrence, waiting and linked as before (spec S1): nothing to undo.
+     * from a previsto reopens its occurrence, waiting and with the link it had before, none if it had none (spec S1,
+     * §2.13 2026-10-24); the previsto its "Repete" made goes with it while nothing of it is launched (D65).
      */
-    suspend fun deleteTransaction(id: TransactionId): Unit = write { c -> deleteTransactions(c, "id = ?", id.v) }
+    suspend fun deleteTransaction(id: TransactionId): Unit = write { c ->
+        // D65: a link this lançamento rewrote goes back to the one before, while the previsto still has the one it wrote.
+        // A recado's lançamento of an occurrence always kept the link before it ('' when none, 2026-10-24).
+        val relinked = c.query(
+            "SELECT d.planned_id, t.notice_id, t.prev_link_package, t.prev_link_key, t.prev_link_text FROM transactions t " +
+                "JOIN planned_dates d ON d.id = t.occurrence_id WHERE t.id = ? AND t.notice_id != 0",
+            id.v,
+        ) { listOf(it.getLong(0), it.getLong(1), it.getText(2), it.getText(3), it.getText(4)) }
+        for ((planned, notice, pkg, key, text) in relinked) {
+            val raw = notice(c, notice as Long).raw
+            c.exec(
+                "UPDATE planned SET link_package = ?, link_key = ?, link_text = ? WHERE id = ? AND link_package = ? AND link_key = ?",
+                pkg, MerchantKey.of(key as String), text, planned, raw.packageName, MerchantKey.of(extract(raw, timeZone).merchant),
+            )
+        }
+        // D65: the previsto its "Repete" made goes with it while none of its occurrences has a lançamento left.
+        // Only here: deleting a budget or a tag leaves it (spec §3, 2026-10-24).
+        deletePlanned(
+            c, "source_transaction = ? AND id NOT IN (SELECT d.planned_id FROM planned_dates d JOIN transactions t ON t.occurrence_id = d.id " +
+                "WHERE t.id != ?)",
+            id.v, id.v,
+        )
+        deleteTransactions(c, "id = ?", id.v)
+    }
 
     /**
      * All transactions, newest (date, time, then id) first. With [today], each row's [TransactionRow.now]
@@ -1200,8 +1224,8 @@ class Db(
         // D65: on edit, "Repete" acts on the transaction's own previsto; only without one does MONTHLY create.
         val own = if (id != 0L) ownPlanned(c, id) else null
         val monthlyName = if (form.repeats == Repeats.MONTHLY && own == null) {
-            val alias = form.alias.trim().ifEmpty { aliases(c)[key].orEmpty() }
-            plannedName(caption, alias, merchant).also { if (it.length > MAX_CAPTION) return Saved() }
+            // Spec §7.3 (2026-10-24): a blank Apelido names it by the bank text, even with a saved alias.
+            plannedName(caption, form.alias, merchant).also { if (it.length > MAX_CAPTION) return Saved() }
         } else ""
 
         val corrected = notice != 0L && extract(raw, timeZone).let {
@@ -1382,23 +1406,6 @@ class Db(
         val gone = c.query("SELECT id FROM transactions WHERE $where", *args) { it.getLong(0) }
         if (gone.isEmpty()) return
         val ids = gone.joinToString(",")
-        // D65: a link this lançamento rewrote goes back to the one before, while the previsto still has the one it wrote.
-        val relinked = c.query(
-            "SELECT d.planned_id, t.notice_id, t.prev_link_package, t.prev_link_key, t.prev_link_text FROM transactions t " +
-                "JOIN planned_dates d ON d.id = t.occurrence_id WHERE t.id IN ($ids) AND t.prev_link_key != ''",
-        ) { listOf(it.getLong(0), it.getLong(1), it.getText(2), it.getText(3), it.getText(4)) }
-        for ((planned, notice, pkg, key, text) in relinked) {
-            val raw = notice(c, notice as Long).raw
-            c.exec(
-                "UPDATE planned SET link_package = ?, link_key = ?, link_text = ? WHERE id = ? AND link_package = ? AND link_key = ?",
-                pkg, MerchantKey.of(key as String), text, planned, raw.packageName, MerchantKey.of(extract(raw, timeZone).merchant),
-            )
-        }
-        // D65: the previsto its "Repete" made goes with it while none of its occurrences has a lançamento left.
-        deletePlanned(
-            c, "source_transaction IN ($ids) AND id NOT IN (SELECT d.planned_id FROM planned_dates d JOIN transactions t ON t.occurrence_id = d.id " +
-                "WHERE t.id NOT IN ($ids))",
-        )
         c.exec("DELETE FROM installments WHERE transaction_id IN ($ids)")
         c.exec("DELETE FROM transaction_tags WHERE transaction_id IN ($ids)")
         c.exec("DELETE FROM refunds WHERE transaction_id IN ($ids)")
