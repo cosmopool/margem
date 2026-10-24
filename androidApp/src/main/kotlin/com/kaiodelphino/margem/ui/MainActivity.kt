@@ -269,7 +269,8 @@ fun App(db: Db, tabRequest: Screen?, onTabOpened: () -> Unit) {
             } }
             SnackbarHost(snack, Modifier.align(Alignment.BottomCenter))
         }
-        if (tabs) TabBar(tabOf(screen), { move(listOf(screenOf(it))) }, badge = pending)
+        // Spec §7.2 (2026-10-24): the tab of the screen on top keeps it as it is (its "Não é" marks stay).
+        if (tabs) TabBar(tabOf(screen), { if (screen != screenOf(it)) move(listOf(screenOf(it))) }, badge = pending)
         else Spacer(Modifier.windowInsetsBottomHeight(WindowInsets.navigationBars))
     }
 }

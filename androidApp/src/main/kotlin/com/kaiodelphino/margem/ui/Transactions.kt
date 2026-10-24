@@ -19,6 +19,7 @@ import androidx.compose.ui.semantics.CollectionItemInfo
 import androidx.compose.ui.semantics.collectionItemInfo
 import androidx.compose.ui.text.input.ImeAction
 import com.kaiodelphino.margem.fold
+import com.kaiodelphino.margem.foldedMatch
 import com.kaiodelphino.margem.widgets.dashedBorder
 import androidx.compose.foundation.border
 import androidx.compose.foundation.clickable
@@ -909,6 +910,7 @@ private fun TxForm(
     var preCaption by rememberSaveable { mutableStateOf("") }
     var preCaptionOpen by rememberSaveable { mutableStateOf(false) }
     var preSuggested by rememberSaveable { mutableStateOf(false) }
+    var preDate by rememberSaveable { mutableStateOf("") }
     // Book 8.12 (D66): the suggestion's budget until one is picked; the sheet and both searches.
     var suggested by rememberSaveable { mutableStateOf(false) }
     var sheet by rememberSaveable { mutableStateOf(false) }
@@ -929,6 +931,7 @@ private fun TxForm(
         preCaption = caption
         preCaptionOpen = captionOpen
         preSuggested = suggested
+        preDate = date
         suggested = false
         if (data?.budgets?.any { it.id == f.budget } == true) budget = f.budget.v
         chips = chipList(f.tags.associateWith { 'C' })
@@ -946,6 +949,8 @@ private fun TxForm(
         caption = preCaption
         captionOpen = preCaptionOpen
         suggested = preSuggested
+        // Spec §7.3 (2026-10-24): the date ahead that link() brought to today comes back.
+        date = preDate
         linked = 0L
     }
 
@@ -1561,12 +1566,12 @@ private fun TagPicker(
                     verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(10.dp),
                 ) {
                     if (on) Icon(R.drawable.i_lancar, tint = c.ink, size = 18.dp)
-                    // Book 8.12: the part found, folded like the search, in bold.
-                    val at = fold(t.name).indexOf(q)
+                    // Book 8.12: the part found, folded like the search, in bold on the name's own letters (spec §7.3, 2026-10-24).
+                    val found = foldedMatch(t.name, q)
                     Text(
                         buildAnnotatedString {
                             append(t.name)
-                            if (at >= 0) addStyle(SpanStyle(fontWeight = FontWeight.Bold), at, at + q.length)
+                            if (found != null) addStyle(SpanStyle(fontWeight = FontWeight.Bold), found.first, found.last + 1)
                         },
                         sans(16f, 500, 20f), Modifier.weight(1f), if (on) c.ink else c.inkSecondary, maxLines = 1,
                     )

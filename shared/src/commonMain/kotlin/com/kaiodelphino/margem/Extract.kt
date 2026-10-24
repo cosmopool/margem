@@ -55,6 +55,28 @@ fun fold(s: String): String {
     return out.toString()
 }
 
+/**
+ * Where [q] (already folded) is first found in [fold] of [s], as the range of [s]'s own chars: every char that
+ * folded into the match plus the combining marks right after the last one (book 8.12's bold; "ss" in
+ * "straße" is the ß). Null when [q] is empty or not found.
+ */
+fun foldedMatch(s: String, q: String): IntRange? {
+    val at = if (q.isEmpty()) -1 else fold(s).indexOf(q)
+    if (at < 0) return null
+    val last = at + q.length - 1
+    var pos = 0
+    var start = -1
+    var end = -1
+    for ((i, ch) in s.withIndex()) {
+        val w = fold(ch.toString()).length
+        if (w == 0 && end == i - 1 && end >= 0) end = i
+        if (w > 0 && start < 0 && pos + w > at) start = i
+        if (w > 0 && last in pos until pos + w) end = i
+        pos += w
+    }
+    return start..end
+}
+
 /** U+00C0–U+017F: the base letter of each one that decomposes to a letter + combining marks; '.' = not folded. */
 private const val LATIN =
     "aaaaaa.ceeeeiiii.nooooo..uuuuy.." +
