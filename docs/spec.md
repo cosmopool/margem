@@ -1,6 +1,6 @@
 # Margem — spec do produto
 
-Status: **decidido** em 2026-10-09; revisado em 2026-10-14 (bloco 4, ciclo do recado: §2.5, §2.8, §2.10, §7.3, §7.4; bloco 5, Ajustes e importação: §4, §7.6; teto: §3, §7.1, §10; início do mês sem sumir verba: §3); em 2026-10-16 (legenda do lançamento: §2.10, §2.12, §7.1, §7.3, §7.4, §7.5; bloco 6, Leitura: §7.5; cabeçalho do teto: §7.1, §10; teto, T1–T10: §3, §7.1); em 2026-10-20 (legenda: quebras de linha em §2.12, nome da prévia em §7.3; apelidos iguais no ranking: §7.5); em 2026-10-22 (previsto, P1–P11 de [previsto-plan.md](previsto-plan.md): §2.12, §2.13, §7.2, §7.3, §7.4; S1; acentos no ranking, §7.5; formulário enxuto, verba numa folha e marcadores por busca: §2.5, §7.3); em 2026-10-23 (pendências E1 do formulário enxuto respondidas: §7.3; perguntas da review do previsto: §2.13, §7.2, §7.3); em 2026-10-24 (segunda review do previsto: §2.13, §3, §7.2, §7.3). O que está em §10 espera resposta, uma por vez.
+Status: **decidido** em 2026-10-09; revisado em 2026-10-14 (bloco 4, ciclo do recado: §2.5, §2.8, §2.10, §7.3, §7.4; bloco 5, Ajustes e importação: §4, §7.6; teto: §3, §7.1, §10; início do mês sem sumir verba: §3); em 2026-10-16 (legenda do lançamento: §2.10, §2.12, §7.1, §7.3, §7.4, §7.5; bloco 6, Leitura: §7.5; cabeçalho do teto: §7.1, §10; teto, T1–T10: §3, §7.1); em 2026-10-20 (legenda: quebras de linha em §2.12, nome da prévia em §7.3; apelidos iguais no ranking: §7.5); em 2026-10-22 (previsto, P1–P11 de [previsto-plan.md](previsto-plan.md): §2.12, §2.13, §7.2, §7.3, §7.4; S1; acentos no ranking, §7.5; formulário enxuto, verba numa folha e marcadores por busca: §2.5, §7.3); em 2026-10-23 (pendências E1 do formulário enxuto respondidas: §7.3; perguntas da review do previsto: §2.13, §7.2, §7.3); em 2026-10-24 (segunda review do previsto: §2.13, §3, §7.2, §7.3); em 2026-10-26 (margem honesta, M1–M10 de [margem-plan.md](margem-plan.md): §2.13, §3, §4, §5, §7.1, §7.4, §7.5). O que está em §10 espera resposta, uma por vez.
 Escopo: só produto (o quê e por quê). Implementação: [architecture.md](architecture.md).
 Vocabulário: [glossary.md](glossary.md). Identidade visual: [design_system.html](design_system.html).
 
@@ -36,14 +36,14 @@ O estorno não é crédito: é só o registro de que uma compra não conta (§6)
     - Apagar o lançamento (ou Desfazer logo depois de lançar) apaga a legenda junto: o recado volta à Pauta sem ela, sem aviso a mais.
     - Aparece no formulário (§7.3), em Lançamentos (§7.4), no detalhe da verba (§7.1) e na escolha da compra estornada (§7.3). Recados (Pauta, Riscados, widget da Pauta) não têm legenda; snackbars e diálogos não a mostram.
     - Lançamento de um previsto (§2.13) nasce com o nome do previsto como legenda.
-13. **Previsto**: gasto que a pessoa já sabe que vem (aluguel, internet, conta de luz), anotado antes de acontecer com valor, nome, dia, verba e marcadores, à espera de um recado. Não é lançamento: **não conta** em verba, Leitura nem widget até ser lançado. Desenho: book 8.11 ([design_system.html](design_system.html#comp)).
+13. **Previsto**: gasto que a pessoa já sabe que vem (aluguel, internet, conta de luz), anotado antes de acontecer com valor, nome, dia, verba e marcadores, à espera de um recado. Não é lançamento: não é gasto nem entra nos rankings e no calendário da Leitura até ser lançado. Em aberto, **reserva** o valor dele na margem da verba, no mês do dia dele, e fica fora do ritmo: o ritmo é só da cota livre (§3, §5; 2026-10-26). Desenho: book 8.11 ([design_system.html](design_system.html#comp)).
     - **Criar**: lançamento manual com data à frente vira previsto (§7.3). Mesmas exigências de lançar: uma verba e ao menos um marcador.
     - **Repete**: "Só uma vez" ou "Todo mês". Todo mês mantém o dia; num mês sem ele (29–31), vale o último dia. Sem data de fim: para parar, apaga-se o previsto ou muda-se para "Só uma vez". "Repete" aparece sempre no formulário — lançamento manual (com qualquer data), Lançar recado e edição. Num lançamento de hoje ou do passado, "Todo mês" lança agora e cria os previstos a partir do mês seguinte; no Lançar recado e na edição de um lançamento com recado, o previsto nasce **já ligado** à fonte e ao texto do banco desse recado, com o nome do lançamento (legenda, senão apelido, senão texto do banco). "Todo mês" num lançamento antigo cria todos os meses desde o seguinte ao da compra, os já passados atrasados; a pessoa pula o que não quiser (intencional, 2026-10-23). No **Editar previsto**, trocar "Todo mês" por "Só uma vez" deixa só a ocorrência que foi aberta para editar; as outras em aberto somem, as lançadas e puladas não mudam (2026-10-23).
     - **Ligar**: dizer qual recado é o previsto. A primeira vez é à mão, no Lançar do recado ("É um previsto? Ligar", §7.3). A ligação guarda a **fonte e o texto do banco** do recado.
     - **Reconhecer**: da segunda vez em diante, recado da mesma fonte com o mesmo texto do banco (sem diferença de maiúsculas e acentos), chegado até **10 dias antes ou depois** do dia do previsto, é reconhecido como dele; o valor pode variar. Dois previstos para o mesmo recado: fica o de dia mais próximo. Fora da janela, é um recado comum, que pode ser ligado à mão. Recado sem texto do banco (ex.: Pix enviado sem estabelecimento lido) **nunca liga nem é reconhecido**: pode ser lançado com o previsto escolhido à mão, que fecha a ocorrência sem gravar ligação (R2).
-    - **Lançar previsto**: o recado reconhecido lança direto da Pauta (§7.2), sem formulário: verba, marcadores e nome (como legenda) vêm do previsto; valor, estabelecimento e data vêm do recado.
-    - **Valor diferente**: vale o do recado. Não é emenda (sem "‸ emendado") e o valor do previsto não aparece ao lado. O previsto do mês seguinte continua com o valor dele; só editar o previsto o muda.
-    - **Sem recado**: o previsto **fica esperando**, depois do dia e da virada ("esperando desde 5 out"); a ocorrência do mês seguinte aparece no dia dela mesmo assim. Na folha do previsto (§7.4): **Lançar sem recado** (abre o lançamento manual preenchido, na data do previsto, sem ligação; só aparece quando o dia da ocorrência já chegou, R6), **Pular este mês** (some sem lançar; o mês seguinte continua), **Editar previsto** e **Apagar previsto** (este e os próximos meses; pede confirmação num diálogo: "Apagar o previsto Academia?", "Este e os próximos meses somem. O que já foi lançado continua."). A folha diz a ligação com o texto do banco entre aspas e a fonte depois de um ponto médio, sem artigo: "Ligado a “SMARTFIT” · Cartão Ipê." (2026-10-23). "Salvar previsto" volta a Lançamentos sem snackbar; um previsto apagado com a tela aberta responde "Este previsto não existe mais." (2026-10-22). Um "Salvar previsto" recusado que a tela não previu responde "Não deu para salvar o previsto." e o formulário fica aberto, com o que foi digitado (2026-10-23).
+    - **Lançar previsto**: o recado reconhecido lança direto da Pauta (§7.2), sem formulário: verba, marcadores e nome (como legenda) vêm do previsto; valor, estabelecimento e data vêm do recado. O lançamento de um previsto conta **no mês do previsto**: se a data do recado cai em outro mês da verba que o dia do previsto (pago atrasado ou adiantado), o lançamento ganha o dia do previsto, sem "‸ emendado". Quem quer que conte no mês do pagamento faz um lançamento comum e deixa o previsto em aberto, pula ou apaga (2026-10-26).
+    - **Valor diferente**: vale o do recado. Não é emenda (sem "‸ emendado") e o valor do previsto não aparece ao lado. O previsto do mês seguinte continua com o valor dele; só editar o previsto o muda. O lançamento inteiro fica fora do ritmo pelo valor real: maior que o previsto, diminui a cota livre e o ritmo se recalcula (§3, §5; 2026-10-26).
+    - **Sem recado**: o previsto **fica esperando**, depois do dia e da virada ("esperando desde 5 out"), e continua reservando no mês dele (§3); a ocorrência do mês seguinte aparece no dia dela mesmo assim. Na folha do previsto (§7.4): **Lançar sem recado** (abre o lançamento manual preenchido, na data do previsto, sem ligação; só aparece quando o dia da ocorrência já chegou, R6), **Pular este mês** (some sem lançar; o mês seguinte continua), **Editar previsto** e **Apagar previsto** (este e os próximos meses; pede confirmação num diálogo: "Apagar o previsto Academia?", "Este e os próximos meses somem. O que já foi lançado continua."). A folha diz a ligação com o texto do banco entre aspas e a fonte depois de um ponto médio, sem artigo: "Ligado a “SMARTFIT” · Cartão Ipê." (2026-10-23). "Salvar previsto" volta a Lançamentos sem snackbar; um previsto apagado com a tela aberta responde "Este previsto não existe mais." (2026-10-22). Um "Salvar previsto" recusado que a tela não previu responde "Não deu para salvar o previsto." e o formulário fica aberto, com o que foi digitado (2026-10-23).
     - Desfazer logo depois de lançar um previsto, ou apagar esse lançamento mais tarde, devolve o recado à Pauta e a ocorrência do previsto a "A caminho", esperando e ligada, como estavam (S1, 2026-10-22): se esse lançamento religou o previsto a outro texto do banco, a ligação volta à de antes, e um previsto que não tinha ligação volta sem ligação (2026-10-24); se o "Todo mês" dele criou um previsto que ainda não tem nada lançado, esse previsto some junto (2026-10-23). Isso vale só para apagar esse lançamento (Desfazer ou Apagar): apagar uma verba ou um marcador não leva o previsto que um lançamento dela criou e que hoje é de outra verba ou tem outro marcador (2026-10-24).
 
 ## 3. Verba e cota
@@ -54,15 +54,19 @@ O estorno não é crédito: é só o registro de que uma compra não conta (§6)
 - **Mudar o dia de início não tira verba do mês atual**: se o mês atual passa a ser outro (ex.: dia 1 → 15 em 14 out volta para o mês que começou em 15 set), cada verba fica nele com a cota que tinha no mês atual de antes; se já tinha cota nele, fica a que estava.
 - **Mudar a cota** vale do **mês atual em diante**. Cada mês guarda a cota que valia nele; a Leitura compara cada mês com a sua.
 - **Virada**: a cota recomeça inteira todo mês. Sobra e excesso não passam para o mês seguinte; ficam só no histórico.
-- **Teto** (opcional; sem teto por padrão): valor máximo para a **soma das cotas** do mês (ex.: a renda). É limite de planejamento, não de gasto: o gasto continua medido por verba, e não existe margem, ritmo ou estado do total.
+- **Teto** (opcional; sem teto por padrão): valor máximo para a **soma das cotas** do mês (ex.: a renda). É limite de planejamento, não de gasto: o gasto continua medido por verba. O total do mês (gasto, previstos e margem somados) aparece fundido com o teto no cabeçalho de Verbas, sem ritmo nem estado (§7.1; 2026-10-26).
   - **Passar do teto é permitido**: criar verba ou mudar cota que deixa a soma das cotas do mês atual acima do teto avisa enquanto digita (texto sob o campo) e de novo ao salvar (diálogo), e grava se a pessoa confirmar.
     Só avisa a mudança que **aumenta** a soma: baixar uma cota com a soma ainda acima do teto, ou só renomear, não avisa.
   - **Mudar o teto** pergunta ao salvar: **só este mês** (no mês seguinte volta o padrão) ou **deste mês em diante** (vira o padrão dos próximos meses). A pessoa pode tirar o teto.
   - Aparece só no cabeçalho de Verbas (§7.1) e nos avisos de cota; widget e Leitura não mostram o teto.
 - **Verba criada no meio do mês** tem a cota cheia no mês inteiro (o ritmo ideal de hoje já conta as semanas passadas).
 - **Apagar uma verba** apaga os lançamentos e os previstos dela; os recados voltam à Pauta. O diálogo conta os dois: "A verba tem 3 lançamentos e 1 previsto." (2026-10-23). Um previsto de outra verba fica, mesmo que o "Todo mês" de um lançamento dela o tenha criado (2026-10-24).
-- **Margem** = cota − gasto do mês.
+- **Margem** = cota − gasto do mês − previstos em aberto do mês. É quanto ainda cabe gastar (2026-10-26).
 - **Gasto do mês** = soma das parcelas (§6; à vista = 1 parcela) dos lançamentos da verba que caem no mês, sem os estornados.
+- **Previstos do mês** (§2.13): as ocorrências da verba com dia no mês, menos as puladas; a lançada vale o valor lançado, a em aberto (inclusive atrasada) o valor do previsto. Contam todas as do mês, não só as que já estão em "A caminho".
+- **Cota livre** = cota − previstos do mês, no mínimo R$ 0,00. É o que os passos e o ritmo repartem (§4, §5).
+  Ex.: cota R$ 3.000, aluguel previsto R$ 2.000 → cota livre R$ 1.000; antes do aluguel, margem R$ 1.000; lançado o aluguel em R$ 2.100, cota livre R$ 900 e margem R$ 900.
+- **Gasto variável** = gasto do mês sem os lançamentos de previsto.
 
 ## 4. Passo semanal
 
@@ -70,34 +74,37 @@ Uma **visualização** de quanto cabe por semana. Não é limite e não muda com
 
 - **Semanas**: semanas de calendário, com **dia de início da semana** escolhido em Ajustes (padrão: segunda), cortadas no mês da verba.
   A primeira e a última semana do mês podem ser parciais.
-- **Passo padrão** de uma semana = cota × dias da semana no mês ÷ dias do mês.
-  Ex.: cota R$ 600, mês de 30 dias → semana cheia R$ 140,00; semana de 2 dias R$ 40,00.
+- **Passo padrão** de uma semana = cota livre (§3) × dias da semana no mês ÷ dias do mês. Sem previstos, a cota livre é a cota.
+  Ex.: cota livre R$ 600, mês de 30 dias → semana cheia R$ 140,00; semana de 2 dias R$ 40,00.
+  Os previstos não entram nos passos: o detalhe da verba os mostra à parte, no dia de cada um (§7.1).
 - **Editar**: a pessoa muda o passo de uma semana do mês (ex.: gastar menos no começo).
-  As semanas **não editadas** se ajustam, proporcionalmente aos dias, para a soma dos passos continuar igual à cota.
+  As semanas **não editadas** se ajustam, proporcionalmente aos dias, para a soma dos passos continuar igual à cota livre.
 - **Uma semana fica sempre automática**: quando só resta uma semana não editada, ela não pode ser editada (aparece em tinta 3, sem toque). Enquanto houver mais de uma, qualquer semana pode ser editada; a última não editada do mês absorve a diferença.
 - **Voltar ao automático**: numa semana editada, a pessoa pode desfazer a edição; ela volta a se ajustar com as outras.
-- **Limite da edição**: um passo aceita no máximo cota − outras semanas editadas; semana automática nunca fica abaixo de R$ 0,00. A mensagem diz o máximo possível.
+- **Limite da edição**: um passo aceita no máximo cota livre − outras semanas editadas; semana automática nunca fica abaixo de R$ 0,00. A mensagem diz o máximo possível.
 - **Centavos**: passos automáticos são arredondados para baixo; a última semana não editada recebe a diferença.
   Ex.: R$ 100,00 em 3 semanas iguais → 33,33 · 33,33 · 33,34.
 - Edições valem para aquele mês daquela verba. Mudar a cota redistribui só as semanas não editadas.
-  Se a cota nova ficar abaixo da soma dos passos editados de um mês (do atual em diante), as edições daquele mês são apagadas e todas as semanas voltam ao automático.
+  Se a cota livre nova ficar abaixo da soma dos passos editados de um mês (do atual em diante), as edições daquele mês são apagadas e todas as semanas voltam ao automático.
   O app **avisa antes** (Confirmar/Cancelar) quando a cota nova vai apagar edições; sem aviso quando nada é apagado.
+- **Previstos mudam a cota livre**: criar, editar, apagar ou pular um previsto, ou lançá-lo com outro valor, redistribui as semanas não editadas daquele mês. Se a cota livre ficar abaixo da soma dos passos editados, as edições daquele mês são apagadas **sem aviso** e todas as semanas voltam ao automático (2026-10-26).
 - **Mudar o dia de início da semana ou do mês** apaga as edições de passo do mês atual em diante; o app avisa antes (Cancelar/Mudar) quando há edição a apagar, e muda direto quando não há. Meses passados são recalculados com o dia novo.
 
 ## 5. Ritmo
 
 - **Ritmo ideal** (hoje) = passos das semanas já fechadas do mês + passo da semana atual × dias corridos dela (com hoje) ÷ dias dela.
   Segue o plano editado: se a semana 1 foi baixada, o ritmo ideal também começa mais baixo.
+- **O ritmo é só da cota livre** (§3): os passos repartem a cota livre, e o que se compara com o ritmo ideal é o **gasto variável**. A conta fixa (previsto) fica fora: o dia em que ela é paga não muda o ritmo (2026-10-26).
 - **Estados** da verba no mês:
 
 | Estado | Quando |
 |---|---|
-| **No ritmo** | gasto ≤ ritmo ideal |
-| **Acima do ritmo** | gasto > ritmo ideal e gasto ≤ cota |
-| **Fora da margem** | gasto > cota (o excesso é dito em reais: "R$ 12,00 além") |
+| **No ritmo** | gasto variável ≤ ritmo ideal |
+| **Acima do ritmo** | gasto variável > ritmo ideal e margem ≥ 0 |
+| **Fora da margem** | margem < 0: gasto + previstos em aberto passam da cota (o excesso é dito em reais: "R$ 12,00 além") |
 
 - **Sem tolerância**: um centavo acima do ritmo ideal já é Acima do ritmo.
-- **No passo atual** (projeção) = gasto do mês × (soma dos passos do mês ÷ ritmo ideal de hoje). Segue o plano: quem está exatamente no ritmo projeta a cota.
+- **No passo atual** (projeção) = gasto variável × (cota livre ÷ ritmo ideal de hoje) + previstos do mês. Segue o plano: quem está exatamente no ritmo projeta a cota (2026-10-26).
   Sem projeção quando o ritmo ideal de hoje é R$ 0,00.
 
 ## 6. Estorno e parcelas
@@ -120,7 +127,11 @@ Uma **visualização** de quanto cabe por semana. Não é limite e não muda com
 Cinco abas: **Verbas** (início) · **Pauta** · **Lançamentos** · **Leitura** · **Ajustes**.
 
 ### 7.1 Verbas
-- Lista das verbas do mês atual: nome, régua (gasto, marca do ritmo ideal, cota), margem, estado.
+- Lista das verbas do mês atual: nome, régua (gasto, previstos em aberto do mês logo depois do gasto, marca do ritmo ideal, cota), margem, estado. O desenho do trecho dos previstos sai do mock (a hachura já é o excesso; [margem-plan.md](margem-plan.md) §4).
+- **Total do mês fundido com o teto** (2026-10-26, M9; desenho final por mock no book 8.10): o fio do teto vira a régua do total, sem ritmo nem estado.
+  - Trilho até o maior entre a soma das cotas e o teto; gasto em tinta cheia, depois os previstos em aberto; marca fina na soma das cotas; o fio duplo de argila do teto e as cotas acima do teto em lacre, como hoje.
+  - Legenda: "Margem R$ 1.570,00 de R$ 5.720,00" e, embaixo, "gasto 1.850 · previstos 2.300 · teto 6.000"; sem teto, a segunda linha termina em "Pôr um teto". O toque abre o teto, como hoje.
+  - Os itens abaixo sobre o fio, a legenda e o leitor de tela valem até o mock aprovado substituí-los.
 - **Cabeçalho com o teto** (§3): desenho do book, [8.10 Cabeçalho do teto](design_system.html) e tela 10.1: chapéu, "Dia 9 de 31.", linha fina e, embaixo, o fio do teto com a legenda. O teto não ganha frase na manchete.
   - **Fio do teto**: régua sem ritmo; trilho em fio forte, cotas em tinta (não é gasto: sem cor de estado), fio duplo de argila no teto, os mesmos 9% reservados ao excesso, em hachura.
   - **Legenda**: "cotas R$ 3.720,00 · teto R$ 4.100,00"; acima do teto, "+ 300" em lacre na faixa reservada (reais inteiros; com centavos só quando há: "+ 300,50"); teto só deste mês (o do mês difere do padrão), "teto R$ 4.400,00 · só outubro".
@@ -132,7 +143,7 @@ Cinco abas: **Verbas** (início) · **Pauta** · **Lançamentos** · **Leitura**
   - **Nova verba / cota**: sob o campo, "Com esta cota, as cotas de outubro somam R$ 4.400,00: R$ 300,00 além do teto."; ao salvar, "Passar do teto?" · Voltar · "Criar mesmo assim" / "Salvar mesmo assim". Em Editar verba, quando a cota nova também apaga passos editados (§4), o diálogo do teto vem primeiro e o dos passos depois; Voltar em qualquer um não grava nada.
 - **Ordenar**: seletor no topo — **risco** (padrão; mesma regra do widget, §8.1) · **manual** (arrastar) · **A–Z**. A escolha é lembrada.
 - Criar verba: nome + cota mensal, com a prévia dos passos semanais do mês atual.
-- **Detalhe da verba**: seletor de mês (do primeiro mês da verba até o atual); régua; passos semanais (editáveis, com "Voltar ao automático", §4); lançamentos do mês com a soma corrida e a marca "cota atingida aqui" (parcelada conta a parcela do mês; estornada aparece riscada e não soma; com legenda, a linha é a de Lançamentos, §7.4); editar nome e cota; apagar.
+- **Detalhe da verba**: seletor de mês (do primeiro mês da verba até o atual); régua; passos semanais (editáveis, com "Voltar ao automático", §4); os previstos do mês, no dia de cada um, à parte dos passos (§4); lançamentos do mês com a soma corrida e a marca "cota atingida aqui" (parcelada conta a parcela do mês; estornada aparece riscada e não soma; com legenda, a linha é a de Lançamentos, §7.4); editar nome e cota; apagar.
 - Vazio: explica o que é uma verba e como criar a primeira.
 
 ### 7.2 Pauta
@@ -178,7 +189,7 @@ Cinco abas: **Verbas** (início) · **Pauta** · **Lançamentos** · **Leitura**
 - Se o recado deixou de estar na Pauta enquanto a tela estava aberta (lançado ou riscado por outro caminho), lançar é recusado: a tela avisa e volta.
 
 ### 7.4 Lançamentos
-- **A caminho** (§2.13, book 8.11): os previstos ficam no topo, num grupo que **sempre abre recolhido** (não lembra; aberto, fica aberto enquanto a tela estiver aberta), para a lista abrir nos lançamentos feitos. Recolhido, é uma linha: rubrica "A caminho", "4 previstos · R$ 539,80" (soma dos valores; não conta em verba) e "1 com recado na Pauta · 1 atrasado" (só as partes que existem, em tinta 2, sem cor de estado). Sem previsto, a linha não existe. Todo previsto entra em "A caminho" 10 dias antes do dia dele (quando o recado dele já pode chegar, §2.13): o do mês seguinte e também um "Salvar previsto" com data longe, que fica guardado até lá (decisão do usuário, 2026-10-22). Aberto, os previstos pelo dia, o atrasado primeiro: folhinha do dia tracejada (em tinta 3 no atrasado), nome, "verba · marcadores · todo mês", "recado na Pauta" (anil) ou "esperando desde 5 out", e o valor em tinta 2. Tocar num previsto abre a folha dele (§2.13).
+- **A caminho** (§2.13, book 8.11): os previstos ficam no topo, num grupo que **sempre abre recolhido** (não lembra; aberto, fica aberto enquanto a tela estiver aberta), para a lista abrir nos lançamentos feitos. Recolhido, é uma linha: rubrica "A caminho", "4 previstos · R$ 539,80" (soma dos valores; não é gasto, mas cada um reserva na margem da sua verba, §3) e "1 com recado na Pauta · 1 atrasado" (só as partes que existem, em tinta 2, sem cor de estado). Sem previsto, a linha não existe. Todo previsto entra em "A caminho" 10 dias antes do dia dele (quando o recado dele já pode chegar, §2.13): o do mês seguinte e também um "Salvar previsto" com data longe, que fica guardado até lá (decisão do usuário, 2026-10-22). Aberto, os previstos pelo dia, o atrasado primeiro: folhinha do dia tracejada (em tinta 3 no atrasado), nome, "verba · marcadores · todo mês", "recado na Pauta" (anil) ou "esperando desde 5 out", e o valor em tinta 2. Tocar num previsto abre a folha dele (§2.13).
 - Todos os lançamentos, mais recentes no topo, **agrupados por dia** como a Pauta: estabelecimento, valor, verba, marcadores; "‸ emendado" quando foi emendado; compras estornadas riscadas como "estornada" (o estorno não tem linha própria).
 - **Com legenda** (§2.12): a legenda é o nome, em itálico, até 2 linhas ("…" se passar); embaixo, "em Padaria do Zé" (apelido, senão texto do banco; sem estabelecimento, essa linha não existe); depois a linha de sempre. Estornada: legenda e "em …" em tinta 3, sem risco; só o valor riscado, como o nome hoje.
 - Parcelada mostra a parcela do mês atual ("Parcela 3 de 10", com o valor dela); sem parcela no mês atual, mostra o total e "10×".
@@ -187,7 +198,7 @@ Cinco abas: **Verbas** (início) · **Pauta** · **Lançamentos** · **Leitura**
 
 ### 7.5 Leitura
 - **Um mês para a página toda**: seletor de mês no topo (do primeiro mês com verba até o atual; "1 a 31 · até sex, 9" no mês atual). Ritmo, ranking e calendário são desse mês; Verbas por mês termina nele.
-- **Ritmo do mês**: gasto acumulado × plano dos passos (ritmo ideal dia a dia), por verba, com a projeção "no passo atual".
+- **Ritmo do mês**: gasto variável acumulado × plano dos passos da cota livre (ritmo ideal dia a dia), por verba, com a projeção "no passo atual", que soma os previstos do mês (§5; 2026-10-26).
   - **Uma verba por vez**: o nome dela, na linha da seção, abre a escolha entre as verbas com cota no mês; vale também para Verbas por mês. Padrão: a mais em risco no mês (ordem do §8.1). A escolha fica enquanto a tela está aberta; num mês em que a verba não tem cota, volta ao padrão.
   - Mês atual: o resto do mês sombreado e em branco; frase "+ R$ 51,10 sobre o ritmo ideal. No passo atual, o mês fecharia em R$ 796." (abaixo do ritmo: "R$ 20,00 abaixo do ritmo ideal. …"; fora da margem: "R$ 12,00 além da cota. …"; sem projeção quando o ritmo ideal de hoje é R$ 0,00, §5, ou quando nada foi gasto no mês).
   - Mês passado: o mês inteiro, sem sombra e sem projeção; frase "Fechou em R$ 1.180,00, R$ 60,00 dentro da cota." ou "… R$ 12,00 além da cota."
