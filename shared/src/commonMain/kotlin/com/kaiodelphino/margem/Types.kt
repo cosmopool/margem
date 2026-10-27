@@ -84,7 +84,7 @@ enum class Repeats { ONCE, MONTHLY }
 /**
  * One open occurrence of a previsto (spec §2.13, D59, D62): the rule and the month together, everything
  * "A caminho", the previsto sheet, the Pauta band, the snackbar and "Qual previsto é este recado?" show.
- * `Planned()` (zero, [occurrence] 0) = no previsto.
+ * Inside a [PlannedLine] it may be a closed (lançada) one. `Planned()` (zero, [occurrence] 0) = no previsto.
  */
 data class Planned(
     val occurrence: OccurrenceId = OccurrenceId(0),
@@ -254,6 +254,12 @@ data class TransactionRow(
     val now: Installment = Installment(),
     /** The legenda (spec §2.12); "" = none. Lists show [title] instead of [name] when set. */
     val caption: String = "",
+    /**
+     * Closed an occurrence of a previsto (D69): out of the ritmo, at its real value, in every month of its
+     * installments ([BudgetMonth.fixed]). Written by Lançar previsto, Lançar recado ligado, "É um previsto?
+     * Ligar" and Lançar sem recado; kept by edit; stays when its previsto is deleted.
+     */
+    val fixed: Boolean = false,
 ) {
     val name: String get() = alias.ifEmpty { merchant }
     /** The row's headline (spec §2.12, D54): [caption] when set, else [name]. The credit "em …" shows [name]. */
@@ -307,12 +313,14 @@ data class Week(
     /** Cut to the month: the first and last weeks may be partial. */
     val start: LocalDate = NO_DATE,
     val end: LocalDate = NO_DATE,
+    /** Share of [BudgetMonth.freeLimit]: Σ steps of the month = freeLimit (spec §4, D68). */
     val step: Cents = Cents(0),
     val edited: Boolean = false,
+    /** Gasto variável of the week: installments dated in it, refunded and [TransactionRow.fixed] ones left out (D68). */
     val spent: Cents = Cents(0),
     /**
-     * The most [Db.setStep] accepts for this week: limit − Σ steps of the other edited weeks. Any
-     * value in 0..max is accepted, max + 1 is refused. Cents(0) when [locked].
+     * The most [Db.setStep] accepts for this week: [BudgetMonth.freeLimit] − Σ steps of the other edited
+     * weeks (D70). Any value in 0..max is accepted, max + 1 is refused. Cents(0) when [locked].
      */
     val max: Cents = Cents(0),
     /**
@@ -324,30 +332,54 @@ data class Week(
     val locked: Boolean = false,
 )
 
-/** Everything the screens show about one budget in one month (architecture §6). */
+/**
+ * Everything the screens show about one budget in one month (architecture §6). Margem honesta (spec §3,
+ * §5; margem-plan M1–M6, D68): the previstos do mês ([planned] = [open] + [fixed]) reserve in the margem
+ * and stay out of the ritmo, which is only the [freeLimit] against the [variable] spending. Without a
+ * previsto in the month, open = fixed = 0, freeLimit = limit and variable = spent: the rules of before.
+ */
 data class BudgetMonth(
     val month: YearMonth = NO_MONTH,
     val start: LocalDate = NO_DATE,
     val end: LocalDate = NO_DATE,
     val limit: Cents = Cents(0),
+    /** Gasto do mês: every installment dated in the month, refunded ones left out, [fixed] included. */
     val spent: Cents = Cents(0),
-    /** Margem = limit − spent; negative when OVERRUN. */
+    /** Margem (M1) = limit − spent − [open]; negative when OVERRUN. */
     val remaining: Cents = Cents(0),
     val weeks: List<Week> = emptyList(),
-    /** Ritmo ideal of today. */
+    /** Ritmo ideal of today, of the [freeLimit] (M3). */
     val ideal: Cents = Cents(0),
+    /** OVERRUN when remaining < 0; else AHEAD when [variable] > [ideal]; else ON_PACE (M3). */
     val status: PaceStatus = PaceStatus.ON_PACE,
-    /** No passo atual; 0 when ideal is 0 (no projection). */
+    /**
+     * No passo atual (M6) = variable × freeLimit ÷ ideal + [planned], rounded down: exactly on pace projects
+     * the limit. 0 when ideal is 0 (no projection).
+     */
     val projection: Cents = Cents(0),
     /**
      * Ritmo ideal at the end of each day of the month (D44): one value per day from [start] to [end],
      * index 0 = [start]. Day d = the rule of [ideal] with today = d (spec §5): steps of the weeks ended
      * before d, plus the step of d's week × days elapsed in it (with d) ÷ its days, rounded down per
-     * week. Never decreases; the last day = Σ steps = [limit]. For
+     * week. Never decreases; the last day = Σ steps = [freeLimit] (D68). For
      * today inside the month, idealByDay[today − start] == [ideal]. Empty when [start] is NO_DATE.
      */
     val idealByDay: List<Cents> = emptyList(),
-)
+    /**
+     * Reserve of the open previstos (M1, M2): Σ of the previsto's value of every open occurrence of this
+     * budget (not skipped, no lançamento) dated in the month, late ones included, whatever the R1 window.
+     */
+    val open: Cents = Cents(0),
+    /** Previstos lançados (M2, D69): Σ installments dated in the month of the [TransactionRow.fixed] lançamentos, refunded ones left out. Part of [spent]. */
+    val fixed: Cents = Cents(0),
+    /** Cota livre (M3, M10) = max(0, limit − [planned]): what the steps share and the ritmo measures. */
+    val freeLimit: Cents = Cents(0),
+    /** Gasto variável (M3, M4) = spent − [fixed]: what is compared with [ideal]. */
+    val variable: Cents = Cents(0),
+) {
+    /** Previstos do mês (M2) = [open] + [fixed]. The régua's ritmo mark sits at (planned + ideal) ÷ limit (M11). */
+    val planned: Cents get() = open + fixed
+}
 
 data class BudgetSummary(val id: BudgetId = BudgetId(0), val name: String = "", val month: BudgetMonth = BudgetMonth())
 
@@ -379,7 +411,32 @@ data class BudgetDetail(
     val firstMonth: YearMonth = NO_MONTH,
     /** Its previstos, due or not: deleted with it (D59, spec §7.1's "Apagar verba"). */
     val planned: Int = 0,
+    /**
+     * "Previstos de outubro" (spec §7.1, M12, D73): one line per occurrence of this budget's previstos dated
+     * in the month, open or lançada, skipped ones left out; by date, then occurrence id. Empty when none.
+     * Σ cents of the open lines = month.open.
+     */
+    val plannedLines: List<PlannedLine> = emptyList(),
 )
+
+/**
+ * One line of "Previstos de outubro" in the budget detail (spec §7.1, M12, D73): the folhinha with the day,
+ * the name, "esperando · todo mês" (open, value in ink 2) or "lançado em 4 out" (lançada, the lançado value).
+ * Tap opens the previsto sheet with [planned].
+ */
+data class PlannedLine(
+    /**
+     * The occurrence with its previsto: name, date, repeats, budget, tags, link. Here it may be a closed one
+     * (lançada); [Planned.late] against the read's today, false when lançada; [Planned.noticeInPauta] false.
+     */
+    val planned: Planned = Planned(),
+    /** Open: the previsto's value (Planned.cents). Lançada: what its lançamento adds to [BudgetMonth.fixed] (fixedByDay, D73). */
+    val cents: Cents = Cents(0),
+    /** Lançada: the date of that installment ("lançado em 4 out"). NO_DATE while open. */
+    val launched: LocalDate = NO_DATE,
+) {
+    val open: Boolean get() = launched == NO_DATE
+}
 
 /**
  * Teto of one budget month (spec §3, §7.1; D42, D46): the most the month's limits may sum, as a planning

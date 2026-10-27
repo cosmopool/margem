@@ -37,9 +37,16 @@ internal fun installmentDate(date: LocalDate, k: Int, startDay: Int): LocalDate 
 }
 
 /**
- * Everything about one budget in one month (architecture §6). Edits that match no week are
- * ignored; so are all of them when they leave no week automatic or sum more than the limit
- * (only reachable in past months after a start-day change, D10).
+ * Everything about one budget in one month (architecture §6), with the margem honesta (D68, margem-plan
+ * M1–M6). [spentByDay] is the whole gasto (fixed included), [fixedByDay] the installments of the
+ * [TransactionRow.fixed] lançamentos (refunded ones left out), [open] the reserve of the open occurrences
+ * dated in the month; days outside the month are ignored. Then fixed = Σ fixedByDay, planned = open + fixed,
+ * freeLimit = max(0, limit − planned), variable = spent − fixed, remaining = limit − spent − open. The steps
+ * share freeLimit and Week.max is against it; [BudgetMonth.ideal], idealByDay and Week.spent are of the free
+ * part (Week.spent = variable of the week). Status: remaining < 0 → OVERRUN, variable > ideal → AHEAD, else
+ * ON_PACE. Projection = variable × freeLimit ÷ ideal + planned (0 when ideal is 0). Edits that match no week
+ * are ignored; so are all of them when they leave no week automatic or sum more than freeLimit (D10, D70:
+ * they count again when freeLimit grows back). With empty [fixedByDay] and [open] 0, the rules of before.
  */
 internal fun budgetMonth(
     month: YearMonth,
@@ -49,7 +56,10 @@ internal fun budgetMonth(
     limit: Cents,
     editedSteps: Map<LocalDate, Cents>,
     spentByDay: Map<LocalDate, Cents>,
+    fixedByDay: Map<LocalDate, Cents>,
+    open: Cents,
 ): BudgetMonth {
+    if (fixedByDay.isNotEmpty() || open.v != 0L) TODO()
     val window = monthWindow(month, monthStartDay)
 
     // Calendar weeks cut to the window.
@@ -142,6 +152,8 @@ internal fun budgetMonth(
         status = status,
         projection = Cents(projection),
         idealByDay = idealByDay,
+        freeLimit = limit,
+        variable = Cents(spent),
     )
 }
 
@@ -152,8 +164,8 @@ internal fun maxStep(bm: BudgetMonth, weekStart: LocalDate): Cents {
 }
 
 /**
- * Riskiest first (spec §8.1): Fora da margem by excess, Acima do ritmo by distance to the ideal,
- * No ritmo by smallest margin as a share of the limit. Ties by name.
+ * Riskiest first (spec §8.1): Fora da margem by excess (−remaining), Acima do ritmo by distance to the
+ * ideal (variable − ideal, D68), No ritmo by smallest margin as a share of the limit. Ties by name.
  */
 internal fun riskOrder(budgets: List<BudgetSummary>): List<BudgetSummary> =
     budgets.sortedWith(

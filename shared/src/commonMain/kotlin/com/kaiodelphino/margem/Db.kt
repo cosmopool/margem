@@ -317,7 +317,8 @@ class Db(
     /**
      * Pending notices, newest (posted_at) first, each with the previsto it is recognized as
      * ([NoticeRow.planned], D60). With [today], first creates the previstos' occurrences dated up to
-     * today + 10 days (R1; a write that doesn't bump [version], like [ensureMonths]) and reads
+     * the later of today + 10 days (R1) and the end of today's budget month (D71; a write that doesn't bump
+     * [version], like [ensureMonths]) and reads
      * [Planned.late] against it; with NO_DATE nothing is created, existing open occurrences are still
      * recognized and `late` is false.
      */
@@ -381,6 +382,11 @@ class Db(
      * and is closed by this lançamento; the previsto's link is (re)written from this notice's fonte and bank
      * text when its key is not empty (R2). With MONTHLY, the new previsto is linked the same way, first
      * occurrence in the month after the purchase date's. [TransactionForm.planned] is ignored.
+     *
+     * Margem honesta (D69, D72): a lançamento that closes an occurrence is [TransactionRow.fixed] (out of the
+     * ritmo at its real value, in every month of its installments). When its date falls in another budget
+     * month than the occurrence's date, it takes the occurrence's date with the time it had (M8, late or
+     * early alike); that move never sets `corrected` (no "‸ emendado").
      */
     suspend fun accept(notice: NoticeId, form: TransactionForm): TransactionId = write { c ->
         if (c.long("SELECT COUNT(*) FROM ($NOTICES) WHERE id = ? AND status = 0", notice.v) == 0L) return@write TransactionId(0)
@@ -398,7 +404,8 @@ class Db(
      *   on that date, repeating as [TransactionForm.repeats] says; Saved(planned). No lançamento.
      * - otherwise the lançamento, Saved(transaction); with [TransactionForm.occurrence] it closes that open
      *   occurrence without writing a link (R6b); with MONTHLY also the new previsto (first occurrence next
-     *   month), Saved(transaction, planned).
+     *   month), Saved(transaction, planned). Closing an occurrence makes it [TransactionRow.fixed] and moves
+     *   its date into the occurrence's budget month like [accept] (D69, D72).
      */
     suspend fun addManual(form: TransactionForm, today: LocalDate = NO_DATE): Saved = write { c -> saveTransaction(c, 0, 0, form, today) }
 
@@ -410,7 +417,9 @@ class Db(
      * never changes on edit. "Repete" acts on the transaction's previsto ([TransactionDetail.planned], D65):
      * MONTHLY on a MONTHLY one changes nothing, on a ONCE one makes it MONTHLY; ONCE on a MONTHLY one deletes
      * it like [deletePlanned]. With no previsto, MONTHLY creates one like [accept] does, linked from the
-     * transaction's notice (none for a manual one).
+     * transaction's notice (none for a manual one). [TransactionRow.fixed] never changes on edit (D69); while
+     * the transaction still has its occurrence, a date in another budget month than the occurrence's becomes
+     * the occurrence's date with the new time, not `corrected` (D72).
      */
     suspend fun edit(id: TransactionId, form: TransactionForm): Boolean = write { c ->
         val notice = c.query("SELECT notice_id FROM transactions WHERE id = ?", id.v) { it.getLong(0) }.firstOrNull()
@@ -423,7 +432,8 @@ class Db(
      * its notice and that estorno notice become pending again (spec §2.8). The legenda goes with the
      * transaction (spec §2.12): the notice returns to the Pauta without one, no extra warning. A lançamento
      * from a previsto reopens its occurrence, waiting and with the link it had before, none if it had none (spec S1,
-     * §2.13 2026-10-24); the previsto its "Repete" made goes with it while nothing of it is launched (D65).
+     * §2.13 2026-10-24), and it reserves again (M1); the previsto its "Repete" made goes with it while nothing of
+     * it is launched (D65).
      */
     suspend fun deleteTransaction(id: TransactionId): Unit = write { c ->
         // D65: a link this lançamento rewrote goes back to the one before, while the previsto still has the one it wrote.
@@ -486,7 +496,8 @@ class Db(
      * purchase of [total] in [installments]. For an edit, [replacing] is the transaction being
      * edited: "before" includes it as it is, "after" swaps it for the new values. A refunded
      * transaction stays refunded after the edit, so its margin doesn't move (after = before).
-     * Zero when the budget or the inputs aren't valid.
+     * Zero when the budget or the inputs aren't valid. Margin here is limit − spent, without the reserve of
+     * the open previstos: the margem honesta (M1) in the previews is out of that block (margem-plan §8).
      */
     suspend fun previewAccept(
         budget: BudgetId,
@@ -539,7 +550,7 @@ class Db(
      * [purchase]'s budget in the budget month of its first installment (the purchase date), before and
      * after registering the estorno — after = before + the installment dated in that month, which stops
      * counting. Like [previewAccept], it doesn't need [today]'s month to be the purchase's. Writes nothing.
-     * Zero when the transaction is unknown or already refunded.
+     * Zero when the transaction is unknown or already refunded. Margin = limit − spent, like [previewAccept].
      */
     suspend fun previewRefund(purchase: TransactionId, today: LocalDate): Preview = read { c ->
         val t = c.query(
@@ -650,7 +661,8 @@ class Db(
 
     /**
      * Changes the limit from [today]'s month onward; earlier months keep theirs. In each of those
-     * months where the edited steps now sum more than the new limit, all edits are deleted (spec §4).
+     * months where the edited steps now sum more than the new cota livre (new limit − that month's
+     * previstos, at least 0: [BudgetMonth.freeLimit], D70), all edits are deleted (spec §4).
      * False for limit ≤ 0 or an unknown budget.
      */
     suspend fun setLimit(id: BudgetId, limit: Cents, today: LocalDate): Boolean {
@@ -671,7 +683,8 @@ class Db(
 
     /**
      * Whether [setLimit] with these arguments would delete step edits: some month from [today]'s on
-     * has edited steps summing more than [limit] (spec §4). Writes nothing; the screen asks before
+     * has edited steps summing more than its cota livre with [limit] (limit − that month's previstos,
+     * at least 0; D70, spec §4). Writes nothing; the screen asks before
      * saving when true. False when [setLimit] would refuse (limit ≤ 0 or above the maximum, unknown budget).
      */
     suspend fun limitDropsEdits(id: BudgetId, limit: Cents, today: LocalDate): Boolean {
@@ -698,9 +711,10 @@ class Db(
 
     /**
      * Edits the step of the week starting on [weekStart] (a Week.start of that month). Refused
-     * when the step is < 0 or > [Week.max] (limit − Σ other edited weeks), or when the week is
+     * when the step is < 0 or > [Week.max] (freeLimit − Σ other edited weeks, D70), or when the week is
      * [Week.locked], the only one left not edited (one week always stays automatic). Editing an
-     * already edited week is allowed.
+     * already edited week is allowed. No write about previstos ever deletes an edit: while the month's
+     * edits sum more than its cota livre they are ignored, and count again when it grows back (D70).
      */
     suspend fun setStep(budget: BudgetId, month: YearMonth, weekStart: LocalDate, step: Cents): Boolean = write { c ->
         val s = settings(c)
@@ -733,11 +747,15 @@ class Db(
         if (limit.v !in 1..MAX_CENTS) return BudgetMonth()
         return read { c ->
             val s = settings(c)
-            budgetMonth(monthOf(today, s.monthStartDay), s.monthStartDay, s.weekStart, today, limit, emptyMap(), emptyMap())
+            budgetMonth(monthOf(today, s.monthStartDay), s.monthStartDay, s.weekStart, today, limit, emptyMap(), emptyMap(), emptyMap(), Cents(0))
         }
     }
 
-    /** Budgets with a limit row in [month], with their [BudgetMonth], in [order]. */
+    /**
+     * Budgets with a limit row in [month], with their [BudgetMonth] (margem honesta, D68), in [order]. First
+     * creates the previstos' occurrences like [planned] does (D71: up to the later of [today] + 10 and the end
+     * of today's budget month, a write that doesn't bump [version]), so every occurrence of the month reserves.
+     */
     suspend fun budgetsOverview(month: YearMonth, today: LocalDate, order: BudgetOrder): List<BudgetSummary> = read { c ->
         val s = settings(c)
         val list = c.query(
@@ -752,8 +770,9 @@ class Db(
     }
 
     /**
-     * One budget in [month]: its [BudgetMonth], the lines of the month ([BudgetDetail.lines]) and its
-     * first month. Zero when unknown.
+     * One budget in [month]: its [BudgetMonth], the lines of the month ([BudgetDetail.lines]), its
+     * first month and the previstos of the month ([BudgetDetail.plannedLines], D73). Zero when unknown.
+     * Creates the occurrences first, like [budgetsOverview] (D71).
      */
     suspend fun budgetDetail(id: BudgetId, month: YearMonth, today: LocalDate): BudgetDetail = read { c ->
         val name = c.query("SELECT name FROM budgets WHERE id = ?", id.v) { it.getText(0) }.firstOrNull() ?: return@read BudgetDetail()
@@ -889,9 +908,11 @@ class Db(
      * "A caminho", the previsto sheet and "Qual previsto é este recado?": every open occurrence (not skipped,
      * not closed by a lançamento) dated up to [today] + 10 days (R1: a later one, even a first one saved
      * with a far date, shows from 10 days before its day), oldest date first (ties: occurrence id), [Planned.late] against [today] and
-     * [Planned.noticeInPauta] like [pending]. First creates the occurrences dated up to [today] + 10 days (R1),
-     * without bumping [version]: a ONCE previsto never gets a second one, a month that has its row (open,
-     * closed or skipped) never gets another. Previstos never count in spent, pace, Leitura or widgets.
+     * [Planned.noticeInPauta] like [pending]. First creates the occurrences dated up to the later of [today] + 10
+     * days (R1) and the end of today's budget month (D71), without bumping [version]: a ONCE previsto never gets
+     * a second one, a month that has its row (open, closed or skipped) never gets another; the list still shows
+     * only up to [today] + 10. An open occurrence is never gasto (spent, Leitura rankings and calendar) but
+     * reserves its value in the margem of its month and leaves the cota livre (M1–M3, D68).
      */
     suspend fun planned(today: LocalDate): List<Planned> {
         fill(today)
@@ -910,15 +931,16 @@ class Db(
         if (read { c -> missingOccurrences(c, today).isNotEmpty() }) write(bump = false) { c -> fillPlanned(c, today) }
     }
 
-    /** Pular este mês (P10): the open occurrence won't come back; the next month's still does. False when not open. */
+    /** Pular este mês (P10): the open occurrence won't come back and stops reserving (M2); the next month's still does. False when not open. */
     suspend fun skipOccurrence(id: OccurrenceId): Boolean = write { c ->
         c.exec("UPDATE planned_dates SET skipped = 1 WHERE id = ? AND skipped = 0 AND id NOT IN (SELECT occurrence_id FROM transactions)", id.v)
         c.changes() > 0
     }
 
     /**
-     * Apagar previsto: the rule, its tags and every occurrence; its lançamentos stay and keep counting, with
-     * no origin (occurrence 0). Unknown: nothing changes.
+     * Apagar previsto: the rule, its tags and every occurrence (the open ones stop reserving); its lançamentos
+     * stay and keep counting, with no origin (occurrence 0), still [TransactionRow.fixed] (D69). Unknown:
+     * nothing changes.
      */
     suspend fun deletePlanned(id: PlannedId): Unit = write { c -> deletePlanned(c, "id = ?", id.v) }
 
@@ -1054,7 +1076,8 @@ class Db(
                 "WHERE t.budget_id = ? AND i.date BETWEEN ? AND ? AND $NOT_REFUNDED GROUP BY i.date",
             budget, w.start.low(), w.endInclusive.high(),
         ) { LocalDate.parse(it.getText(0)) to Cents(it.getLong(1)) }.toMap()
-        val bm = budgetMonth(month, s.monthStartDay, s.weekStart, today, Cents(limit), edits, spent)
+        // D68: the fixed installments by day and the open reserve of the month come in the implementation.
+        val bm = budgetMonth(month, s.monthStartDay, s.weekStart, today, Cents(limit), edits, spent, emptyMap(), Cents(0))
         // No limit row (before the budget's first month): nothing to edit, every week locked (Week.locked).
         val hasRow = c.long("SELECT COUNT(*) FROM budget_months WHERE budget_id = ? AND month = ?", budget, month.toString()) > 0L
         return if (hasRow) bm else bm.copy(weeks = bm.weeks.map { it.copy(locked = true, max = Cents(0)) })
@@ -1433,7 +1456,8 @@ class Db(
          */
         /**
          * The one schema (D67, 2026-10-23: the old v1–v5 migrations dropped, nobody but the author used them).
-         * The next change is a migration from this v1 (architecture §4).
+         * The next change is a migration from this v1 (architecture §4). `transactions.fixed` went into v1 without
+         * one (D69): the phone's database is converted by the user's script on a backup.
          */
         val SCHEMA = listOf(
             "CREATE TABLE settings(key TEXT PRIMARY KEY, value TEXT NOT NULL)",
@@ -1447,12 +1471,13 @@ class Db(
             "CREATE TABLE week_steps(budget_id INTEGER NOT NULL, week_start TEXT NOT NULL, cents INTEGER NOT NULL, PRIMARY KEY(budget_id, week_start))",
             "CREATE TABLE ceiling_months(month TEXT PRIMARY KEY, cents INTEGER NOT NULL)",
             // occurrence_id: the occurrence it closed (0 = none, D59); prev_link_*: the previsto's link before this
-            // lançamento rewrote it, given back when it is deleted (D65).
+            // lançamento rewrote it, given back when it is deleted (D65); fixed: it closed an occurrence, out of the
+            // ritmo, kept when the previsto is deleted (D69).
             "CREATE TABLE transactions(id INTEGER PRIMARY KEY AUTOINCREMENT, notice_id INTEGER NOT NULL, budget_id INTEGER NOT NULL, " +
                 "merchant TEXT NOT NULL, merchant_key TEXT NOT NULL, date TEXT NOT NULL, time TEXT NOT NULL, " +
                 "total_cents INTEGER NOT NULL, corrected INTEGER NOT NULL DEFAULT 0, caption TEXT NOT NULL DEFAULT '', " +
                 "occurrence_id INTEGER NOT NULL DEFAULT 0, prev_link_package TEXT NOT NULL DEFAULT '', " +
-                "prev_link_key TEXT NOT NULL DEFAULT '', prev_link_text TEXT NOT NULL DEFAULT '')",
+                "prev_link_key TEXT NOT NULL DEFAULT '', prev_link_text TEXT NOT NULL DEFAULT '', fixed INTEGER NOT NULL DEFAULT 0)",
             "CREATE TABLE installments(transaction_id INTEGER NOT NULL, k INTEGER NOT NULL, date TEXT NOT NULL, cents INTEGER NOT NULL, " +
                 "PRIMARY KEY(transaction_id, k))",
             "CREATE TABLE refunds(estorno_notice_id INTEGER PRIMARY KEY, transaction_id INTEGER NOT NULL, notice_id INTEGER NOT NULL)",

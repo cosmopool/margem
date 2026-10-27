@@ -66,6 +66,7 @@ import com.kaiodelphino.margem.Cents
 import com.kaiodelphino.margem.Db
 import com.kaiodelphino.margem.MonthLine
 import com.kaiodelphino.margem.PaceStatus
+import com.kaiodelphino.margem.PlannedLine
 import com.kaiodelphino.margem.R
 import com.kaiodelphino.margem.Week
 import com.kaiodelphino.margem.widgets.AliasText
@@ -139,18 +140,22 @@ object BudgetTags {
      */
     const val HEADER = "budgets.header"
 
-    // ---- Teto in the header (spec §3, §7.1; book 8.10; D46) ----
+    // ---- Teto and total of the month in the header (spec §3, §7.1; book 8.10; D46; margem-plan M9, M11, M12; D73) ----
 
     /**
-     * The ceiling line under the header's dek, for the current month (after ensureMonths). Absent when the
-     * month has no budget. With a ceiling: "cotas R$ 3.720,00" and "teto R$ 4.100,00" ("teto R$ 4.400,00 ·
-     * só outubro" when Ceiling.cents != Ceiling.standard), plus "+ 300" (whole reais; "+ 300,50" with
-     * cents) when the limits pass it; content description "Teto de outubro: R$ 4.100,00. Cotas somam
-     * R$ 3.720,00, a R$ 380,00 do teto. Tocar para mudar." ("…, fecham no teto. …" when equal; "…, R$ 300,00
-     * além do teto. …" when above). Without a ceiling: "As cotas somam R$ 3.720,00." and "Pôr um teto";
-     * content description "As cotas de outubro somam R$ 3.720,00. Sem teto. Tocar para pôr um teto."
-     * Clicking it, or [HEADER], opens [CEILING_DIALOG] (one touch target from the rubric to the legend);
-     * with no budget, [HEADER] opens nothing.
+     * The teto line, fused with the total of the month (M9), under the header's dek, for the current month
+     * (after ensureMonths). Absent when the month has no budget. Sums of the budgetsOverview list (D73):
+     * cotas = Σ limit, gasto = Σ spent, previstos = Σ open, margem = cotas − gasto − previstos (negative when
+     * the month passes its cotas); no ritmo, no state. Texts: "Margem R$ 1.570,00 de R$ 5.720,00" (margem de
+     * cotas; "R$ 12,00 além de R$ 5.720,00" when negative) and "gasto 1.850 · previstos 2.300 · teto 6.000"
+     * (stepValue: whole reais, cents only when there are), with " · só outubro" when Ceiling.cents !=
+     * Ceiling.standard and " · + 300" when the cotas pass the teto; without a teto, "gasto 1.850 · previstos
+     * 2.300" and "Pôr um teto". Content description "Outubro: margem de R$ 1.570,00 de R$ 5.720,00. Gasto
+     * R$ 1.850,00, previstos R$ 2.300,00. Teto R$ 6.000,00, cotas a R$ 280,00 do teto. Tocar para mudar o
+     * teto." ("…, cotas fecham no teto. …" when equal; "…, cotas R$ 300,00 além do teto. …" when above;
+     * without a teto, "… previstos R$ 2.300,00. Sem teto. Tocar para pôr um teto."). Clicking it, or [HEADER],
+     * opens [CEILING_DIALOG] (one touch target from the rubric to the legend); with no budget, [HEADER] opens
+     * nothing.
      */
     const val CEILING = "budgets.ceiling"
 
@@ -225,8 +230,12 @@ object BudgetTags {
 
     /**
      * Prefix: ROW + budget id ("budgets.row.3"). Name; spent (money) and "de 465,00" (moneyPlain of the
-     * limit); the meter; the state ("No ritmo", "Acima do ritmo", "Fora da margem"; "Sem gasto" when
-     * nothing was spent); and "margem R$ 388,90", or "R$ 12,00 além" when Fora da margem.
+     * limit); the meter (previstos first, M11); the state ("No ritmo", "Acima do ritmo", "Fora da margem";
+     * "Sem gasto" when nothing was spent); and "margem R$ 388,90" (BudgetMonth.remaining), or "R$ 12,00 além"
+     * (−remaining) when Fora da margem. Content description (M12): "Casa, R$ 40,00 de R$ 3.000,00, R$ 2.000,00
+     * em previstos, no ritmo, margem de R$ 960,00." (spent de limit; the "em previstos" part only with
+     * BudgetMonth.open > 0, its value). The state as its label, lowercase ("no ritmo", "acima do ritmo",
+     * "sem gasto"), then "margem de R$ 960,00."; Fora da margem: "…, fora da margem, R$ 12,00 além.".
      * Click opens the detail on the current month. In manual order, long press and drag moves the row;
      * the new order is saved (reorderBudgets) on release.
      */
@@ -324,8 +333,12 @@ object BudgetTags {
     const val MONTH_NEXT = "budget.month.next"
 
     /**
-     * The headline: "R$ 12,00 além da cota." when Fora da margem; otherwise it contains the margin
-     * (money of BudgetMonth.remaining). Followed by a sentence about the month.
+     * The headline: "R$ 12,00 além da cota." (−BudgetMonth.remaining) when Fora da margem; otherwise it
+     * contains the margin (money of remaining). Followed by the dek (M12): "Você lançou R$ 40,00 de R$ 3.000,00
+     * e tem R$ 2.000,00 em previstos. No ritmo: o ideal da cota livre até hoje é R$ 64,52." (the "e tem … em
+     * previstos" part only with BudgetMonth.open > 0, its value); Acima do ritmo: "…, R$ 51,10 acima do ritmo
+     * ideal de hoje." (variable − ideal); Fora da margem: "… em previstos. Nada foi bloqueado. O mês recomeça
+     * em 1 de novembro, com a cota inteira."
      */
     const val DETAIL_HEADLINE = "budget.headline"
 
@@ -357,6 +370,30 @@ object BudgetTags {
     const val STEP_CANCEL = "budget.step.cancel"
 
     /**
+     * After the last [WEEK] (book 8.6, M12): with previstos in the month (BudgetMonth.planned > 0), "Soma = cota
+     * livre", "cota R$ 3.000,00 − previstos R$ 2.000,00" (limit, planned) and money(freeLimit); without,
+     * "Soma = cota" and money(limit).
+     */
+    const val STEPS_SUM = "budget.stepsSum"
+
+    // ---- Previstos de outubro (spec §7.1, book 10.8, M12, D73) ----
+
+    /**
+     * The section "Previstos de outubro" (monthLong of the month) with "valor", between the meter and the
+     * steps, one [PLANNED_LINE] per BudgetDetail.plannedLines. Absent when that list is empty.
+     */
+    const val PLANNED_LINES = "budget.plannedLines"
+
+    /**
+     * Prefix: PLANNED_LINE + occurrence id: the folhinha ("out" / "5"), the name, and under it "esperando ·
+     * todo mês" ("esperando · só uma vez"; "esperando desde 5 out" when Planned.late) while open, "lançado em
+     * 4 out" (PlannedLine.launched) when lançada; the value (PlannedLine.cents), in ink 2 while open. Click
+     * opens the previsto sheet (TransactionTags.PLANNED_SHEET) with PlannedLine.planned; on a lançada line the
+     * sheet has only PLANNED_EDIT and PLANNED_DELETE and says "Lançado em 4 out." instead of the waiting line.
+     */
+    const val PLANNED_LINE = "budget.plannedLine."
+
+    /**
      * Prefix: LINE + transaction id, one per BudgetDetail.lines, oldest first. Headline like
      * TransactionTags.ROW: the legenda in italic with an "em …" credit under it (2 lines) when set, else
      * the name (alias, else bank text). "qui, 1" (weekday and day of MonthLine.date) and the tags;
@@ -368,7 +405,10 @@ object BudgetTags {
     /** Prefix: LINE_SUM + transaction id: the running sum up to that line (moneyPlain); refunded lines don't add. */
     const val LINE_SUM = "budget.lineSum."
 
-    /** "cota atingida aqui": right after the first line whose running sum reaches the limit (≥). Absent if it never does. */
+    /**
+     * "cota atingida aqui": right after the first line where the margem reaches zero: its running sum plus
+     * BudgetMonth.open reaches the limit (≥, M13). Absent if it never does.
+     */
     const val CUT = "budget.cut"
 
     /** Instead of the lines when the month has none. */
@@ -964,6 +1004,14 @@ private fun CutLine() {
         }
     }
 }
+
+/** Book 10.8, M12: "Previstos de outubro" and its lines. Tags: [BudgetTags.PLANNED_LINES], [BudgetTags.PLANNED_LINE]. */
+@Composable
+private fun PlannedLines(lines: List<PlannedLine>, month: YearMonth, open: (PlannedLine) -> Unit): Unit = TODO()
+
+/** Book 8.6, M12: "Soma = cota livre" (or "Soma = cota") under the steps. Tag: [BudgetTags.STEPS_SUM]. */
+@Composable
+private fun StepsSum(bm: BudgetMonth): Unit = TODO()
 
 /** The step of one week: value, "no máximo R$ X", Salvar, and Voltar ao automático on an edited week. */
 @Composable

@@ -19,7 +19,7 @@ class MonthTest {
         weekStart: DayOfWeek = MONDAY,
         edited: Map<LocalDate, Long> = emptyMap(),
         spent: Map<LocalDate, Long> = emptyMap(),
-    ) = budgetMonth(month, startDay, weekStart, today, Cents(limit), edited.mapValues { Cents(it.value) }, spent.mapValues { Cents(it.value) })
+    ) = budgetMonth(month, startDay, weekStart, today, Cents(limit), edited.mapValues { Cents(it.value) }, spent.mapValues { Cents(it.value) }, emptyMap(), Cents(0))
 
     private fun BudgetMonth.steps() = weeks.map { it.step.v }
 

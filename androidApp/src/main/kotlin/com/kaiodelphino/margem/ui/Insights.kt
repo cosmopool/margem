@@ -125,22 +125,23 @@ object InsightsTags {
     const val BUDGET_OPTION = "insights.budgetChoice."
 
     /**
-     * The conclusion. Current month, by the chosen budget's BudgetMonth:
-     * - spent > limit: "R$ 12,00 além da cota." (spent − limit);
-     * - else spent > ideal: "+ R$ 51,10 sobre o ritmo ideal." (spent − ideal);
-     * - else spent < ideal: "R$ 20,00 abaixo do ritmo ideal." (ideal − spent);
+     * The conclusion (margem honesta, spec §7.5, D68). Current month, by the chosen budget's BudgetMonth:
+     * - remaining < 0: "R$ 12,00 além da cota." (−remaining);
+     * - else variable > ideal: "+ R$ 51,10 sobre o ritmo ideal." (variable − ideal);
+     * - else variable < ideal: "R$ 20,00 abaixo do ritmo ideal." (ideal − variable);
      * - else: "No ritmo ideal.";
-     * then, when ideal > 0 and spent > 0, " No passo atual, o mês fecharia em R$ 796." (projection, whole reais).
-     * Past month: "Fechou em R$ 1.180,00, R$ 60,00 dentro da cota." (spent, limit − spent),
-     * "Fechou em R$ 477,00, R$ 12,00 além da cota." (spent, spent − limit), or
-     * "Fechou em R$ 620,00, exatamente a cota." when spent == limit.
+     * then, when ideal > 0 and spent > 0, " No passo atual, o mês fecharia em R$ 796." (projection, M6, whole reais).
+     * Past month: "Fechou em R$ 1.180,00, R$ 60,00 dentro da cota." (spent, remaining),
+     * "Fechou em R$ 477,00, R$ 12,00 além da cota." (spent, −remaining), or
+     * "Fechou em R$ 620,00, exatamente a cota." when remaining == 0.
      */
     const val PACE_SENTENCE = "insights.pace.sentence"
 
     /**
-     * The chart: cumulative spent by day (installments on their date, refunds out), BudgetMonth.idealByDay
+     * The chart: cumulative gasto variável by day (installments on their date, refunds and TransactionRow.fixed
+     * lines out, D68), BudgetMonth.idealByDay (of the cota livre)
      * dashed, projection dotted (current month, when there is a projection), the rest of the month shaded (current month only).
-     * Content description, current month: "Ritmo do mês de Restaurantes: R$ 231,10 até o dia 9, contra
+     * Content description, current month (the gasto variável up to today): "Ritmo do mês de Restaurantes: R$ 231,10 até o dia 9, contra
      * ritmo ideal de R$ 180,00; no passo atual, R$ 796 no fim do mês, para uma cota de R$ 620,00"
      * (the "; no passo atual, … no fim do mês" part only when ideal > 0 and spent > 0). Past month: "Ritmo do mês de
      * Restaurantes: R$ 1.180,00 no mês, para uma cota de R$ 1.240,00".

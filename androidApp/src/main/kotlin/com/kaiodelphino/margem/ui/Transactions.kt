@@ -219,7 +219,9 @@ object TransactionTags {
     /**
      * The previsto sheet (book 8.11): stamp, name, "Lazer · academia · todo mês, dia 5", value; then
      * "Esperando o recado desde 5 de outubro." when late and "Ligado a “SMARTFIT” · Cartão Ipê." (Planned.linkText,
-     * linkSource) when linked, in one line; then the actions. Back or a touch outside closes it.
+     * linkSource) when linked, in one line; then the actions. Back or a touch outside closes it. Opened from a
+     * lançada line of the budget detail (BudgetTags.PLANNED_LINE): "Lançado em 4 out." instead of the waiting
+     * line, and only [PLANNED_EDIT] and [PLANNED_DELETE] (margem-plan M12, 2026-10-27).
      */
     const val PLANNED_SHEET = "transactions.plannedSheet"
 

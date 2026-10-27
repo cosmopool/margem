@@ -328,6 +328,8 @@ private fun mtBudgetMonth(
         // §5: No passo atual = spent × (Σ steps ÷ today's ideal); none when the ideal is 0. Rounded down (spec silent).
         projection = Cents(if (ideal == 0L) 0L else spent * steps.sum() / ideal),
         idealByDay = idealByDay,
+        // D68 without a previsto in the month: the cota livre is the limit and all the gasto is variável.
+        freeLimit = Cents(limit), variable = Cents(spent),
     )
 }
 

@@ -369,7 +369,7 @@ class BudgetsEdgeTest {
 
         // Ideal of Sep 15 (§5): closed weeks 12000 + 14000, plus 14000 × 2 days (14, 15) ÷ 7 = 4000 → 30000.
         val expected = BudgetMonth(
-            month = sep, start = s1, end = day(2026, 9, 30), limit = Cents(60000), spent = Cents(0), remaining = Cents(60000),
+            month = sep, start = s1, end = day(2026, 9, 30), limit = Cents(60000), spent = Cents(0), remaining = Cents(60000), freeLimit = Cents(60000), variable = Cents(0),
             weeks = listOf(
                 fresh(s1, day(2026, 9, 6), 12000, 60000),
                 fresh(s2, day(2026, 9, 13), 14000, 60000),
@@ -390,7 +390,7 @@ class BudgetsEdgeTest {
         val preview = db.previewBudget(Cents(1), sep15)
         // Every share rounds down to 0; the last week not edited gets the difference (spec §4). Ideal 0 → no projection.
         val expected = BudgetMonth(
-            month = sep, start = s1, end = day(2026, 9, 30), limit = Cents(1), spent = Cents(0), remaining = Cents(1),
+            month = sep, start = s1, end = day(2026, 9, 30), limit = Cents(1), spent = Cents(0), remaining = Cents(1), freeLimit = Cents(1), variable = Cents(0),
             weeks = listOf(
                 fresh(s1, day(2026, 9, 6), 0, 1),
                 fresh(s2, day(2026, 9, 13), 0, 1),
@@ -447,7 +447,7 @@ class BudgetsEdgeTest {
         // Ideal of Feb 10: 1000 + 7000 closed, plus 7000 × 3 days (8, 9, 10) ÷ 7 = 3000 → 11000.
         val expected = BudgetMonth(
             month = ym(2027, 1), start = day(2027, 1, 31), end = day(2027, 2, 27),
-            limit = Cents(28000), spent = Cents(0), remaining = Cents(28000),
+            limit = Cents(28000), spent = Cents(0), remaining = Cents(28000), freeLimit = Cents(28000), variable = Cents(0),
             weeks = listOf(
                 fresh(day(2027, 1, 31), day(2027, 1, 31), 1000, 28000),
                 fresh(day(2027, 2, 1), day(2027, 2, 7), 7000, 28000),
@@ -489,7 +489,7 @@ class BudgetsEdgeTest {
         assertEquals(
             BudgetMonth(
                 month = ym(2027, 1), start = jan30, end = day(2027, 2, 27),
-                limit = Cents(29000), spent = Cents(0), remaining = Cents(29000),
+                limit = Cents(29000), spent = Cents(0), remaining = Cents(29000), freeLimit = Cents(29000), variable = Cents(0),
                 weeks = listOf(
                     fresh(jan30, day(2027, 1, 31), 2000, 29000),
                     fresh(day(2027, 2, 1), day(2027, 2, 7), 7000, 29000),
@@ -507,7 +507,7 @@ class BudgetsEdgeTest {
         assertEquals(
             BudgetMonth(
                 month = ym(2027, 2), start = feb28, end = day(2027, 3, 29),
-                limit = Cents(30000), spent = Cents(0), remaining = Cents(30000),
+                limit = Cents(30000), spent = Cents(0), remaining = Cents(30000), freeLimit = Cents(30000), variable = Cents(0),
                 weeks = listOf(
                     fresh(feb28, feb28, 1000, 30000),
                     fresh(day(2027, 3, 1), day(2027, 3, 7), 7000, 30000),
@@ -531,7 +531,7 @@ class BudgetsEdgeTest {
         val feb28 = day(2028, 2, 28)
         val jan = BudgetMonth(
             month = ym(2028, 1), start = day(2028, 1, 29), end = feb28,
-            limit = Cents(31000), spent = Cents(0), remaining = Cents(31000),
+            limit = Cents(31000), spent = Cents(0), remaining = Cents(31000), freeLimit = Cents(31000), variable = Cents(0),
             weeks = listOf(
                 fresh(day(2028, 1, 29), day(2028, 1, 30), 2000, 31000),
                 fresh(day(2028, 1, 31), day(2028, 2, 6), 7000, 31000),
@@ -554,7 +554,7 @@ class BudgetsEdgeTest {
         assertEquals(
             BudgetMonth(
                 month = ym(2028, 2), start = feb29, end = day(2028, 3, 28),
-                limit = Cents(29000), spent = Cents(0), remaining = Cents(29000),
+                limit = Cents(29000), spent = Cents(0), remaining = Cents(29000), freeLimit = Cents(29000), variable = Cents(0),
                 weeks = listOf(
                     fresh(feb29, day(2028, 3, 5), 6000, 29000),
                     fresh(day(2028, 3, 6), day(2028, 3, 12), 7000, 29000),
@@ -576,7 +576,7 @@ class BudgetsEdgeTest {
         val feb27 = day(2027, 2, 27)
         val jan = BudgetMonth(
             month = ym(2027, 1), start = day(2027, 1, 29), end = feb27,
-            limit = Cents(30000), spent = Cents(0), remaining = Cents(30000),
+            limit = Cents(30000), spent = Cents(0), remaining = Cents(30000), freeLimit = Cents(30000), variable = Cents(0),
             weeks = listOf(
                 fresh(day(2027, 1, 29), day(2027, 1, 31), 3000, 30000),
                 fresh(day(2027, 2, 1), day(2027, 2, 7), 7000, 30000),
@@ -643,7 +643,7 @@ class BudgetsEdgeTest {
         // ideal of Oct 15 counts the weeks already past: 1000 + 3·7000 + 7000 × 4 days (12..15) ÷ 7 = 26000.
         val expected = BudgetMonth(
             month = ym(2026, 9), start = day(2026, 9, 20), end = day(2026, 10, 19),
-            limit = Cents(30000), spent = Cents(0), remaining = Cents(30000),
+            limit = Cents(30000), spent = Cents(0), remaining = Cents(30000), freeLimit = Cents(30000), variable = Cents(0),
             weeks = listOf(
                 fresh(day(2026, 9, 20), day(2026, 9, 20), 1000, 30000),
                 fresh(day(2026, 9, 21), day(2026, 9, 27), 7000, 30000),

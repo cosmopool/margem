@@ -40,7 +40,7 @@ Decided 2026-10-27 (M11, M12): [mockups/margem-honesta.html](mockups/margem-hone
 
 ### 5.1 shared
 - `Month.kt` · `budgetMonth(…, fixedByDay, open)` (D68): `fixed`, `planned`, `freeLimit`, `variable`; passos, `Week.max`, `ideal`, `idealByDay` and `Week.spent` of the free part; `remaining = limit − spent − open`; states and projection per M3/M6; edits over `freeLimit` ignored (D70). `riskOrder` unchanged in shape (its OVERRUN excess becomes `−remaining`, AHEAD distance `variable − ideal`).
-- `Types.kt` · `BudgetMonth` + `open`, `fixed`, `freeLimit`, `variable` (KDoc: the M1–M6 formulas, `idealByDay` last day = `freeLimit`); `TransactionRow.fixed`; `PlannedLine` and `BudgetDetail.plannedLines` (D73).
+- `Types.kt` · `BudgetMonth` + `open`, `fixed`, `freeLimit`, `variable` (KDoc: the M1–M6 formulas, `idealByDay` last day = `freeLimit`); `TransactionRow.fixed`; `PlannedLine` and `BudgetDetail.plannedLines` (D73). `PlannedLine(planned: Planned, cents, launched)` (2026-10-27, user's decision): the occurrence's `Planned`, open or lançada, so the line opens the previsto sheet with no other read; `cents` = the previsto's value open, the `fixedByDay` value lançada; `launched` = that installment's date, NO_DATE open (`open` derived).
 - `Db.kt`
   - Schema v1: `transactions.fixed` (D69), no new version.
   - `budgetMonth(c, …)`: two more sums over the window — fixed installments by day (`t.fixed = 1`, `NOT_REFUNDED`) and open occurrences of the budget dated in the window (`skipped = 0`, no transaction), at `planned.cents`.
@@ -52,8 +52,8 @@ Decided 2026-10-27 (M11, M12): [mockups/margem-honesta.html](mockups/margem-hone
 
 ### 5.2 androidApp
 - `widgets/Components.kt` · `Meter`: fixed-first track (M11) from a `BudgetMonth` — open dashed outline in fio forte, lançado fixed in tinta 3, variable in the state color, ritmo mark at `(planned + ideal) ÷ limit`, excess hatch as today; `CeilingMeter` → the total line (M9/M11: track = teto, without teto = sum of cotas and no double rule; thin tinta 2 mark at the sum of cotas; overflow hatch as today). Catalog entries (light/dark) for every state of the mock.
-- `ui/Budgets.kt`: header with the total (D73: sums of the overview list + `Ceiling`), legend and TalkBack of M12; row TalkBack with "R$ X em previstos"; detail dek of M12, "Previstos de <mês>" section (`plannedLines`, tap opens the previsto sheet), "Soma = cota livre" line under the passos. Tags for the new pieces.
-- `ui/Insights.kt`: "Ritmo do mês" plots the cumulative gasto variável (lines with `row.fixed` out) against `idealByDay`; the sentence uses `variable − ideal` and the M6 projection.
+- `ui/Budgets.kt`: header with the total (D73: sums of the overview list + `Ceiling`), legend and TalkBack of M12; row TalkBack with "R$ X em previstos" (the state as its label, lowercase; Fora da margem ends in "R$ 12,00 além.", the others in "margem de R$ X."; 2026-10-27, user's decision); detail dek of M12, "Previstos de <mês>" section (`plannedLines`, tap opens the previsto sheet; on a lançada line the sheet has only Editar and Apagar previsto and says "Lançado em 4 out.", 2026-10-27, user's decision), "Soma = cota livre" line under the passos. Tags for the new pieces.
+- `ui/Insights.kt`: "Ritmo do mês" plots the cumulative gasto variável (lines with `row.fixed` out) against `idealByDay`; the sentence uses `variable − ideal` and the M6 projection. "Além da cota" and the past month's "dentro/além da cota" follow the M1 margem (`remaining`, an open late previsto included; "exatamente a cota" at 0); spent stays the whole gasto in "Fechou em" (2026-10-27, user's decision).
 - `ui/Transactions.kt`: nothing new beyond what `saveTransaction` does (D72 is silent in the form).
 
 ### 5.3 Book (`docs/design_system.html`)
@@ -79,7 +79,7 @@ From [the mock](mockups/margem-honesta.html), proposal A: 8.5 régua (fixed firs
 Each step one commit, each commit only after the user's approval.
 
 0. **Book** (§5.3) from the mock, light and dark; `docs: margem honesta in the book`.
-1. **Contract**: §5.1 types, signatures and KDoc (D68–D73), the `fixed` column, tags of §5.2; new bodies `TODO()`; `make test` green with the old behavior where bodies didn't change.
+1. **Contract**: §5.1 types, signatures and KDoc (D68–D73), the `fixed` column, tags of §5.2; new bodies `TODO()`; `make test` green with the old behavior where bodies didn't change. Decided 2026-10-27 (user): the `Db` bodies whose rule changes keep today's behavior in the contract (no previsto sums, `fixed` written 0, `plannedLines` empty, no D71/D72), since `TODO()` there would break the suites that pin the old rule; `TODO()` only on `budgetMonth`'s new path (`fixedByDay` or `open` given) and on the new screen pieces, not wired yet.
 2. **Contract round** (§6), in parallel with step 3.
 3. **Implementation**: `budgetMonth` first with its unit tests; then `Db` (sums, `fixed`, D72, fill horizon, `plannedLines`, the step/limit checks), rewriting the suites that pin "never counts"; then the UI per the book. `make test` after each change.
 4. **Triage** of the contract tests; `make test` green.
@@ -92,4 +92,6 @@ Each step one commit, each commit only after the user's approval.
 - **Write before read in Verbas** (D71): `budgetsOverview`/`budgetDetail` now may write (`bump = false`) before reading, like `pending()`; a read during a long write waits (D29).
 - **The phone's database** (D69): the new app can't open the release database without the conversion; installing it before step 7 breaks the app on the phone. Install only after the export.
 - **Silent date change** (D72): editing a previsto's lançamento to another month keeps it in the occurrence's month without saying so in the form. Accepted with the decision; if the emulator check shows it confuses, it goes back to the user.
+- **Margin previews out of this block** (2026-10-27, user's decision): `previewAccept` (the form's "Lazer: margem R$ 34,00 → R$ 12,00" and the "Margem: …" snack) and `previewRefund` stay limit − spent, without the M1 reserve, so they differ from the verba sheet and Verbas while a previsto is open. Pending, to be decided apart (option on the table: M1 margin plus an `occurrence` parameter that swaps the reserve for the lançamento in the occurrence's month).
+- **Leitura "Verbas por mês" out of this block** (2026-10-27, user's decision): `history` and its chart and sentence ("Dois meses fora da margem.") stay spent × limit, without the reserve; a past month with an open late previsto can be Fora da margem in Verbas and not there. Pending, to be decided apart.
 - **The previsto's "Parcelas" bug** (5-persona review, 2026-10-26: the stepper shows on Salvar previsto and is ignored) is out of this plan.
