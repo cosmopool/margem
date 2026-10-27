@@ -548,11 +548,11 @@ p.tx.serif{font:400 19px/1.6 'Newsreader'}
 /* ---- margem honesta (mock) ---- */
 .wrapm{max-width:1180px;margin:0 auto;padding:48px 24px 96px}
 .rail .fix{position:absolute;left:0;top:3px;height:8px;width:calc(var(--f,0)*100%);background:var(--tinta-3)}
-.rail .res{position:absolute;left:calc(var(--rs,0)*100%);top:3px;height:8px;width:calc(var(--r,0)*100%);border:1px dashed var(--fio-forte);box-sizing:border-box}
+.rail .rsv{position:absolute;left:calc(var(--rs,0)*100%);top:3px;height:8px;width:calc(var(--r,0)*100%);border:1px dashed var(--fio-forte);box-sizing:border-box}
 .meter.m2 .fill{left:calc(var(--fs,0)*100%);border-radius:0}
 .meter.m2.ov .fill{width:calc(var(--g,0)*100%)}
-.meter.tall .fix,.meter.tall .res{top:5px;height:12px}
-.meter.teto .fix,.meter.teto .res{top:2px;height:5px}
+.meter.tall .fix,.meter.tall .rsv{top:5px;height:12px}
+.meter.teto .fix,.meter.teto .rsv{top:2px;height:5px}
 .rail .cm{position:absolute;left:calc(var(--c,0)*100%);top:1px;bottom:1px;width:1px;background:var(--tinta-2)}
 .prop{display:inline-block;font:600 12px 'Source Sans 3';letter-spacing:.1em;text-transform:uppercase;color:var(--argila);margin-bottom:6px}
 .rec2{font:600 11px 'Source Sans 3';letter-spacing:.08em;text-transform:uppercase;color:var(--anil);margin-left:8px}
@@ -620,17 +620,17 @@ p.tx.serif{font:400 19px/1.6 'Newsreader'}
 <p class="intro">Verba Casa, cota R$ 3.000,00, aluguel previsto R$ 2.000,00 no dia 5, outubro de 1 a 31. As duas propostas obedecem à mesma conta: a tinta passa da marca do ritmo exatamente quando o gasto variável passa do ritmo ideal da cota livre, e a tinta mais o tracejado passam do fio duplo exatamente quando a margem fica negativa.</p>
 <div class="cols-2">
 <div class="stage t-light" data-twin><span class="prop">Proposta A · fixas na frente</span>
-<div class="vr"><div class="l1"><span class="nm"><i class="id" style="background:var(--c1)"></i>Casa</span><span class="vv">R$ 40,00<small>de 3.000,00</small></span></div><div class="meter m2 " style="--rs:0;--r:.667;--fs:.667;--g:.013;--p:.688"><div class="rail"><i class="res"></i><i class="fill"></i><i class="pace"></i></div></div><div class="l3"><span class="st ok">No ritmo</span><span>margem R$ 960,00</span></div></div>
+<div class="vr"><div class="l1"><span class="nm"><i class="id" style="background:var(--c1)"></i>Casa</span><span class="vv">R$ 40,00<small>de 3.000,00</small></span></div><div class="meter m2 " style="--rs:0;--r:.667;--fs:.667;--g:.013;--p:.688"><div class="rail"><i class="rsv"></i><i class="fill"></i><i class="pace"></i></div></div><div class="l3"><span class="st ok">No ritmo</span><span>margem R$ 960,00</span></div></div>
 <div class="vr"><div class="l1"><span class="nm"><i class="id" style="background:var(--c1)"></i>Casa</span><span class="vv">R$ 2.400,00<small>de 3.000,00</small></span></div><div class="meter m2 " style="--f:.70;--fs:.70;--g:.10;--p:.816"><div class="rail"><i class="fix"></i><i class="fill"></i><i class="pace"></i></div></div><div class="l3"><span class="st ok">No ritmo</span><span>margem R$ 600,00</span></div></div>
 <div class="vr"><div class="l1"><span class="nm"><i class="id" style="background:var(--c1)"></i>Casa</span><span class="vv">R$ 2.550,00<small>de 3.000,00</small></span></div><div class="meter m2 at" style="--f:.70;--fs:.70;--g:.15;--p:.816"><div class="rail"><i class="fix"></i><i class="fill"></i><i class="pace"></i></div></div><div class="l3"><span class="st at">Acima do ritmo</span><span>margem R$ 450,00</span></div></div>
-<div class="vr"><div class="l1"><span class="nm"><i class="id" style="background:var(--c1)"></i>Casa</span><span class="vv">R$ 1.100,00<small>de 3.000,00</small></span></div><div class="meter m2 ov" style="--rs:0;--r:.667;--fs:.667;--g:.333;--p:.882;--x:.033"><div class="rail"><i class="res"></i><i class="fill"></i><i class="pace"></i><i class="over"></i></div></div><div class="l3"><span class="st ov">Fora da margem</span><span><b style="color:var(--lacre)">R$ 100,00 além</b></span></div></div>
+<div class="vr"><div class="l1"><span class="nm"><i class="id" style="background:var(--c1)"></i>Casa</span><span class="vv">R$ 1.100,00<small>de 3.000,00</small></span></div><div class="meter m2 ov" style="--rs:0;--r:.667;--fs:.667;--g:.333;--p:.882;--x:.033"><div class="rail"><i class="rsv"></i><i class="fill"></i><i class="pace"></i><i class="over"></i></div></div><div class="l3"><span class="st ov">Fora da margem</span><span><b style="color:var(--lacre)">R$ 100,00 além</b></span></div></div>
 <p class="cap" style="margin-top:12px"><b>Como lê</b>Os previstos do mês ocupam o começo da régua: em aberto, só o contorno tracejado; lançado, tinta 3 cheia (é gasto, mas fora do ritmo, por isso sem cor de estado). Depois vem o gasto variável, na cor do estado, e a marca do ritmo fica sempre na parte livre. Linhas: dia 2 com o aluguel em aberto · dia 12, aluguel lançado em R$ 2.100,00 e R$ 300,00 variáveis · dia 12 com R$ 450,00 variáveis · dia 20, aluguel em aberto e R$ 1.100,00 variáveis.</p>
 </div>
 <div class="stage t-light" data-twin><span class="prop">Proposta B · depois do gasto</span>
-<div class="vr"><div class="l1"><span class="nm"><i class="id" style="background:var(--c1)"></i>Casa</span><span class="vv">R$ 40,00<small>de 3.000,00</small></span></div><div class="meter m2 " style="--fs:0;--g:.013;--rs:.013;--r:.667;--p:.0215"><div class="rail"><i class="fill"></i><i class="res"></i><i class="pace"></i></div></div><div class="l3"><span class="st ok">No ritmo</span><span>margem R$ 960,00</span></div></div>
+<div class="vr"><div class="l1"><span class="nm"><i class="id" style="background:var(--c1)"></i>Casa</span><span class="vv">R$ 40,00<small>de 3.000,00</small></span></div><div class="meter m2 " style="--fs:0;--g:.013;--rs:.013;--r:.667;--p:.0215"><div class="rail"><i class="fill"></i><i class="rsv"></i><i class="pace"></i></div></div><div class="l3"><span class="st ok">No ritmo</span><span>margem R$ 960,00</span></div></div>
 <div class="vr"><div class="l1"><span class="nm"><i class="id" style="background:var(--c1)"></i>Casa</span><span class="vv">R$ 2.400,00<small>de 3.000,00</small></span></div><div class="meter m2 " style="--fs:0;--g:.80;--p:.816"><div class="rail"><i class="fill"></i><i class="pace"></i></div></div><div class="l3"><span class="st ok">No ritmo</span><span>margem R$ 600,00</span></div></div>
 <div class="vr"><div class="l1"><span class="nm"><i class="id" style="background:var(--c1)"></i>Casa</span><span class="vv">R$ 2.550,00<small>de 3.000,00</small></span></div><div class="meter m2 at" style="--fs:0;--g:.85;--p:.816"><div class="rail"><i class="fill"></i><i class="pace"></i></div></div><div class="l3"><span class="st at">Acima do ritmo</span><span>margem R$ 450,00</span></div></div>
-<div class="vr"><div class="l1"><span class="nm"><i class="id" style="background:var(--c1)"></i>Casa</span><span class="vv">R$ 1.100,00<small>de 3.000,00</small></span></div><div class="meter m2 ov" style="--fs:0;--g:.367;--rs:.367;--r:.633;--p:.215;--x:.033"><div class="rail"><i class="fill"></i><i class="res"></i><i class="pace"></i><i class="over"></i></div></div><div class="l3"><span class="st ov">Fora da margem</span><span><b style="color:var(--lacre)">R$ 100,00 além</b></span></div></div>
+<div class="vr"><div class="l1"><span class="nm"><i class="id" style="background:var(--c1)"></i>Casa</span><span class="vv">R$ 1.100,00<small>de 3.000,00</small></span></div><div class="meter m2 ov" style="--fs:0;--g:.367;--rs:.367;--r:.633;--p:.215;--x:.033"><div class="rail"><i class="fill"></i><i class="rsv"></i><i class="pace"></i><i class="over"></i></div></div><div class="l3"><span class="st ov">Fora da margem</span><span><b style="color:var(--lacre)">R$ 100,00 além</b></span></div></div>
 <p class="cap" style="margin-top:12px"><b>Como lê</b>Como hoje: a tinta é todo o gasto, na cor do estado, inclusive o aluguel lançado; o previsto em aberto vem logo depois, tracejado. A marca do ritmo fica em lançados de previsto + ritmo ideal, então pode cair dentro do tracejado (linha 1) e o aluguel pago ganha a cor do variável (linha 3, ocre). Mesmas quatro situações.</p>
 </div>
 </div>
@@ -641,28 +641,28 @@ p.tx.serif{font:400 19px/1.6 'Newsreader'}
 <div class="cols-2">
 <div class="stage t-light" data-twin><span class="prop">Proposta A · fixas na frente</span>
 <div class="hdr" role="button"><div class="over-r">Mês de 1 a 31 de outubro</div><h3 class="hl">Dia 9 de 31.</h3><p class="dek">Faltam 23 dias, contando hoje.</p>
-<div class="meter teto m2" style="--f:.2;--rs:.2;--r:.383;--fs:.583;--g:.108;--c:.953"><div class="rail"><i class="fix"></i><i class="res"></i><i class="fill"></i><i class="cm"></i></div></div>
+<div class="meter teto m2" style="--f:.2;--rs:.2;--r:.383;--fs:.583;--g:.108;--c:.953"><div class="rail"><i class="fix"></i><i class="rsv"></i><i class="fill"></i><i class="cm"></i></div></div>
 <div class="tlab2"><b>Margem R$ 1.570,00 de R$ 5.720,00</b><span>gasto 1.850 · previstos 2.300 · teto 6.000</span></div></div>
 <p class="cap" style="margin-top:14px"><b>Sem teto</b></p>
 <div class="hdr" role="button"><div class="over-r">Mês de 1 a 31 de outubro</div><h3 class="hl">Dia 9 de 31.</h3><p class="dek">Faltam 23 dias, contando hoje.</p>
-<div class="meter teto m2 nt" style="--f:.21;--rs:.21;--r:.402;--fs:.612;--g:.114"><div class="rail"><i class="fix"></i><i class="res"></i><i class="fill"></i></div></div>
+<div class="meter teto m2 nt" style="--f:.21;--rs:.21;--r:.402;--fs:.612;--g:.114"><div class="rail"><i class="fix"></i><i class="rsv"></i><i class="fill"></i></div></div>
 <div class="tlab2"><b>Margem R$ 1.570,00 de R$ 5.720,00</b><span>gasto 1.850 · previstos 2.300 · <span class="btn txt sm">Pôr um teto</span></span></div></div>
 <p class="cap" style="margin-top:14px"><b>Cotas acima do teto</b> (cotas R$ 6.300,00)</p>
 <div class="hdr" role="button"><div class="over-r">Mês de 1 a 31 de outubro</div><h3 class="hl">Dia 9 de 31.</h3><p class="dek">Faltam 23 dias, contando hoje.</p>
-<div class="meter teto m2" style="--f:.2;--rs:.2;--r:.383;--fs:.583;--g:.108;--x:.05"><div class="rail"><i class="fix"></i><i class="res"></i><i class="fill"></i><i class="over"></i></div></div>
+<div class="meter teto m2" style="--f:.2;--rs:.2;--r:.383;--fs:.583;--g:.108;--x:.05"><div class="rail"><i class="fix"></i><i class="rsv"></i><i class="fill"></i><i class="over"></i></div></div>
 <div class="tlab2"><b>Margem R$ 2.150,00 de R$ 6.300,00</b><span>gasto 1.850 · previstos 2.300 · teto 6.000 · <b style="font:600 13px 'Source Sans 3';color:var(--lacre)">+ 300</b></span></div></div>
 </div>
 <div class="stage t-light" data-twin><span class="prop">Proposta B · depois do gasto</span>
 <div class="hdr" role="button"><div class="over-r">Mês de 1 a 31 de outubro</div><h3 class="hl">Dia 9 de 31.</h3><p class="dek">Faltam 23 dias, contando hoje.</p>
-<div class="meter teto m2" style="--fs:0;--g:.308;--rs:.308;--r:.383;--c:.953"><div class="rail"><i class="fill"></i><i class="res"></i><i class="cm"></i></div></div>
+<div class="meter teto m2" style="--fs:0;--g:.308;--rs:.308;--r:.383;--c:.953"><div class="rail"><i class="fill"></i><i class="rsv"></i><i class="cm"></i></div></div>
 <div class="tlab2"><b>Margem R$ 1.570,00 de R$ 5.720,00</b><span>gasto 1.850 · previstos 2.300 · teto 6.000</span></div></div>
 <p class="cap" style="margin-top:14px"><b>Sem teto</b></p>
 <div class="hdr" role="button"><div class="over-r">Mês de 1 a 31 de outubro</div><h3 class="hl">Dia 9 de 31.</h3><p class="dek">Faltam 23 dias, contando hoje.</p>
-<div class="meter teto m2 nt" style="--fs:0;--g:.323;--rs:.323;--r:.402"><div class="rail"><i class="fill"></i><i class="res"></i></div></div>
+<div class="meter teto m2 nt" style="--fs:0;--g:.323;--rs:.323;--r:.402"><div class="rail"><i class="fill"></i><i class="rsv"></i></div></div>
 <div class="tlab2"><b>Margem R$ 1.570,00 de R$ 5.720,00</b><span>gasto 1.850 · previstos 2.300 · <span class="btn txt sm">Pôr um teto</span></span></div></div>
 <p class="cap" style="margin-top:14px"><b>Cotas acima do teto</b> (cotas R$ 6.300,00)</p>
 <div class="hdr" role="button"><div class="over-r">Mês de 1 a 31 de outubro</div><h3 class="hl">Dia 9 de 31.</h3><p class="dek">Faltam 23 dias, contando hoje.</p>
-<div class="meter teto m2" style="--fs:0;--g:.308;--rs:.308;--r:.383;--x:.05"><div class="rail"><i class="fill"></i><i class="res"></i><i class="over"></i></div></div>
+<div class="meter teto m2" style="--fs:0;--g:.308;--rs:.308;--r:.383;--x:.05"><div class="rail"><i class="fill"></i><i class="rsv"></i><i class="over"></i></div></div>
 <div class="tlab2"><b>Margem R$ 2.150,00 de R$ 6.300,00</b><span>gasto 1.850 · previstos 2.300 · teto 6.000 · <b style="font:600 13px 'Source Sans 3';color:var(--lacre)">+ 300</b></span></div></div>
 </div>
 </div>
@@ -674,7 +674,7 @@ p.tx.serif{font:400 19px/1.6 'Newsreader'}
 <div class="over-r">Casa · outubro</div>
 <h3 class="hl">Sobram R$ 960,00.</h3>
 <p class="dek">Você lançou R$ 40,00 de R$ 3.000,00 e tem R$ 2.000,00 em previstos. No ritmo: o ideal da cota livre até hoje é R$ 64,52.</p>
-<div class="meter m2 tall" style="--rs:0;--r:.667;--fs:.667;--g:.013;--p:.688;margin-top:14px"><div class="rail"><i class="res"></i><i class="fill"></i><i class="pace"></i></div></div>
+<div class="meter m2 tall" style="--rs:0;--r:.667;--fs:.667;--g:.013;--p:.688;margin-top:14px"><div class="rail"><i class="rsv"></i><i class="fill"></i><i class="pace"></i></div></div>
 <div class="secline"><span class="over-r" style="color:var(--tinta)">Previstos de outubro</span><span class="over-r">valor</span></div>
 <div class="prow"><span class="dia"><small>out</small><b>5</b></span><span class="tx"><span class="nm">Aluguel</span><span class="w">esperando · todo mês</span></span><span class="amt"><span class="cur">R$</span>2.000,00</span></div>
 <div class="secline"><span class="over-r" style="color:var(--tinta)">Passos semanais · Casa</span><span class="over-r">passo</span></div>

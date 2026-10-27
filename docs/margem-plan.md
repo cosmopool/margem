@@ -1,6 +1,6 @@
 # Margem honesta — plan
 
-Status: **product decided** 2026-10-26 (M1–M10), mock decided 2026-10-27 (M11–M12); recorded in spec §2.13, §3, §4, §5, §7.1, §7.4, §7.5 and the glossary. Implementation decided 2026-10-27: architecture D68–D74, plan §5–§9. Nothing open.
+Status: **product decided** 2026-10-26 (M1–M10), mock decided 2026-10-27 (M11–M12), book M13; recorded in spec §2.13, §3, §4, §5, §7.1, §7.4, §7.5 and the glossary. Implementation decided 2026-10-27: architecture D68–D74, plan §5–§9. Nothing open.
 
 ## 1. Goal
 
@@ -24,6 +24,7 @@ The rule in the owner's words: verba − previsto = quanto sobra para gastar; o 
 | M10 | Names | **Margem** keeps its name with the M1 formula; cota − previstos do mês is the **Cota livre** (`FreeLimit`). |
 | M11 | Régua (mock, 2026-10-27) | **Proposal A, fixed first** ([mockups/margem-honesta.html](mockups/margem-honesta.html)), in the verba régua and in the total: previstos do mês at the start of the track — open = dashed outline in fio forte, lançado = solid tinta 3 (gasto, but out of the ritmo, so no state color) — then the gasto variável in the state color (in the total, tinta). The ritmo mark sits at previstos do mês + ritmo ideal, always in the free part. Excess hatch as today. Total: thin tinta 2 mark at the sum of cotas when it falls before the teto; no double rule without teto. |
 | M12 | Copy (mock, 2026-10-27) | Detail dek: "Você lançou R$ 40,00 de R$ 3.000,00 e tem R$ 2.000,00 em previstos. No ritmo: o ideal da cota livre até hoje é R$ 64,52." (the "e tem … em previstos" part only with an open previsto). TalkBack verba: "Casa, R$ 40,00 de R$ 3.000,00, R$ 2.000,00 em previstos, no ritmo, margem de R$ 960,00." TalkBack total: "Outubro: margem de R$ 1.570,00 de R$ 5.720,00. Gasto R$ 1.850,00, previstos R$ 2.300,00. Teto R$ 6.000,00, cotas a R$ 280,00 do teto. Tocar para mudar o teto." Detail: "Previstos de outubro" with the folhinha, "esperando · todo mês" (open, tinta 2 value) or "lançado em 4 out" (lançado value); passos end in "Soma = cota livre" over "cota R$ 3.000,00 − previstos R$ 2.000,00"; without previsto in the month, as today. |
+| M13 | "Cota atingida aqui" (book, 2026-10-27) | The verba detail's cut line falls on the lançamento where the margem reaches zero: running sum + open previstos ≥ cota (Lazer, 9 out: Cine Paraíso, 419,00 + 89,90 ≥ 465,00). The book's scenario now reserves the four previstos of 8.11 (user's decision). |
 
 ## 3. Consequences recorded without a separate question
 
