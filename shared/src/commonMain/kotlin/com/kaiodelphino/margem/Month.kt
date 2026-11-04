@@ -59,8 +59,10 @@ internal fun budgetMonth(
     fixedByDay: Map<LocalDate, Cents>,
     open: Cents,
 ): BudgetMonth {
-    if (fixedByDay.isNotEmpty() || open.v != 0L) TODO()
     val window = monthWindow(month, monthStartDay)
+    var fixed = 0L
+    for ((date, cents) in fixedByDay) if (date in window) fixed += cents.v
+    val free = maxOf(0L, limit.v - open.v - fixed)
 
     // Calendar weeks cut to the window.
     val starts = ArrayList<LocalDate>()
@@ -78,14 +80,14 @@ internal fun budgetMonth(
     var edited = BooleanArray(n) { starts[it] in editedSteps }
     var editedSum = 0L
     for (i in 0 until n) if (edited[i]) editedSum += editedSteps.getValue(starts[i]).v
-    if (edited.all { it } || editedSum > limit.v) {
+    if (edited.all { it } || editedSum > free) {
         edited = BooleanArray(n)
         editedSum = 0
     }
 
     // Automatic weeks share what the edits leave, by days, rounded down; the last one takes the rest (D11).
     val steps = LongArray(n)
-    val rest = limit.v - editedSum
+    val rest = free - editedSum
     val autoDays = (0 until n).filter { !edited[it] }.sumOf { days[it] }
     val autoCount = edited.count { !it }
     var lastAuto = -1
@@ -101,13 +103,20 @@ internal fun budgetMonth(
     }
     if (lastAuto >= 0) steps[lastAuto] += rest - given
 
+    // Week.spent is the gasto variável: the whole gasto of the week less its fixed installments (D68).
     val weekSpent = LongArray(n)
     var spent = 0L
     for ((date, cents) in spentByDay) {
-        if (date < window.start || date > window.endInclusive) continue
+        if (date !in window) continue
         spent += cents.v
         for (i in 0 until n) if (date <= ends[i]) { weekSpent[i] += cents.v; break }
     }
+    for ((date, cents) in fixedByDay) {
+        if (date !in window) continue
+        for (i in 0 until n) if (date <= ends[i]) { weekSpent[i] -= cents.v; break }
+    }
+    val variable = spent - fixed
+    val remaining = limit.v - spent - open.v
 
     // Ritmo ideal of a day: closed weeks whole, that day's week by days elapsed (with the day).
     fun idealOn(day: LocalDate): Long {
@@ -125,14 +134,15 @@ internal fun budgetMonth(
     for (d in window) idealByDay.add(Cents(idealOn(d)))
 
     val status = when {
-        spent > limit.v -> PaceStatus.OVERRUN
-        spent > ideal -> PaceStatus.AHEAD
+        remaining < 0 -> PaceStatus.OVERRUN
+        variable > ideal -> PaceStatus.AHEAD
         else -> PaceStatus.ON_PACE
     }
+    // M6: the free part at today's pace, plus the previstos do mês.
     val projection = when {
         ideal == 0L -> 0L
-        limit.v == 0L || spent <= Long.MAX_VALUE / limit.v -> spent * limit.v / ideal
-        else -> (spent.toDouble() * limit.v / ideal).toLong()
+        free == 0L || variable <= Long.MAX_VALUE / free -> variable * free / ideal + open.v + fixed
+        else -> (variable.toDouble() * free / ideal).toLong() + open.v + fixed
     }
 
     return BudgetMonth(
@@ -141,19 +151,21 @@ internal fun budgetMonth(
         end = window.endInclusive,
         limit = limit,
         spent = Cents(spent),
-        remaining = Cents(limit.v - spent),
+        remaining = Cents(remaining),
         weeks = List(n) {
             // Max of a step edit: what the other edits leave; the only automatic week left is locked (spec §4).
             val locked = !edited[it] && autoCount == 1
-            val max = if (locked) 0L else limit.v - editedSum + (if (edited[it]) steps[it] else 0L)
+            val max = if (locked) 0L else free - editedSum + (if (edited[it]) steps[it] else 0L)
             Week(starts[it], ends[it], Cents(steps[it]), edited[it], Cents(weekSpent[it]), Cents(max), locked)
         },
         ideal = Cents(ideal),
         status = status,
         projection = Cents(projection),
         idealByDay = idealByDay,
-        freeLimit = limit,
-        variable = Cents(spent),
+        open = open,
+        fixed = Cents(fixed),
+        freeLimit = Cents(free),
+        variable = Cents(variable),
     )
 }
 
@@ -172,8 +184,8 @@ internal fun riskOrder(budgets: List<BudgetSummary>): List<BudgetSummary> =
         compareByDescending<BudgetSummary> { it.month.status.ordinal }
             .thenByDescending {
                 when (it.month.status) {
-                    PaceStatus.OVERRUN -> (it.month.spent - it.month.limit).v.toDouble()
-                    PaceStatus.AHEAD -> (it.month.spent - it.month.ideal).v.toDouble()
+                    PaceStatus.OVERRUN -> -it.month.remaining.v.toDouble()
+                    PaceStatus.AHEAD -> (it.month.variable - it.month.ideal).v.toDouble()
                     PaceStatus.ON_PACE -> if (it.month.limit.v == 0L) 0.0 else -it.month.remaining.v.toDouble() / it.month.limit.v
                 }
             }

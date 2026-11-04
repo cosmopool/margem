@@ -326,7 +326,7 @@ class Db(
         if (today != NO_DATE) fill(today)
         return read { c ->
             val rows = notices(c, "WHERE status = 0 ORDER BY posted_at DESC, id DESC")
-            val found = recognize(c, rows, plannedRows(c, today, "WHERE p.link_key != ''"))
+            val found = recognize(c, rows, plannedRows(c, today, "p.link_key != ''"))
             rows.map { n -> found[n.id.v]?.let { n.copy(planned = it.copy(noticeInPauta = true)) } ?: n }
         }
     }
@@ -756,13 +756,18 @@ class Db(
      * creates the previstos' occurrences like [planned] does (D71: up to the later of [today] + 10 and the end
      * of today's budget month, a write that doesn't bump [version]), so every occurrence of the month reserves.
      */
-    suspend fun budgetsOverview(month: YearMonth, today: LocalDate, order: BudgetOrder): List<BudgetSummary> = read { c ->
+    suspend fun budgetsOverview(month: YearMonth, today: LocalDate, order: BudgetOrder): List<BudgetSummary> {
+        fill(today)
+        return read { c -> overview(c, month, today, order) }
+    }
+
+    private fun overview(c: SQLiteConnection, month: YearMonth, today: LocalDate, order: BudgetOrder): List<BudgetSummary> {
         val s = settings(c)
         val list = c.query(
             "SELECT b.id, b.name FROM budgets b JOIN budget_months m ON m.budget_id = b.id AND m.month = ? ORDER BY b.position, b.id",
             month.toString(),
         ) { it.getLong(0) to it.getText(1) }.map { (id, name) -> BudgetSummary(BudgetId(id), name, budgetMonth(c, s, id, month, today)) }
-        when (order) {
+        return when (order) {
             BudgetOrder.RISK -> riskOrder(list)
             BudgetOrder.MANUAL -> list
             BudgetOrder.AZ -> list.sortedBy { it.name.lowercase() }
@@ -774,8 +779,13 @@ class Db(
      * first month and the previstos of the month ([BudgetDetail.plannedLines], D73). Zero when unknown.
      * Creates the occurrences first, like [budgetsOverview] (D71).
      */
-    suspend fun budgetDetail(id: BudgetId, month: YearMonth, today: LocalDate): BudgetDetail = read { c ->
-        val name = c.query("SELECT name FROM budgets WHERE id = ?", id.v) { it.getText(0) }.firstOrNull() ?: return@read BudgetDetail()
+    suspend fun budgetDetail(id: BudgetId, month: YearMonth, today: LocalDate): BudgetDetail {
+        fill(today)
+        return read { c -> detail(c, id, month, today) }
+    }
+
+    private fun detail(c: SQLiteConnection, id: BudgetId, month: YearMonth, today: LocalDate): BudgetDetail {
+        val name = c.query("SELECT name FROM budgets WHERE id = ?", id.v) { it.getText(0) }.firstOrNull() ?: return BudgetDetail()
         val bm = budgetMonth(c, settings(c), id.v, month, today)
         val from = bm.start.low()
         val to = bm.end.high()
@@ -790,7 +800,24 @@ class Db(
         ) { MonthLine(rows.getValue(it.getLong(0)), it.getInt(1), LocalDate.parse(it.getText(2)), Cents(it.getLong(3))) }
         val first = c.query("SELECT MIN(month) FROM budget_months WHERE budget_id = ?", id.v) { if (it.isNull(0)) NO_MONTH else YearMonth.parse(it.getText(0)) }
         val planned = c.long("SELECT COUNT(*) FROM planned WHERE budget_id = ?", id.v).toInt()
-        BudgetDetail(id, name, bm, lines, first.firstOrNull() ?: NO_MONTH, planned)
+        // D73: the occurrences of its previstos dated in the month, open or lançada; a lançada one at what its
+        // lançamento adds to this budget's fixed (0 when refunded or in another budget), on its date.
+        // An occurrence's date is in the calendar month of its row: the window's two calendar months hold them all.
+        val inMonth = "p.budget_id = ${id.v} AND d.month BETWEEN '${bm.start.yearMonth}' AND '${bm.end.yearMonth}'"
+        val launched = HashMap<Long, Pair<Cents, LocalDate>>()
+        c.query(
+            "SELECT d.id, t.date, CASE WHEN t.budget_id = p.budget_id AND $NOT_REFUNDED THEN " +
+                "(SELECT COALESCE(SUM(i.cents), 0) FROM installments i WHERE i.transaction_id = t.id AND i.date BETWEEN ? AND ?) ELSE 0 END " +
+                "FROM planned_dates d JOIN planned p ON p.id = d.planned_id JOIN transactions t ON t.occurrence_id = d.id WHERE $inMonth",
+            from, to,
+        ) { launched[it.getLong(0)] = Cents(it.getLong(2)) to LocalDate.parse(it.getText(1)) }
+        val plannedLines = plannedRows(c, today, "$inMonth AND d.skipped = 0", open = false)
+            .filter { it.date in bm.start..bm.end }
+            .map { p ->
+                val l = launched[p.occurrence.v]
+                if (l == null) PlannedLine(p, p.cents) else PlannedLine(p.copy(late = false), l.first, l.second)
+            }
+        return BudgetDetail(id, name, bm, lines, first.firstOrNull() ?: NO_MONTH, planned, plannedLines)
     }
 
     // ---- Teto (spec §3, §7.1; D42, D46) ----
@@ -917,7 +944,7 @@ class Db(
     suspend fun planned(today: LocalDate): List<Planned> {
         fill(today)
         return read { c ->
-            val rows = plannedRows(c, today, "")
+            val rows = plannedRows(c, today, "1")
             // Only a linked previsto can have its recado in the Pauta: without one, the Pauta isn't read (D60).
             val linked = rows.filter { it.linked }
             if (linked.isEmpty()) return@read rows
@@ -1076,21 +1103,46 @@ class Db(
                 "WHERE t.budget_id = ? AND i.date BETWEEN ? AND ? AND $NOT_REFUNDED GROUP BY i.date",
             budget, w.start.low(), w.endInclusive.high(),
         ) { LocalDate.parse(it.getText(0)) to Cents(it.getLong(1)) }.toMap()
-        // D68: the fixed installments by day and the open reserve of the month come in the implementation.
-        val bm = budgetMonth(month, s.monthStartDay, s.weekStart, today, Cents(limit), edits, spent, emptyMap(), Cents(0))
+        val (fixed, open) = reserve(c, budget, w)
+        val bm = budgetMonth(month, s.monthStartDay, s.weekStart, today, Cents(limit), edits, spent, fixed, open)
         // No limit row (before the budget's first month): nothing to edit, every week locked (Week.locked).
         val hasRow = c.long("SELECT COUNT(*) FROM budget_months WHERE budget_id = ? AND month = ?", budget, month.toString()) > 0L
         return if (hasRow) bm else bm.copy(weeks = bm.weeks.map { it.copy(locked = true, max = Cents(0)) })
     }
 
-    /** Windows of [budget]'s months, from [today]'s on, whose step edits sum more than [limit] (spec §4). */
+    /**
+     * The previstos of [budget] in window [w] (D68): the installments by day of its fixed lançamentos (refunded
+     * ones left out) and the reserve of its open occurrences dated in [w], at the previsto's value.
+     */
+    private fun reserve(c: SQLiteConnection, budget: Long, w: LocalDateRange): Pair<Map<LocalDate, Cents>, Cents> {
+        val fixed = c.query(
+            "SELECT i.date, SUM(i.cents) FROM installments i JOIN transactions t ON t.id = i.transaction_id " +
+                "WHERE t.budget_id = ? AND t.fixed = 1 AND i.date BETWEEN ? AND ? AND $NOT_REFUNDED GROUP BY i.date",
+            budget, w.start.low(), w.endInclusive.high(),
+        ) { LocalDate.parse(it.getText(0)) to Cents(it.getLong(1)) }.toMap()
+        // The occurrence's date is its month's row cut to the previsto's day: a window spans two calendar months.
+        var open = 0L
+        c.query(
+            "SELECT d.month, p.day, p.cents FROM planned_dates d JOIN planned p ON p.id = d.planned_id " +
+                "WHERE p.budget_id = ? AND d.month BETWEEN ? AND ? AND d.skipped = 0 AND d.id NOT IN (SELECT occurrence_id FROM transactions)",
+            budget, w.start.yearMonth.toString(), w.endInclusive.yearMonth.toString(),
+        ) { if (occurrenceDate(YearMonth.parse(it.getText(0)), it.getInt(1)) in w) open += it.getLong(2) }
+        return fixed to Cents(open)
+    }
+
+    /** Windows of [budget]'s months, from [today]'s on, whose step edits sum more than that month's cota livre with [limit] (spec §4, D70). */
     private fun editsOver(c: SQLiteConnection, budget: Long, limit: Long, today: LocalDate): List<LocalDateRange> {
         val day = settings(c).monthStartDay
         val edits = c.query(
             "SELECT week_start, cents FROM week_steps WHERE budget_id = ? AND week_start >= ?",
             budget, monthWindow(monthOf(today, day), day).start.low(),
         ) { LocalDate.parse(it.getText(0)) to it.getLong(1) }
-        return edits.groupBy { monthOf(it.first, day) }.filter { (_, inMonth) -> inMonth.sumOf { it.second } > limit }.map { monthWindow(it.key, day) }
+        return edits.groupBy { monthOf(it.first, day) }.map { (m, inMonth) -> monthWindow(m, day) to inMonth.sumOf { it.second } }
+            .filter { (w, sum) ->
+                val (fixed, open) = reserve(c, budget, w)
+                sum > maxOf(0L, limit - open.v - fixed.values.sumOf { it.v })
+            }
+            .map { it.first }
     }
 
     /** Σ installments in [from]..[to] of the non-refunded transactions matching [where] (over `t`). */
@@ -1165,7 +1217,7 @@ class Db(
         val rows = c.query(
             "SELECT t.id, t.notice_id, t.budget_id, b.name, t.merchant, COALESCE(a.alias, ''), t.total_cents, " +
                 "(SELECT COUNT(*) FROM installments i WHERE i.transaction_id = t.id), t.date, t.time, " +
-                "COALESCE((SELECT r.estorno_notice_id FROM refunds r WHERE r.transaction_id = t.id), 0), t.corrected, t.caption " +
+                "COALESCE((SELECT r.estorno_notice_id FROM refunds r WHERE r.transaction_id = t.id), 0), t.corrected, t.caption, t.fixed " +
                 "FROM transactions t JOIN budgets b ON b.id = t.budget_id LEFT JOIN merchant_aliases a ON a.merchant_key = t.merchant_key " +
                 "$where ORDER BY t.date DESC, t.time DESC, t.id DESC",
             *args,
@@ -1174,7 +1226,7 @@ class Db(
                 id = TransactionId(it.getLong(0)), notice = NoticeId(it.getLong(1)), budget = BudgetId(it.getLong(2)), budgetName = it.getText(3),
                 merchant = it.getText(4), alias = it.getText(5), total = Cents(it.getLong(6)), installments = it.getInt(7),
                 date = LocalDate.parse(it.getText(8)), time = LocalTime.parse(it.getText(9)), estorno = NoticeId(it.getLong(10)),
-                corrected = it.getLong(11) != 0L, caption = it.getText(12),
+                corrected = it.getLong(11) != 0L, caption = it.getText(12), fixed = it.getLong(13) != 0L,
             )
         }
         if (rows.isEmpty()) return rows
@@ -1196,8 +1248,8 @@ class Db(
         if (tags.isEmpty() || form.total.v !in 1..MAX_CENTS || form.installments !in 1..MAX_INSTALLMENTS) return Saved()
         if (c.long("SELECT COUNT(*) FROM budgets WHERE id = ?", form.budget.v) == 0L) return Saved()
         val day = settings(c).monthStartDay
-        val dates = (1..form.installments).map { installmentDate(form.date, it, day) }
-        if (dates.any { it !in FIRST_DATE..LAST_DATE }) return Saved()
+        val formDates = (1..form.installments).map { installmentDate(form.date, it, day) }
+        if (formDates.any { it !in FIRST_DATE..LAST_DATE }) return Saved()
         val merchant = storable(form.merchant.trim())
         val caption = cleanCaption(form.caption)
         if (caption.length > MAX_CAPTION) return Saved()
@@ -1246,6 +1298,19 @@ class Db(
         ) { it.getLong(0) }.firstOrNull() ?: return Saved()
         // D65: on edit, "Repete" acts on the transaction's own previsto; only without one does MONTHLY create.
         val own = if (id != 0L) ownPlanned(c, id) else null
+
+        // D72: a lançamento with its occurrence (new, or kept by the edit) stays in the occurrence's budget month.
+        // An edit to ONCE deleting the occurrence's previsto doesn't keep it.
+        val kept = if (id == 0L) occurrence else c.query(
+            "SELECT t.occurrence_id, d.planned_id FROM transactions t JOIN planned_dates d ON d.id = t.occurrence_id WHERE t.id = ?", id,
+        ) { it.getLong(0) to it.getLong(1) }.firstOrNull()
+            ?.takeUnless { own != null && form.repeats == Repeats.ONCE && own.second == Repeats.MONTHLY && own.first == it.second }?.first ?: 0L
+        val keptDate = if (kept == 0L) NO_DATE else c.query(
+            "SELECT d.month, p.day FROM planned_dates d JOIN planned p ON p.id = d.planned_id WHERE d.id = ?", kept,
+        ) { occurrenceDate(YearMonth.parse(it.getText(0)), it.getInt(1)) }.first()
+        val date = if (kept != 0L && monthOf(form.date, day) != monthOf(keptDate, day)) keptDate else form.date
+        val dates = if (date == form.date) formDates else (1..form.installments).map { installmentDate(date, it, day) }
+        if (dates.any { it !in FIRST_DATE..LAST_DATE }) return Saved()
         val monthlyName = if (form.repeats == Repeats.MONTHLY && own == null) {
             // Spec §7.3 (2026-10-24): a blank Apelido names it by the bank text, even with a saved alias.
             plannedName(caption, form.alias, merchant).also { if (it.length > MAX_CAPTION) return Saved() }
@@ -1256,15 +1321,15 @@ class Db(
         }
         val txId = if (id == 0L) {
             c.exec(
-                "INSERT INTO transactions(notice_id, budget_id, merchant, merchant_key, date, time, total_cents, corrected, caption, occurrence_id) " +
-                    "VALUES (?,?,?,?,?,?,?,?,?,?)",
-                notice, form.budget.v, merchant, key, form.date.toString(), form.time.toString(), form.total.v, corrected, caption, occurrence,
+                "INSERT INTO transactions(notice_id, budget_id, merchant, merchant_key, date, time, total_cents, corrected, caption, occurrence_id, fixed) " +
+                    "VALUES (?,?,?,?,?,?,?,?,?,?,?)",
+                notice, form.budget.v, merchant, key, date.toString(), form.time.toString(), form.total.v, corrected, caption, occurrence, occurrence != 0L,
             )
             c.lastId()
         } else {
             c.exec(
                 "UPDATE transactions SET budget_id = ?, merchant = ?, merchant_key = ?, date = ?, time = ?, total_cents = ?, corrected = ?, caption = ? WHERE id = ?",
-                form.budget.v, merchant, key, form.date.toString(), form.time.toString(), form.total.v, corrected, caption, id,
+                form.budget.v, merchant, key, date.toString(), form.time.toString(), form.total.v, corrected, caption, id,
             )
             c.exec("DELETE FROM installments WHERE transaction_id = ?", id)
             c.exec("DELETE FROM transaction_tags WHERE transaction_id = ?", id)
@@ -1325,7 +1390,8 @@ class Db(
     }
 
     /**
-     * R1: every Todo mês previsto gets its occurrences dated up to [today] + 10 days, from its latest row on
+     * R1, D71: every Todo mês previsto gets its occurrences dated up to the later of [today] + 10 days and the end of
+     * today's budget month, from its latest row on
      * (like [ensureMonth]); a row that exists is never created again, Só uma vez never gets a second one.
      */
     private fun fillPlanned(c: SQLiteConnection, today: LocalDate) {
@@ -1334,7 +1400,9 @@ class Db(
 
     /** The (previsto, month) rows [fillPlanned] would create for [today]. */
     private fun missingOccurrences(c: SQLiteConnection, today: LocalDate): List<Pair<Long, YearMonth>> {
-        val until = LocalDate.fromEpochDays(minOf(today.toEpochDays() + 10, LAST_DATE.toEpochDays()))
+        // D71: every occurrence of today's budget month reserves, so the horizon reaches its end.
+        val day = settings(c).monthStartDay
+        val until = maxOf(LocalDate.fromEpochDays(minOf(today.toEpochDays() + 10, LAST_DATE.toEpochDays())), monthWindow(monthOf(today, day), day).endInclusive)
         val rules = c.query(
             "SELECT p.id, p.day, MAX(d.month) FROM planned p JOIN planned_dates d ON d.planned_id = p.id WHERE p.repeats = ? GROUP BY p.id",
             Repeats.MONTHLY.ordinal,
@@ -1351,16 +1419,16 @@ class Db(
     }
 
     /**
-     * Open occurrences (not skipped, no lançamento) with their previsto, [where] over `p` (planned), oldest
+     * Open occurrences (not skipped, no lançamento) with their previsto, [where] over `p` (planned) and `d`, oldest
      * date first then id, dated up to [today] + 10 (all with NO_DATE); `late` against [today] (never with
-     * NO_DATE). noticeInPauta is left false.
+     * NO_DATE). noticeInPauta is left false. With [open] false, every occurrence [where] gives, at any date.
      */
-    private fun plannedRows(c: SQLiteConnection, today: LocalDate, where: String): List<Planned> {
+    private fun plannedRows(c: SQLiteConnection, today: LocalDate, where: String, open: Boolean = true): List<Planned> {
         val rows = c.query(
             "SELECT d.id, p.id, p.name, p.budget_id, b.name, p.cents, p.day, p.repeats, d.month, p.link_key, p.link_text, " +
                 "COALESCE(s.label, p.link_package) FROM planned_dates d JOIN planned p ON p.id = d.planned_id JOIN budgets b ON b.id = p.budget_id " +
                 "LEFT JOIN sources s ON s.package = p.link_package " +
-                "${if (where.isEmpty()) "WHERE" else "$where AND"} d.skipped = 0 AND d.id NOT IN (SELECT occurrence_id FROM transactions)",
+                "WHERE $where${if (open) " AND d.skipped = 0 AND d.id NOT IN (SELECT occurrence_id FROM transactions)" else ""}",
         ) {
             val day = it.getInt(6)
             val month = YearMonth.parse(it.getText(8))
@@ -1381,7 +1449,7 @@ class Db(
             tags.getOrPut(it.getLong(0)) { ArrayList() }.add(it.getText(1))
         }
         // R1 (2026-10-22): with a today, only what is due by today + 10 shows, a far Salvar previsto included.
-        val until = if (today == NO_DATE) LAST_DATE else LocalDate.fromEpochDays(minOf(today.toEpochDays() + 10, LAST_DATE.toEpochDays()))
+        val until = if (today == NO_DATE || !open) LAST_DATE else LocalDate.fromEpochDays(minOf(today.toEpochDays() + 10, LAST_DATE.toEpochDays()))
         return rows.filter { it.date <= until }.map { it.copy(tags = tags[it.planned.v] ?: emptyList()) }
             .sortedWith(compareBy<Planned> { it.date }.thenBy { it.occurrence.v })
     }
