@@ -481,5 +481,8 @@ data class HistoryRow(
     val spent: Cents = Cents(0),
 )
 
-/** Leitura ranking: a tag or a merchant (by alias), by value, with how many transactions. */
-data class RankRow(val name: String = "", val total: Cents = Cents(0), val count: Int = 0)
+/**
+ * Leitura ranking: a tag or a merchant (by alias), by value, with how many transactions; [fixed] = the part of
+ * [total] from lançamentos of previstos ([TransactionRow.fixed]), drawn apart (spec §7.5, 2026-11-04).
+ */
+data class RankRow(val name: String = "", val total: Cents = Cents(0), val count: Int = 0, val fixed: Cents = Cents(0))

@@ -16,6 +16,7 @@ import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.widthIn
 import androidx.compose.foundation.rememberScrollState
+import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.foundation.verticalScroll
 import androidx.compose.runtime.Composable
@@ -245,6 +246,8 @@ private class InsightsData(
     val tags: List<RankRow>,
     val merchants: List<RankRow>,
     val byDay: Map<LocalDate, Cents>,
+    /** The part of [byDay] from lançamentos of previstos (spec §7.5, 2026-11-04). */
+    val fixedByDay: Map<LocalDate, Cents>,
 )
 
 /** The query's result: [data] null = no budgets (null from query() itself = still loading). */
@@ -283,6 +286,7 @@ fun Insights(db: Db) {
             rows.map { it.budget.v }.distinct().sorted(), detail,
             rows.filter { it.budget == detail.id && it.month in from..month },
             start, end, d.tagRanking(start, end), d.merchantRanking(start, end), d.spentByDay(start, end),
+            d.spentByDay(start, end, fixedOnly = true),
         ))
     }
     val data = page?.data
@@ -552,15 +556,20 @@ private fun Ranking(data: InsightsData, rank: Rank, all: Boolean, onRank: (Rank)
     val shown = if (all) rows else rows.take(RANK_ROWS)
     val top = maxOf(rows[0].total.v, 1L)
     for ((i, r) in shown.withIndex()) Column(
-        Modifier.fillMaxWidth().testTag(InsightsTags.RANK_ROW + i).semantics(mergeDescendants = true) {}.padding(top = 10.dp),
+        Modifier.fillMaxWidth().testTag(InsightsTags.RANK_ROW + i).semantics(mergeDescendants = true) {
+            if (r.fixed.v > 0) stateDescription = "dos quais ${money(r.fixed)} de previstos"
+        }.padding(top = 10.dp),
     ) {
         Row(verticalAlignment = Alignment.Bottom) {
             Text(r.name, serif(16, 500, 21), Modifier.weight(1f), maxLines = 1)
             Text(if (r.count == 1) "1 lançamento" else "${r.count} lançamentos", sans(12f, 500, 16f), Modifier.padding(horizontal = 10.dp), c.inkTertiary)
             Text(moneyPlain(r.total), sans(14f, 600, 18f, tabular = true))
         }
+        // Spec §7.5 (2026-11-04): the previstos' part first, faint, as their band in the Ritmo; then the rest.
         Canvas(Modifier.fillMaxWidth().height(6.dp).padding(top = 3.dp)) {
-            drawRect(c.inkTertiary, Offset.Zero, Size(size.width * r.total.v / top, size.height))
+            val fixed = size.width * r.fixed.v / top
+            drawRect(c.inkTertiary.copy(alpha = 0.3f), Offset.Zero, Size(fixed, size.height))
+            drawRect(c.inkTertiary, Offset(fixed, 0f), Size(size.width * (r.total.v - r.fixed.v) / top, size.height))
         }
     }
     if (!all && rows.size > RANK_ROWS) Text(
@@ -630,7 +639,9 @@ private fun Calendar(data: InsightsData) {
             }
             val spent = data.byDay[day]?.v ?: 0L
             val level = if (spent == 0L) 0 else ((spent + step - 1) / step).toInt().coerceIn(1, 4)
-            val description = "${day.day}: ${if (spent == 0L) "sem gasto" else money(Cents(spent))}"
+            val fixed = data.fixedByDay[day]?.v ?: 0L
+            val description = "${day.day}: ${if (spent == 0L) "sem gasto" else money(Cents(spent))}" +
+                if (fixed > 0) ", ${money(Cents(fixed))} de previstos" else ""
             Box(
                 Modifier.weight(1f).aspectRatio(1f).background(c.heat[level]).clearAndSetSemantics {
                     testTag = InsightsTags.CAL_DAY + day
@@ -639,6 +650,7 @@ private fun Calendar(data: InsightsData) {
                 }.padding(3.dp),
             ) {
                 Text(day.day.toString(), sans(10.5f, 600, 13f, tabular = true), color = if (level >= 3) c.paper else c.inkSecondary)
+                if (fixed > 0) Box(Modifier.align(Alignment.TopEnd).size(5.dp).background(if (level >= 3) c.paper else c.inkTertiary, CircleShape))
             }
         }
     }
@@ -648,5 +660,9 @@ private fun Calendar(data: InsightsData) {
         Row(horizontalArrangement = Arrangement.spacedBy(2.dp)) { for (l in 0..4) Box(Modifier.size(14.dp).background(c.heat[l])) }
         Text("mais ·", sans(11f, 500, 14f), color = c.inkTertiary)
         Text("cada degrau ≈ ${reais(Cents(step))}", sans(11f, 500, 14f), Modifier.testTag(InsightsTags.CAL_LEGEND), c.inkTertiary, maxLines = 1)
+    }
+    if (data.fixedByDay.isNotEmpty()) Row(Modifier.padding(top = 6.dp), verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(6.dp)) {
+        Box(Modifier.size(5.dp).background(c.inkTertiary, CircleShape))
+        Text("dia com previsto lançado", sans(11f, 500, 14f), color = c.inkTertiary)
     }
 }

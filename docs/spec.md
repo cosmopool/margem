@@ -210,6 +210,7 @@ Cinco abas: **Verbas** (início) · **Pauta** · **Lançamentos** · **Leitura**
   - Um lançamento com vários marcadores conta inteiro em cada um; a tela avisa que a soma dos marcadores pode passar do total.
   - Frase: "feira puxa a fila."
 - **Calendário de gastos**: mapa de calor por dia do mês do topo, com a semana dos Ajustes. Degrau 0 = sem gasto; degraus 1–4 em faixas iguais: degrau = maior dia do mês ÷ 4, arredondado para cima em R$ 10; o dia vai ao degrau ⌈gasto ÷ degrau⌉. Legenda "cada degrau ≈ R$ 60". Frase pelo dia da semana com mais gasto: "Os sábados pesam." e "31% do mês em quatro sábados".
+- **Previstos no ranking e no calendário** (2026-11-04, decisão do usuário): os lançamentos de previsto continuam contando, marcados como na régua: na barra do ranking, a parte de previstos vem primeiro, apagada, e o resto como sempre (TalkBack: "dos quais R$ 2.000,00 de previstos"); no calendário, o dia com lançamento de previsto ganha um ponto em tinta 3 no canto, e a legenda diz "dia com previsto lançado".
 - Ranking e calendário contam a compra parcelada **pela data de cada parcela**, como o Gasto do mês (§3); a contagem do ranking é de lançamentos com parcela no período. Compras estornadas não contam.
 - **Frases** de conclusão por modelos fixos (acima); sem anotações com fio-guia.
 - **Acessibilidade**: cada gráfico tem descrição para o TalkBack com a frase de conclusão e os números principais; sem tabela equivalente.

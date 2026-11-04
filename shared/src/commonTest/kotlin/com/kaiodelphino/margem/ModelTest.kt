@@ -1260,7 +1260,10 @@ private class MtRun(val db: Db, val path: String, val seed: Int) {
             }
             val tagRank = m.tags.mapNotNull { g ->
                 val with = counted.filter { g in it.first.tags }
-                if (with.isEmpty()) null else RankRow(g, Cents(with.sumOf { (_, i) -> i.sumOf { it.cents.v } }), with.size)
+                if (with.isEmpty()) null else RankRow(
+                    g, Cents(with.sumOf { (_, i) -> i.sumOf { it.cents.v } }), with.size,
+                    Cents(with.filter { it.first.fixed }.sumOf { (_, i) -> i.sumOf { it.cents.v } }),
+                )
             }
             val gotTags = db.tagRanking(a, z)
             assertEquals(tagRank.sortedBy { it.name }, gotTags.sortedBy { it.name }, "tagRanking $a..$z")
@@ -1268,14 +1271,17 @@ private class MtRun(val db: Db, val path: String, val seed: Int) {
 
             // Merchants with the same alias (any case) are one row named by it; without one, by key. The spec doesn't say which
             // spelling names the row, so any of the group's aliases or bank texts will do.
-            class Group(val total: Long, val count: Int, val names: Set<String>)
+            class Group(val total: Long, val count: Int, val names: Set<String>, val fixed: Long)
             val groups = counted.groupBy { m.aliases[mtKey(it.first.merchant)]?.let { a -> "a" + a.lowercase() } ?: ("k" + mtKey(it.first.merchant)) }.map { (_, list) ->
                 val aliases = list.mapNotNull { m.aliases[mtKey(it.first.merchant)] }.toSet()
-                Group(list.sumOf { (_, i) -> i.sumOf { it.cents.v } }, list.size, aliases.ifEmpty { list.map { it.first.merchant }.toSet() })
+                Group(
+                    list.sumOf { (_, i) -> i.sumOf { it.cents.v } }, list.size, aliases.ifEmpty { list.map { it.first.merchant }.toSet() },
+                    list.filter { it.first.fixed }.sumOf { (_, i) -> i.sumOf { it.cents.v } },
+                )
             }.toMutableList()
             val gotMerchants = db.merchantRanking(a, z)
             for (r in gotMerchants) {
-                val g = groups.firstOrNull { it.total == r.total.v && it.count == r.count && r.name in it.names }
+                val g = groups.firstOrNull { it.total == r.total.v && it.count == r.count && it.fixed == r.fixed.v && r.name in it.names }
                 assertNotNull(g, "merchantRanking $a..$z: unexpected $r; expected ${groups.map { "${it.names} ${it.total} ${it.count}" }}")
                 groups.remove(g)
             }
@@ -1285,6 +1291,10 @@ private class MtRun(val db: Db, val path: String, val seed: Int) {
             val byDay = LinkedHashMap<LocalDate, Long>()
             for ((_, inside) in counted) for (i in inside) byDay[i.date] = (byDay[i.date] ?: 0L) + i.cents.v
             assertEquals(byDay.filterValues { it > 0 }.mapValues { Cents(it.value) }, db.spentByDay(a, z), "spentByDay $a..$z")
+            // The calendar's mark (spec §7.5, 2026-11-04): only lançamentos of previstos.
+            val fixedByDay = LinkedHashMap<LocalDate, Long>()
+            for ((t, inside) in counted) if (t.fixed) for (i in inside) fixedByDay[i.date] = (fixedByDay[i.date] ?: 0L) + i.cents.v
+            assertEquals(fixedByDay.filterValues { it > 0 }.mapValues { Cents(it.value) }, db.spentByDay(a, z, fixedOnly = true), "spentByDay fixed $a..$z")
         }
 
         // §7.3 the edit screen and the notice behind each transaction.

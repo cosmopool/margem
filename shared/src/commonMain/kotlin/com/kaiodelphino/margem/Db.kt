@@ -1000,11 +1000,11 @@ class Db(
     /** Tags by value of installments dated in [from]..[to]; count = transactions with one there. */
     suspend fun tagRanking(from: LocalDate, to: LocalDate): List<RankRow> = read { c ->
         c.query(
-            "SELECT g.name, SUM(i.cents), COUNT(DISTINCT t.id) FROM installments i JOIN transactions t ON t.id = i.transaction_id " +
+            "SELECT g.name, SUM(i.cents), COUNT(DISTINCT t.id), SUM(CASE WHEN t.fixed = 1 THEN i.cents ELSE 0 END) FROM installments i JOIN transactions t ON t.id = i.transaction_id " +
                 "JOIN transaction_tags l ON l.transaction_id = t.id JOIN tags g ON g.id = l.tag_id " +
                 "WHERE i.date BETWEEN ? AND ? AND $NOT_REFUNDED GROUP BY g.id ORDER BY 2 DESC, g.name",
             from.low(), to.high(),
-        ) { RankRow(it.getText(0), Cents(it.getLong(1)), it.getInt(2)) }
+        ) { RankRow(it.getText(0), Cents(it.getLong(1)), it.getInt(2), Cents(it.getLong(3))) }
     }
 
     /**
@@ -1013,19 +1013,22 @@ class Db(
      */
     suspend fun merchantRanking(from: LocalDate, to: LocalDate): List<RankRow> = read { c ->
         c.query(
-            "SELECT COALESCE(MAX(a.alias), MAX(t.merchant)), SUM(i.cents), COUNT(DISTINCT t.id) FROM installments i " +
+            "SELECT COALESCE(MAX(a.alias), MAX(t.merchant)), SUM(i.cents), COUNT(DISTINCT t.id), SUM(CASE WHEN t.fixed = 1 THEN i.cents ELSE 0 END) FROM installments i " +
                 "JOIN transactions t ON t.id = i.transaction_id LEFT JOIN merchant_aliases a ON a.merchant_key = t.merchant_key " +
                 "WHERE i.date BETWEEN ? AND ? AND $NOT_REFUNDED " +
                 "GROUP BY CASE WHEN a.alias IS NULL THEN 'k' || t.merchant_key ELSE 'a' || a.alias_key END ORDER BY 2 DESC, 1",
             from.low(), to.high(),
-        ) { RankRow(it.getText(0), Cents(it.getLong(1)), it.getInt(2)) }
+        ) { RankRow(it.getText(0), Cents(it.getLong(1)), it.getInt(2), Cents(it.getLong(3))) }
     }
 
-    /** Spent per day in [from]..[to]; days without spending are absent. */
-    suspend fun spentByDay(from: LocalDate, to: LocalDate): Map<LocalDate, Cents> = read { c ->
+    /**
+     * Spent per day in [from]..[to]; days without spending are absent. [fixedOnly]: only lançamentos of previstos
+     * ([TransactionRow.fixed]), for the calendar's mark (spec §7.5, 2026-11-04).
+     */
+    suspend fun spentByDay(from: LocalDate, to: LocalDate, fixedOnly: Boolean = false): Map<LocalDate, Cents> = read { c ->
         c.query(
             "SELECT i.date, SUM(i.cents) FROM installments i JOIN transactions t ON t.id = i.transaction_id " +
-                "WHERE i.date BETWEEN ? AND ? AND $NOT_REFUNDED GROUP BY i.date HAVING SUM(i.cents) > 0 ORDER BY i.date",
+                "WHERE i.date BETWEEN ? AND ? AND $NOT_REFUNDED${if (fixedOnly) " AND t.fixed = 1" else ""} GROUP BY i.date HAVING SUM(i.cents) > 0 ORDER BY i.date",
             from.low(), to.high(),
         ) { LocalDate.parse(it.getText(0)) to Cents(it.getLong(1)) }.toMap()
     }
