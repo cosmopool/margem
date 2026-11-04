@@ -13,6 +13,7 @@ import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.heightIn
 import androidx.compose.foundation.layout.padding
+import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.widthIn
 import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.shape.RoundedCornerShape
@@ -628,13 +629,11 @@ private fun Calendar(data: InsightsData) {
             }
         }
     }
-    Row(Modifier.fillMaxWidth().padding(top = 8.dp), verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(4.dp)) {
+    // Book Fig. 9.5: fixed 14 px swatches, then "mais · cada degrau ≈ R$ 60" on the same line.
+    Row(Modifier.fillMaxWidth().padding(top = 8.dp), verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(6.dp)) {
         Text("menos", sans(11f, 500, 14f), color = c.inkTertiary)
-        for (l in 0..4) Box(Modifier.weight(1f, fill = false).padding(horizontal = 1.dp).background(c.heat[l]).height(10.dp).widthIn(min = 14.dp))
-        Text("mais", sans(11f, 500, 14f), color = c.inkTertiary)
-        Text(
-            "cada degrau ≈ ${reais(Cents(step))}", sans(11f, 500, 14f),
-            Modifier.weight(1f).padding(start = 8.dp).testTag(InsightsTags.CAL_LEGEND), c.inkTertiary,
-        )
+        Row(horizontalArrangement = Arrangement.spacedBy(2.dp)) { for (l in 0..4) Box(Modifier.size(14.dp).background(c.heat[l])) }
+        Text("mais ·", sans(11f, 500, 14f), color = c.inkTertiary)
+        Text("cada degrau ≈ ${reais(Cents(step))}", sans(11f, 500, 14f), Modifier.testTag(InsightsTags.CAL_LEGEND), c.inkTertiary, maxLines = 1)
     }
 }
