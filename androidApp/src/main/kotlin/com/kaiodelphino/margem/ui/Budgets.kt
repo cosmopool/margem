@@ -1068,7 +1068,7 @@ internal fun PlannedLineRow(l: PlannedLine, onClick: () -> Unit) {
             .padding(vertical = 9.dp),
         verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(12.dp),
     ) {
-        DayStamp(p.date, p.late && l.open)
+        DayStamp(p.date, p.late && l.open, launched = !l.open)
         Column(Modifier.weight(1f)) {
             Text(p.name, serif(17, 500, 22), maxLines = 2)
             Text(sub, sans(13f, 400, 17f), color = if (p.late && l.open) c.inkSecondary else c.inkTertiary, maxLines = 1)

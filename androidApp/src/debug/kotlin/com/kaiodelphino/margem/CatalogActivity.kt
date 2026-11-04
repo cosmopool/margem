@@ -210,6 +210,7 @@ private fun Catalog(dark: Boolean, setDark: (Boolean) -> Unit) {
                     Row(verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(12.dp)) {
                         DayStamp(LocalDate(2026, 10, 5), late = true)
                         DayStamp(LocalDate(2026, 10, 12), late = false)
+                        DayStamp(LocalDate(2026, 10, 4), late = false, launched = true)
                     }
                     InfoBand(R.drawable.i_ligar, "Ligado a “Academia”", "Todo mês, dia 5. Verba, marcadores e nome vieram do previsto.", action = "Desligar")
                     InfoBand(R.drawable.i_previsto, "", "Data à frente: vira previsto. Fica em Lançamentos esperando o recado, sem contar na verba.")

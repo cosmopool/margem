@@ -180,9 +180,9 @@ fun Modifier.focusRing(on: Boolean, color: Color, radius: Dp): Modifier = drawWi
     }
 }
 
-fun DrawScope.dashedBorder(color: Color, radius: Dp) = drawRoundRect(
+fun DrawScope.dashedBorder(color: Color, radius: Dp, dashed: Boolean = true) = drawRoundRect(
     color, Offset(0.5f.dp.toPx(), 0.5f.dp.toPx()), Size(size.width - 1.dp.toPx(), size.height - 1.dp.toPx()), CornerRadius(radius.toPx()),
-    style = Stroke(1.dp.toPx(), pathEffect = PathEffect.dashPathEffect(floatArrayOf(3.dp.toPx(), 2.dp.toPx()))),
+    style = Stroke(1.dp.toPx(), pathEffect = if (dashed) PathEffect.dashPathEffect(floatArrayOf(3.dp.toPx(), 2.dp.toPx())) else null),
 )
 
 /** A line of dots, as the book's `dotted` borders and the alias underline. */
@@ -1115,12 +1115,12 @@ fun InfoBand(icon: Int, title: String, text: String, modifier: Modifier = Modifi
     }
 }
 
-/** Book 8.11 `.dia`: the dashed day stamp — "still to happen". Late: the day in ink 3. */
+/** Book 8.11 `.dia`: the dashed day stamp — "still to happen"; [launched]: solid, it happened (`.dia.done`). Late: the day in ink 3. */
 @Composable
-fun DayStamp(date: LocalDate, late: Boolean, modifier: Modifier = Modifier) {
+fun DayStamp(date: LocalDate, late: Boolean, modifier: Modifier = Modifier, launched: Boolean = false) {
     val c = Margem.colors
     Column(
-        modifier.width(42.dp).drawBehind { dashedBorder(c.ruleStrong, 3.dp) }.padding(top = 3.dp, bottom = 4.dp),
+        modifier.width(42.dp).drawBehind { dashedBorder(c.ruleStrong, 3.dp, dashed = !launched) }.padding(top = 3.dp, bottom = 4.dp),
         horizontalAlignment = Alignment.CenterHorizontally,
     ) {
         Text(monthShort(date.month).uppercase(), sans(9.5f, 700, 12f, 0.12f), color = c.inkTertiary)
