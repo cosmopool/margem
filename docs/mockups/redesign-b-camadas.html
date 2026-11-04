@@ -1,0 +1,942 @@
+<!doctype html>
+<html lang="pt-BR">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Margem em camadas</title>
+<meta name="description" content="Redesenho B do Margem: mesma estrutura, disclosure progressivo. Primeira camada responde só 'quanto ainda posso gastar e tem algo errado?'.">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Newsreader:ital,opsz,wght@0,6..72,300..700;1,6..72,300..700&family=Source+Sans+3:ital,wght@0,300..800;1,400..600&display=swap" rel="stylesheet">
+<style>
+/* ---------- tokens: os mesmos do design_system.html ---------- */
+:root, .t-light{
+  color-scheme:light;
+  --papel:#F3EEE4; --folha:#FBF8F1; --folha-2:#ECE5D8;
+  --fio:#DDD3C2; --fio-forte:#8A7E6A;
+  --tinta:#1E1B16; --tinta-2:#514A40; --tinta-3:#6B6254;
+  --argila:#A44D29;
+  --musgo:#3E5E38; --musgo-fundo:#E3EADB;
+  --ocre:#85590F;  --ocre-fundo:#F4E7CC;
+  --lacre:#9A2A20; --lacre-fundo:#F6E3DC;
+  --anil:#2D4C6E;  --anil-fundo:#DFE6EE;
+  --acao:#1E1B16; --sobre-acao:#FBF8F1;
+  --scrim:rgba(30,27,22,.45);
+  --sombra:0 1px 2px rgba(30,27,22,.06),0 12px 30px -12px rgba(30,27,22,.28);
+  --c1:#2F5FA8; --c2:#D0682E; --c3:#139488; --c4:#7E2F78; --c5:#B8860B;
+}
+.t-dark{
+  color-scheme:dark;
+  --papel:#171512; --folha:#201D19; --folha-2:#2A2621;
+  --fio:#36312A; --fio-forte:#7C7262;
+  --tinta:#EEE7DA; --tinta-2:#BDB3A3; --tinta-3:#988E7F;
+  --argila:#E09470;
+  --musgo:#A3C092; --musgo-fundo:#24301F;
+  --ocre:#DDB063;  --ocre-fundo:#382C17;
+  --lacre:#EE937E; --lacre-fundo:#3A221C;
+  --anil:#A3BCDB;  --anil-fundo:#1F2A36;
+  --acao:#EEE7DA; --sobre-acao:#171512;
+  --scrim:rgba(0,0,0,.6);
+  --sombra:0 1px 0 rgba(0,0,0,.35),0 14px 34px -10px rgba(0,0,0,.7);
+  --c1:#5584D0; --c2:#D06A30; --c3:#20A898; --c4:#8E4A8A; --c5:#B98A14;
+}
+@media (prefers-color-scheme:dark){
+  :root:not([data-theme="light"]){
+    color-scheme:dark;
+    --papel:#171512; --folha:#201D19; --folha-2:#2A2621; --fio:#36312A; --fio-forte:#7C7262;
+    --tinta:#EEE7DA; --tinta-2:#BDB3A3; --tinta-3:#988E7F; --argila:#E09470;
+    --musgo:#A3C092; --musgo-fundo:#24301F; --ocre:#DDB063; --ocre-fundo:#382C17;
+    --lacre:#EE937E; --lacre-fundo:#3A221C; --anil:#A3BCDB; --anil-fundo:#1F2A36;
+    --acao:#EEE7DA; --sobre-acao:#171512; --scrim:rgba(0,0,0,.6);
+    --sombra:0 1px 0 rgba(0,0,0,.35),0 14px 34px -10px rgba(0,0,0,.7);
+    --c1:#5584D0; --c2:#D06A30; --c3:#20A898; --c4:#8E4A8A; --c5:#B98A14;
+  }
+}
+:root[data-theme="dark"]{
+  color-scheme:dark;
+  --papel:#171512; --folha:#201D19; --folha-2:#2A2621; --fio:#36312A; --fio-forte:#7C7262;
+  --tinta:#EEE7DA; --tinta-2:#BDB3A3; --tinta-3:#988E7F; --argila:#E09470;
+  --musgo:#A3C092; --musgo-fundo:#24301F; --ocre:#DDB063; --ocre-fundo:#382C17;
+  --lacre:#EE937E; --lacre-fundo:#3A221C; --anil:#A3BCDB; --anil-fundo:#1F2A36;
+  --acao:#EEE7DA; --sobre-acao:#171512; --scrim:rgba(0,0,0,.6);
+  --sombra:0 1px 0 rgba(0,0,0,.35),0 14px 34px -10px rgba(0,0,0,.7);
+  --c1:#5584D0; --c2:#D06A30; --c3:#20A898; --c4:#8E4A8A; --c5:#B98A14;
+}
+
+/* ---------- página ---------- */
+*{box-sizing:border-box;margin:0;padding:0}
+html{-webkit-text-size-adjust:100%}
+body{background:var(--papel);color:var(--tinta);font:400 17px/1.6 'Source Sans 3',system-ui,sans-serif;overflow-x:hidden}
+h1,h2,h3,.serif{font-family:'Newsreader',Georgia,serif;font-weight:400}
+.num{font-variant-numeric:lining-nums tabular-nums}
+a{color:var(--anil);text-underline-offset:3px}
+.wrap{max-width:1240px;margin:0 auto;padding:0 16px 96px}
+@media (min-width:720px){.wrap{padding:0 40px 120px}}
+
+header.cover{padding:48px 0 40px;border-bottom:2px solid var(--tinta)}
+.kicker{font:600 12px/1.3 'Source Sans 3';letter-spacing:.14em;text-transform:uppercase;color:var(--argila)}
+h1{font-size:clamp(44px,8vw,96px);line-height:.95;letter-spacing:-.025em;margin:14px 0 18px}
+h1 em{color:var(--argila)}
+.lede{font:300 clamp(20px,2.4vw,25px)/1.45 'Newsreader';color:var(--tinta-2);max-width:40em}
+.lede em{color:var(--tinta)}
+nav.toc{display:flex;flex-wrap:wrap;gap:8px 20px;margin-top:28px;font-size:15px}
+nav.toc a{color:var(--tinta);text-decoration:none;border-bottom:1px solid var(--fio-forte)}
+nav.toc a:hover{color:var(--argila)}
+
+section.sec{padding:64px 0 24px;border-bottom:1px solid var(--fio)}
+.sec-n{font:italic 300 56px/1 'Newsreader';color:var(--argila)}
+h2{font-size:clamp(30px,4vw,46px);line-height:1.05;letter-spacing:-.015em;margin:6px 0 14px;max-width:18em}
+h3{font-size:24px;line-height:1.2;margin:36px 0 10px}
+p.tx{max-width:40em;margin-bottom:12px}
+.muted{color:var(--tinta-2)}
+.rub{font:600 11.5px/1.3 'Source Sans 3';letter-spacing:.12em;text-transform:uppercase;color:var(--tinta-3)}
+
+.problems{display:grid;grid-template-columns:repeat(auto-fit,minmax(280px,1fr));gap:20px;margin-top:24px}
+.prob{background:var(--folha);border:1px solid var(--fio);border-radius:8px;padding:20px 22px}
+.prob .n{font:italic 300 40px/1 'Newsreader';color:var(--lacre)}
+.prob h3{margin:6px 0 8px;font-size:21px}
+.prob p{font-size:15.5px;line-height:1.5;color:var(--tinta-2)}
+.prob .q{margin-top:10px;font:italic 15px/1.45 'Newsreader';color:var(--tinta);border-left:2px solid var(--fio-forte);padding-left:10px}
+
+.tblw{overflow-x:auto;margin:16px 0}
+table.tbl{width:100%;border-collapse:collapse;font-size:15px;line-height:1.45;min-width:640px}
+.tbl th{font:600 11px/1.3 'Source Sans 3';letter-spacing:.12em;text-transform:uppercase;text-align:left;padding:10px 14px 10px 0;border-top:2px solid var(--tinta);border-bottom:1px solid var(--tinta)}
+.tbl td{padding:10px 14px 10px 0;border-bottom:1px solid var(--fio);vertical-align:top}
+.tbl td:first-child{font-family:'Newsreader';font-size:17px;white-space:nowrap}
+.tbl .new{font-weight:600}
+.tag-k{display:inline-block;font:600 10.5px/1 'Source Sans 3';letter-spacing:.1em;text-transform:uppercase;padding:4px 6px;border-radius:3px}
+.k-keep{background:var(--musgo-fundo);color:var(--musgo)}
+.k-ren{background:var(--anil-fundo);color:var(--anil)}
+.k-hide{background:var(--ocre-fundo);color:var(--ocre)}
+.k-del{background:var(--lacre-fundo);color:var(--lacre)}
+
+/* mapa de camadas */
+.layers{display:grid;grid-template-columns:repeat(auto-fit,minmax(220px,1fr));gap:14px;margin-top:20px}
+.layer{border-radius:8px;padding:18px 18px 14px;border:1px solid var(--fio);background:var(--folha)}
+.layer h4{font:600 12px/1.3 'Source Sans 3';letter-spacing:.12em;text-transform:uppercase;margin-bottom:4px}
+.layer .sub{font:italic 14px/1.4 'Newsreader';color:var(--tinta-2);margin-bottom:10px}
+.layer ul{list-style:none;font-size:15px;line-height:1.45}
+.layer li{padding:5px 0;border-top:1px solid var(--fio)}
+.layer li small{display:block;color:var(--tinta-3);font-size:13px}
+.L1{border-top:4px solid var(--musgo)} .L2{border-top:4px solid var(--anil)} .L3{border-top:4px solid var(--ocre)} .L4{border-top:4px solid var(--lacre)}
+
+.tabs-ia{display:grid;grid-template-columns:repeat(auto-fit,minmax(170px,1fr));gap:10px;margin:18px 0}
+.tabs-ia div{background:var(--folha-2);border-radius:6px;padding:12px 14px;font-size:14.5px;line-height:1.4}
+.tabs-ia b{display:block;font-family:'Newsreader';font-size:19px;font-weight:500}
+.tabs-ia s{color:var(--tinta-3)}
+
+/* ---------- figuras com telefones ---------- */
+.gallery{display:flex;flex-wrap:wrap;gap:36px 32px;margin-top:28px;align-items:flex-start}
+figure.shot{width:340px;max-width:100%}
+figure.shot figcaption{font:italic 14.5px/1.45 'Newsreader';color:var(--tinta-2);margin-top:12px}
+figure.shot figcaption b{font:600 11px 'Source Sans 3';letter-spacing:.12em;text-transform:uppercase;color:var(--tinta);font-style:normal;margin-right:6px}
+.tb{display:block;margin-top:8px;font:13px/1.45 'Source Sans 3';font-style:normal;color:var(--tinta-3);border-top:1px dashed var(--fio-forte);padding-top:6px}
+
+.phone{width:340px;max-width:100%;height:720px;border-radius:30px;background:var(--papel);color:var(--tinta);border:9px solid #0f0e0c;box-shadow:var(--sombra);overflow:hidden;display:flex;flex-direction:column;position:relative;font-size:15px;line-height:1.4}
+.t-dark.phone{border-color:#000}
+.sb{height:26px;flex:none;display:flex;justify-content:space-between;align-items:center;padding:0 18px;font:600 12px 'Source Sans 3';color:var(--tinta-2)}
+.appbar{flex:none;padding:6px 18px 10px;display:flex;align-items:center;justify-content:space-between;gap:8px}
+.appbar .t{font:500 22px/1.15 'Newsreader'}
+.appbar .back{font-size:20px;color:var(--tinta-2);margin-right:8px}
+.appbar .act{font:600 13px 'Source Sans 3';color:var(--anil)}
+.scr{flex:1;overflow:hidden;padding:0 14px 12px}
+.nav{flex:none;display:flex;justify-content:space-around;border-top:1px solid var(--fio);background:var(--folha);padding:6px 0 10px}
+.nav span{display:flex;flex-direction:column;align-items:center;font:600 10.5px 'Source Sans 3';color:var(--tinta-3);gap:3px;min-width:56px;position:relative}
+.nav span i{width:22px;height:4px;border-radius:2px;background:transparent;margin-bottom:2px}
+.nav span.on{color:var(--tinta)}
+.nav span.on i{background:var(--argila)}
+.nav .badge{position:absolute;top:-4px;right:6px;background:var(--anil);color:var(--folha);font-size:9.5px;border-radius:8px;padding:0 5px;line-height:15px}
+
+/* cabeçalho do mês */
+.mhead{padding:2px 4px 14px}
+.mhead .when{font:600 11.5px/1.3 'Source Sans 3';letter-spacing:.12em;text-transform:uppercase;color:var(--tinta-3)}
+.mhead .big{font:400 40px/1.05 'Newsreader';letter-spacing:-.02em;margin-top:6px}
+.mhead .big small{font:400 17px 'Newsreader';color:var(--tinta-2);letter-spacing:0}
+.mhead .say{font-size:15px;color:var(--tinta-2);margin-top:6px}
+.mhead .say b{color:var(--tinta);font-weight:600}
+.why{font:600 12.5px 'Source Sans 3';color:var(--anil);text-decoration:none;white-space:nowrap}
+.why::before{content:"ⓘ ";font-weight:400}
+
+.strip{display:flex;justify-content:space-between;align-items:center;background:var(--anil-fundo);color:var(--anil);border-radius:8px;padding:10px 12px;margin:0 0 12px;font-weight:600;font-size:14.5px}
+
+/* cartão de verba (camada 1) */
+.vcard{background:var(--folha);border:1px solid var(--fio);border-radius:10px;padding:12px 14px 12px;margin-bottom:8px}
+.vrow{display:flex;justify-content:space-between;align-items:baseline;gap:8px}
+.vname{font:500 18px/1.2 'Newsreader'}
+.vval{font:600 19px/1.1 'Source Sans 3';font-variant-numeric:tabular-nums;text-align:right}
+.vval small{display:block;font:400 11.5px 'Source Sans 3';color:var(--tinta-3);letter-spacing:.02em}
+.vval.over{color:var(--lacre)}
+.bar{height:8px;border-radius:4px;background:var(--folha-2);margin:9px 0 8px;position:relative;overflow:hidden}
+.bar i{position:absolute;left:0;top:0;bottom:0;border-radius:4px}
+.f-ok{background:var(--musgo)} .f-fast{background:var(--ocre)} .f-over{background:var(--lacre)} .f-none{background:var(--fio-forte)}
+.bar .res{background:repeating-linear-gradient(135deg,var(--fio-forte) 0 2px,transparent 2px 5px);opacity:.7}
+.state{display:flex;align-items:center;gap:6px;font-size:13.5px;color:var(--tinta-2)}
+.chip{display:inline-flex;align-items:center;gap:4px;font:600 12px/1 'Source Sans 3';padding:4px 7px;border-radius:12px;white-space:nowrap}
+.c-ok{background:var(--musgo-fundo);color:var(--musgo)}
+.c-fast{background:var(--ocre-fundo);color:var(--ocre)}
+.c-over{background:var(--lacre-fundo);color:var(--lacre)}
+.c-none{background:var(--folha-2);color:var(--tinta-2)}
+.chev{margin-left:auto;color:var(--tinta-3);font-size:13px}
+
+/* camada 2: cartão aberto */
+.vcard.open{border-color:var(--fio-forte);box-shadow:var(--sombra)}
+.l2{margin-top:10px;padding-top:10px;border-top:1px dashed var(--fio)}
+.l2 p{font-size:14px;line-height:1.45;margin-bottom:8px}
+.l2 p b{font-weight:600}
+.bar.tall{height:14px;overflow:visible}
+.bar .tick{position:absolute;top:-4px;bottom:-4px;width:2px;background:var(--tinta);border-radius:1px}
+.ticklab{position:relative;height:16px;font-size:11px;color:var(--tinta-2);margin-top:-2px}
+.ticklab span{position:absolute;transform:translateX(-50%);white-space:nowrap}
+.kv{width:100%;border-collapse:collapse;font-size:13.5px;margin:6px 0 8px}
+.kv td{padding:4px 0;border-bottom:1px solid var(--fio)}
+.kv td:last-child{text-align:right;font-variant-numeric:tabular-nums}
+.kv tr.tot td{font-weight:600;border-bottom:0;border-top:1px solid var(--tinta)}
+.more{display:flex;justify-content:space-between;font:600 13.5px 'Source Sans 3';color:var(--anil);padding:6px 0 0}
+
+/* folha (bottom sheet) */
+.dim{position:absolute;inset:0;background:var(--scrim)}
+.sheet{position:absolute;left:0;right:0;bottom:0;background:var(--folha);border-radius:18px 18px 0 0;padding:10px 18px 18px;box-shadow:var(--sombra)}
+.sheet .grab{width:36px;height:4px;border-radius:2px;background:var(--fio-forte);margin:0 auto 12px}
+.sheet h5{font:500 21px/1.2 'Newsreader';margin-bottom:6px}
+.sheet p{font-size:14px;line-height:1.45;color:var(--tinta-2);margin-bottom:10px}
+
+/* pauta */
+.rc{background:var(--folha);border:1px solid var(--fio);border-radius:10px;padding:12px 14px;margin-bottom:10px}
+.rc.novo{border-left:4px double var(--anil)}
+.rc .meta{display:flex;justify-content:space-between;font-size:12px;color:var(--tinta-3)}
+.rc .what{display:flex;justify-content:space-between;align-items:baseline;margin:4px 0 6px}
+.rc .what .m{font:500 18px/1.2 'Newsreader'}
+.rc .what .v{font:600 18px 'Source Sans 3';font-variant-numeric:tabular-nums}
+.sug{display:flex;flex-wrap:wrap;align-items:center;gap:5px;font-size:13px;color:var(--tinta-2);background:var(--folha-2);border-radius:6px;padding:7px 9px;margin-bottom:9px}
+.sug .vb{font-weight:600;color:var(--tinta)}
+.tg{display:inline-block;font-size:12px;padding:2px 8px;border-radius:10px;border:1px solid var(--fio-forte);color:var(--tinta)}
+.band{background:var(--anil-fundo);color:var(--anil);border-radius:6px;padding:8px 10px;font-size:13px;margin-bottom:9px}
+.band b{font-weight:600}
+.ad{display:inline-block;font:600 11px 'Source Sans 3';letter-spacing:.06em;text-transform:uppercase;color:var(--tinta-3);border:1px dashed var(--fio-forte);border-radius:3px;padding:2px 6px}
+.acts{display:flex;gap:8px;align-items:center}
+.btn{display:inline-flex;align-items:center;justify-content:center;min-height:38px;padding:0 14px;border-radius:19px;font:600 14px 'Source Sans 3';border:1px solid var(--fio-forte);color:var(--tinta);background:transparent;white-space:nowrap}
+.btn.pri{background:var(--acao);color:var(--sobre-acao);border-color:var(--acao)}
+.btn.txt{border-color:transparent;padding:0 8px;color:var(--tinta-2)}
+.btn.grow{flex:1}
+.snack{position:absolute;left:12px;right:12px;bottom:66px;background:#2a2620;color:#EEE7DA;border-radius:8px;padding:11px 14px;font-size:13.5px;display:flex;justify-content:space-between;gap:10px;box-shadow:var(--sombra)}
+.t-dark .snack{background:#EEE7DA;color:#171512}
+.snack b{color:#E09470}
+.t-dark .snack b{color:#A44D29}
+
+/* formulário */
+.quote{font:italic 13.5px/1.4 'Newsreader';color:var(--tinta-2);border-left:2px solid var(--fio-forte);padding:2px 0 2px 10px;margin:0 2px 12px}
+.fld{border-bottom:1px solid var(--fio);padding:8px 2px 9px}
+.fld .lab{font:600 11px 'Source Sans 3';letter-spacing:.1em;text-transform:uppercase;color:var(--tinta-3)}
+.fld .val{font:400 17px/1.3 'Newsreader';margin-top:2px;display:flex;justify-content:space-between;align-items:baseline;gap:8px}
+.fld .val.amt{font:600 26px 'Source Sans 3';font-variant-numeric:tabular-nums}
+.fld .hint{font-size:12.5px;color:var(--tinta-3);margin-top:2px}
+.fld .val .aux{font:400 13px 'Source Sans 3';color:var(--tinta-2)}
+.pick{display:inline-flex;align-items:center;gap:6px;font:600 15px 'Source Sans 3';border:1px solid var(--fio-forte);border-radius:8px;padding:6px 10px}
+.srch{margin-top:6px;font-size:14px;color:var(--tinta-3);border:1px solid var(--fio);border-radius:8px;padding:6px 10px}
+.opt{display:flex;justify-content:space-between;align-items:center;padding:10px 2px;border-bottom:1px solid var(--fio);font-size:14.5px}
+.opt .r{color:var(--tinta-2);font-size:13.5px}
+.disc{display:flex;justify-content:space-between;padding:12px 2px;font:600 14px 'Source Sans 3';color:var(--anil)}
+.prev{background:var(--musgo-fundo);color:var(--musgo);border-radius:8px;padding:9px 11px;font-size:13.5px;margin-top:10px}
+.prev.warn{background:var(--ocre-fundo);color:var(--ocre)}
+.foot{flex:none;display:flex;gap:8px;padding:10px 14px 14px;border-top:1px solid var(--fio);background:var(--folha)}
+
+/* listas */
+.lh{font:600 11px 'Source Sans 3';letter-spacing:.12em;text-transform:uppercase;color:var(--tinta-3);padding:10px 2px 4px}
+.li{display:flex;justify-content:space-between;gap:10px;padding:8px 2px;border-bottom:1px solid var(--fio);font-size:14.5px}
+.li .s{font-size:12.5px;color:var(--tinta-3)}
+.li .v{font-variant-numeric:tabular-nums;font-weight:600;white-space:nowrap}
+.cal{display:inline-flex;flex-direction:column;align-items:center;justify-content:center;width:34px;height:36px;border:1.5px dashed var(--fio-forte);border-radius:5px;font:600 14px/1 'Source Sans 3';margin-right:10px;flex:none}
+.cal small{font:600 8.5px 'Source Sans 3';letter-spacing:.06em;color:var(--tinta-3);text-transform:uppercase}
+.cal.done{border-style:solid;background:var(--folha-2)}
+
+/* resumo */
+.hb{display:grid;grid-template-columns:76px 1fr 64px;gap:8px;align-items:center;font-size:13.5px;padding:4px 0}
+.hb .t{height:10px;border-radius:3px;background:var(--c1)}
+.hb .n{text-align:right;font-variant-numeric:tabular-nums}
+.seg{display:inline-flex;border:1px solid var(--fio-forte);border-radius:16px;overflow:hidden;font:600 12.5px 'Source Sans 3';margin:6px 0 6px}
+.seg span{padding:5px 11px}
+.seg span.on{background:var(--acao);color:var(--sobre-acao)}
+.cols6{display:flex;align-items:flex-end;gap:10px;height:96px;padding:0 4px;border-bottom:1px solid var(--fio-forte);position:relative}
+.cols6 div{flex:1;background:var(--c2);border-radius:3px 3px 0 0;position:relative}
+.cols6 div.over{background:var(--lacre)}
+.cols6 .lim{position:absolute;left:0;right:0;border-top:1.5px dashed var(--tinta-2)}
+.mlab{display:flex;gap:10px;padding:3px 4px 0;font-size:11px;color:var(--tinta-3)}
+.mlab span{flex:1;text-align:center}
+.card{background:var(--folha);border:1px solid var(--fio);border-radius:10px;padding:12px 14px;margin-bottom:10px}
+.card .say{font:500 17px/1.3 'Newsreader';margin:2px 0 8px}
+
+.legend{display:flex;flex-wrap:wrap;gap:8px 18px;font-size:14px;margin:14px 0;color:var(--tinta-2)}
+.legend span{display:inline-flex;align-items:center;gap:6px}
+.sw{display:inline-block;width:22px;height:8px;border-radius:3px}
+
+ul.bul{max-width:42em;padding-left:20px;margin:8px 0 14px}
+ul.bul li{margin-bottom:8px}
+.two{display:grid;grid-template-columns:repeat(auto-fit,minmax(300px,1fr));gap:24px}
+.box{background:var(--folha);border:1px solid var(--fio);border-radius:8px;padding:18px 20px}
+.box h3{margin-top:0}
+</style>
+</head>
+<body>
+<div class="wrap">
+
+<header class="cover">
+  <div class="kicker">Margem · redesenho · direção B</div>
+  <h1>Margem <em>em camadas</em></h1>
+  <p class="lede">Nada sai do app; quase tudo sai <em>da primeira tela</em>. Cada tela responde primeiro uma pergunta em português simples. A conta, o plano semanal, as contas previstas e o teto continuam lá, <em>um toque abaixo</em>, com uma frase que explica cada número.</p>
+  <nav class="toc" aria-label="Seções">
+    <a href="#confusao">1 · O que confunde hoje</a>
+    <a href="#ia">2 · Arquitetura e camadas</a>
+    <a href="#telas">3 · Telas</a>
+    <a href="#vocab">4 · Vocabulário</a>
+    <a href="#ds">5 · Design system: mantido e mudado</a>
+    <a href="#perdas">6 · Trade-offs</a>
+  </nav>
+</header>
+
+<!-- ============================================================ 1 -->
+<section class="sec" id="confusao">
+  <div class="sec-n">1</div>
+  <h2>As cinco maiores fontes de confusão</h2>
+  <p class="tx muted">Lidas no spec (§3–§7) e nas telas atuais. A causa comum: cada número derivado que o modelo calcula também aparece na tela, sempre ao mesmo tempo.</p>
+  <div class="problems">
+    <div class="prob"><div class="n">1</div><h3>A régua codifica seis coisas</h3>
+      <p>Previsto em aberto (contorno tracejado), previsto lançado (tinta 3), gasto variável (cor do estado), marca do ritmo (deslocada pelos previstos), hachura do excesso e fio duplo da margem. Sem legenda na tela, ninguém lê isso em 5 segundos.</p>
+      <div class="q">"A barra está meio cheia de tracejado e a marquinha está no meio. Estou bem ou mal?"</div></div>
+    <div class="prob"><div class="n">2</div><h3>Três contas de "quanto sobra"</h3>
+      <p>Margem usa a cota inteira, o ritmo usa a <i>cota livre</i> e o <i>gasto variável</i>, os passos dividem a cota livre. Por isso "No ritmo" convive com uma margem pequena (Casa: R$ 840 de R$ 3.000 e mesmo assim "No ritmo"). Os números não se explicam entre si.</p>
+      <div class="q">"Se estou no ritmo, por que só sobra R$ 840?"</div></div>
+    <div class="prob"><div class="n">3</div><h3>O cabeçalho funde total e teto</h3>
+      <p>"Margem R$ 1.570,00 de R$ 5.720,00 · gasto 1.850 · previstos 2.300 · teto 6.000": quatro números, dois deles (soma das cotas e teto) são de planejamento, não de gasto, e aparecem acima da resposta que importa.</p>
+      <div class="q">"5.720 é o que eu tenho? E 6.000?"</div></div>
+    <div class="prob"><div class="n">4</div><h3>Vocabulário denso e quase sinônimo</h3>
+      <p>Verba, cota, cota livre, margem, teto, ritmo, ritmo ideal, passo, no passo atual: nove palavras em volta de "limite". Apelido, legenda e texto do banco: três em volta de "nome". Pauta, recado, lançar, riscar, emenda: jargão próprio que precisa ser aprendido antes de usar.</p>
+      <div class="q">"Qual a diferença entre cota e margem?"</div></div>
+    <div class="prob"><div class="n">5</div><h3>Triar custa uma tela inteira</h3>
+      <p>Mesmo quando a sugestão está certa, lançar abre o formulário, onde aparecem apelido, "No banco", legenda, data, repete, parcelas, ligar a previsto e estorno. O tracejado da sugestão tem uma regra própria ("já conta, um toque tira") que não se descobre olhando.</p>
+      <div class="q">"Se ele já sabe que é Mercado, por que preciso abrir isso?"</div></div>
+  </div>
+</section>
+
+<!-- ============================================================ 2 -->
+<section class="sec" id="ia">
+  <div class="sec-n">2</div>
+  <h2>Arquitetura: as mesmas cinco abas, cada uma em três camadas</h2>
+  <p class="tx">A estrutura fica (a direção B pede isso), mas cada aba ganha um nome que diz o que tem dentro. Em toda tela, a <b>camada 1</b> responde uma pergunta em uma frase e um número; a <b>camada 2</b> (tocar no cartão, ou no ⓘ "por quê?") abre a explicação no lugar; a <b>camada 3</b> é a tela de detalhe ou Ajustes ▸ Avançado.</p>
+
+  <div class="tabs-ia">
+    <div><b>Verbas</b>"Quanto ainda posso gastar? Tem algo errado?"<br><span class="muted">antes: Verbas</span></div>
+    <div><b>Recados</b>"O que chegou e falta decidir?"<br><span class="muted">antes: <s>Pauta</s></span></div>
+    <div><b>Gastos</b>"O que eu gastei e quais contas vêm?"<br><span class="muted">antes: <s>Lançamentos</s></span></div>
+    <div><b>Resumo</b>"Para onde foi o dinheiro?"<br><span class="muted">antes: <s>Leitura</s></span></div>
+    <div><b>Ajustes</b>Fontes, marcadores e, recolhido, Avançado.<br><span class="muted">antes: Ajustes</span></div>
+  </div>
+
+  <h3>Mapa de conceitos por camada</h3>
+  <div class="layers">
+    <div class="layer L1"><h4>Sempre visível</h4><div class="sub">camada 1 · o que a pessoa vê sem tocar</div>
+      <ul>
+        <li>Verba (nome)</li>
+        <li>Livre <small>= margem, em reais inteiros: "R$ 820 livres"</small></li>
+        <li>Estado em palavra + ícone <small>No ritmo · Rápido · Passou R$ 37 · Nada gasto</small></li>
+        <li>Uma barra: quanto do limite já está usado</li>
+        <li>Total livre do mês + frase do que está errado</li>
+        <li>Recados a decidir, com a sugestão à vista</li>
+        <li>Lançar · Não é gasto</li>
+        <li>Valor, nome, verba, marcadores, data (formulário)</li>
+      </ul></div>
+    <div class="layer L2"><h4>Um toque</h4><div class="sub">camada 2 · abre no lugar, com frase</div>
+      <ul>
+        <li>Esperado até hoje <small>= ritmo ideal, como marca na barra e frase</small></li>
+        <li>Se continuar assim <small>= projeção "no passo atual"</small></li>
+        <li>Conta: limite − gasto − reservado = livre</li>
+        <li>Contas previstas da verba <small>("reservado"), com nome e dia</small></li>
+        <li>Teto e soma dos limites <small>(folha do total)</small></li>
+        <li>Mais opções do formulário <small>parcelas · repete · nome só deste gasto · é uma conta prevista? · é um estorno?</small></li>
+        <li>Como veio no banco / corrigir <small>(= texto do banco, emenda)</small></li>
+        <li>Ritmo do mês e calendário no Resumo</li>
+      </ul></div>
+    <div class="layer L3"><h4>Escondido</h4><div class="sub">camada 3 · detalhe da verba ou Ajustes ▸ Avançado</div>
+      <ul>
+        <li>Plano por semana <small>(= passos semanais; editar, voltar ao automático)</small></li>
+        <li>Mês de outra época da verba</li>
+        <li>Início do mês e da semana</li>
+        <li>Ordem das verbas e do widget</li>
+        <li>Riscados <small>→ "Não eram gasto"</small></li>
+        <li>Backup, importar do cobudget</li>
+      </ul></div>
+    <div class="layer L4"><h4>Removido da interface</h4><div class="sub">o modelo de dados continua igual</div>
+      <ul>
+        <li>"Cota livre" e "gasto variável" como palavras <small>viram "o que sobra depois das contas" e "gasto do dia a dia", só em frases da camada 2</small></li>
+        <li>Hachura do excesso e fio duplo na barra da camada 1</li>
+        <li>Total do mês fundido com o teto no cabeçalho</li>
+        <li>Seletor Ordenar no topo de Verbas</li>
+        <li>Tracejado como sinal de sugestão <small>vira o rótulo "Como da última vez"</small></li>
+        <li>Glifo "‸" de emendado <small>vira a palavra "corrigido"</small></li>
+        <li>Centavos na camada 1 <small>(ficam na 2 e nos formulários)</small></li>
+      </ul></div>
+  </div>
+
+  <h3>Regras das camadas</h3>
+  <ul class="bul">
+    <li><b>Uma resposta por cartão.</b> O número grande é sempre "livre" (ou "Passou R$ X"). Nenhum outro valor em reais compete com ele na camada 1, exceto uma única linha de contexto quando há conta prevista reservando ("R$ 2.000 guardados para o aluguel, dia 10").</li>
+    <li><b>Estado sempre em palavra.</b> Cor nunca sozinha: ✓ No ritmo, ↗ Rápido, ! Passou. Isso também é o que o TalkBack lê primeiro.</li>
+    <li><b>Toda derivação tem uma frase.</b> Ao abrir a camada 2, o número vem dentro de uma frase com sujeito e verbo ("Em 4 dias você gastou R$ 380; para durar o mês, o esperado era uns R$ 160"), nunca solto numa legenda.</li>
+    <li><b>Abrir é no lugar.</b> Camada 2 expande o cartão (ou abre folha, quando não há cartão). Só a camada 3 navega para outra tela, o que mantém a volta óbvia.</li>
+    <li><b>O "por quê?" (ⓘ) é um componente só</b>: um link anil depois de um estado ou total, que abre uma folha curta com a conta em linguagem simples.</li>
+  </ul>
+</section>
+
+<!-- ============================================================ 3 -->
+<section class="sec" id="telas">
+  <div class="sec-n">3</div>
+  <h2>Telas</h2>
+  <p class="tx muted">Dados de exemplo: 4 de novembro, mês de 1 a 30. Mercado R$ 1.200 (gasto R$ 380). Casa R$ 3.000 (internet R$ 120 lançada, R$ 40 de outros, aluguel R$ 2.000 previsto para o dia 10). Lazer R$ 400 (gasto R$ 437). Transporte R$ 350 (R$ 42). Saúde R$ 300 (academia R$ 119,90 prevista para o dia 15). Limites somam R$ 5.250; teto R$ 6.000.</p>
+
+  <div class="legend" aria-label="Legenda da barra">
+    <span><i class="sw f-ok"></i> usado, no ritmo</span>
+    <span><i class="sw f-fast"></i> usado, rápido</span>
+    <span><i class="sw f-over"></i> passou do limite</span>
+    <span><i class="sw res" style="background:repeating-linear-gradient(135deg,var(--fio-forte) 0 2px,transparent 2px 5px)"></i> guardado para conta prevista</span>
+  </div>
+
+  <h3>3.1 Verbas: camada 1, claro e escuro</h3>
+  <div class="gallery">
+
+<!-- HOME L1 LIGHT -->
+<figure class="shot">
+<div class="phone t-light" role="img" aria-label="Tela Verbas, camada 1, tema claro">
+  <div class="sb"><span>9:41</span><span>▴ ◼</span></div>
+  <div class="appbar"><span class="t">Verbas</span><span class="act">+ Nova</span></div>
+  <div class="scr">
+    <div class="mhead">
+      <div class="when">Novembro · faltam 27 dias</div>
+      <div class="big num">R$ 2.111 <small>livres no mês</small></div>
+      <div class="say"><b>Lazer passou do limite</b> e <b>Mercado está rápido</b>. O resto vai bem. <a class="why" href="#">por quê?</a></div>
+    </div>
+    <div class="strip"><span>3 recados para decidir</span><span>›</span></div>
+
+    <div class="vcard">
+      <div class="vrow"><span class="vname">Lazer</span><span class="vval over num">R$ 37<small>além do limite</small></span></div>
+      <div class="bar"><i class="f-over" style="width:100%"></i></div>
+      <div class="state"><span class="chip c-over">! Passou</span> de R$ 400 por mês<span class="chev">⌄</span></div>
+    </div>
+    <div class="vcard">
+      <div class="vrow"><span class="vname">Mercado</span><span class="vval num">R$ 820<small>livres</small></span></div>
+      <div class="bar"><i class="f-fast" style="width:31.7%"></i></div>
+      <div class="state"><span class="chip c-fast">↗ Rápido</span> para o dia 4<span class="chev">⌄</span></div>
+    </div>
+    <div class="vcard">
+      <div class="vrow"><span class="vname">Casa</span><span class="vval num">R$ 840<small>livres</small></span></div>
+      <div class="bar"><i class="f-ok" style="width:5.3%"></i><i class="res" style="left:5.3%;width:66.7%"></i></div>
+      <div class="state"><span class="chip c-ok">✓ No ritmo</span> R$ 2.000 guardados p/ aluguel<span class="chev">⌄</span></div>
+    </div>
+    <div class="vcard">
+      <div class="vrow"><span class="vname">Transporte</span><span class="vval num">R$ 308<small>livres</small></span></div>
+      <div class="bar"><i class="f-ok" style="width:12%"></i></div>
+      <div class="state"><span class="chip c-ok">✓ No ritmo</span><span class="chev">⌄</span></div>
+    </div>
+  </div>
+  <div class="nav"><span class="on"><i></i>Verbas</span><span><i></i>Recados<em class="badge">3</em></span><span><i></i>Gastos</span><span><i></i>Resumo</span><span><i></i>Ajustes</span></div>
+</div>
+<figcaption><b>Camada 1</b>Um número no topo (soma do que está livre), uma frase que nomeia o que está errado, e cada verba com um número e um estado em palavra. A barra mostra só "quanto do limite já foi usado"; a parte guardada para contas aparece listrada, sem marca de ritmo e sem hachura.
+<span class="tb">TalkBack, cartão: "Mercado. R$ 820 livres de R$ 1.200. Rápido para o dia 4. Tocar para ver por quê." Cabeçalho: "Novembro, faltam 27 dias. R$ 2.111 livres no mês. Lazer passou do limite e Mercado está rápido."</span></figcaption>
+</figure>
+
+<!-- HOME L1 DARK -->
+<figure class="shot">
+<div class="phone t-dark" role="img" aria-label="Tela Verbas, camada 1, tema escuro">
+  <div class="sb"><span>9:41</span><span>▴ ◼</span></div>
+  <div class="appbar"><span class="t">Verbas</span><span class="act">+ Nova</span></div>
+  <div class="scr">
+    <div class="mhead">
+      <div class="when">Novembro · faltam 27 dias</div>
+      <div class="big num">R$ 2.111 <small>livres no mês</small></div>
+      <div class="say"><b>Lazer passou do limite</b> e <b>Mercado está rápido</b>. O resto vai bem. <a class="why" href="#">por quê?</a></div>
+    </div>
+    <div class="strip"><span>3 recados para decidir</span><span>›</span></div>
+    <div class="vcard">
+      <div class="vrow"><span class="vname">Lazer</span><span class="vval over num">R$ 37<small>além do limite</small></span></div>
+      <div class="bar"><i class="f-over" style="width:100%"></i></div>
+      <div class="state"><span class="chip c-over">! Passou</span> de R$ 400 por mês<span class="chev">⌄</span></div>
+    </div>
+    <div class="vcard">
+      <div class="vrow"><span class="vname">Mercado</span><span class="vval num">R$ 820<small>livres</small></span></div>
+      <div class="bar"><i class="f-fast" style="width:31.7%"></i></div>
+      <div class="state"><span class="chip c-fast">↗ Rápido</span> para o dia 4<span class="chev">⌄</span></div>
+    </div>
+    <div class="vcard">
+      <div class="vrow"><span class="vname">Casa</span><span class="vval num">R$ 840<small>livres</small></span></div>
+      <div class="bar"><i class="f-ok" style="width:5.3%"></i><i class="res" style="left:5.3%;width:66.7%"></i></div>
+      <div class="state"><span class="chip c-ok">✓ No ritmo</span> R$ 2.000 guardados p/ aluguel<span class="chev">⌄</span></div>
+    </div>
+    <div class="vcard">
+      <div class="vrow"><span class="vname">Transporte</span><span class="vval num">R$ 308<small>livres</small></span></div>
+      <div class="bar"><i class="f-ok" style="width:12%"></i></div>
+      <div class="state"><span class="chip c-ok">✓ No ritmo</span><span class="chev">⌄</span></div>
+    </div>
+  </div>
+  <div class="nav"><span class="on"><i></i>Verbas</span><span><i></i>Recados<em class="badge">3</em></span><span><i></i>Gastos</span><span><i></i>Resumo</span><span><i></i>Ajustes</span></div>
+</div>
+<figcaption><b>Escuro</b>Mesmos tokens do book (papel #171512, estados claros sobre fundos escuros). Estado nunca só por cor: o chip leva ícone e palavra, então a leitura é igual em ambos os temas e em daltonismo.
+<span class="tb">Ordem padrão é a de risco (Passou → Rápido → No ritmo), a mesma do widget; o seletor Ordenar sai do topo e vai para Ajustes ▸ Avançado.</span></figcaption>
+</figure>
+
+<!-- HOME empty-ish first-run? use: header "por quê?" sheet -->
+<figure class="shot">
+<div class="phone t-light" role="img" aria-label="Folha do total do mês, aberta pelo por quê do cabeçalho">
+  <div class="sb"><span>9:41</span><span>▴ ◼</span></div>
+  <div class="appbar"><span class="t">Verbas</span><span class="act">+ Nova</span></div>
+  <div class="scr">
+    <div class="mhead">
+      <div class="when">Novembro · faltam 27 dias</div>
+      <div class="big num">R$ 2.111 <small>livres no mês</small></div>
+    </div>
+  </div>
+  <div class="dim"></div>
+  <div class="sheet">
+    <div class="grab"></div>
+    <h5>Novembro até hoje</h5>
+    <p>"Livre" é o que ainda cabe gastar: o limite de cada verba menos o que você já gastou e menos o que está guardado para contas que vão chegar.</p>
+    <table class="kv num">
+      <tr><td>Limites das 5 verbas</td><td>R$ 5.250,00</td></tr>
+      <tr><td>Já gasto</td><td>− R$ 1.019,00</td></tr>
+      <tr><td>Guardado para 2 contas previstas</td><td>− R$ 2.119,90</td></tr>
+      <tr class="tot"><td>Livre</td><td>R$ 2.111,10</td></tr>
+    </table>
+    <p style="margin-top:6px">Lazer passou R$ 37 do limite, e isso já está descontado do total.</p>
+    <div class="opt" style="border-top:1px solid var(--fio)"><span>Teto do planejamento<br><span class="r">Os limites somam R$ 5.250, R$ 750 abaixo do teto de R$ 6.000.</span></span><span class="r">›</span></div>
+    <div class="opt" style="border:0"><span>Contas previstas do mês</span><span class="r">Aluguel, Academia ›</span></div>
+  </div>
+</div>
+<figcaption><b>Camada 2 do cabeçalho</b>O ⓘ "por quê?" abre a conta em linhas. O teto sai do cabeçalho e mora aqui, com uma frase que diz que é limite de <i>planejamento</i> (soma dos limites), não de gasto. Tocar abre o diálogo do teto que já existe.
+<span class="tb">Sem teto, a linha diz "Sem teto. Pôr um teto ›". Nada do diálogo, das perguntas "só este mês / em diante" ou dos snackbars muda.</span></figcaption>
+</figure>
+  </div>
+
+  <h3>3.2 Verbas: camada 2 (cartão aberto) e camada 3 (detalhe)</h3>
+  <div class="gallery">
+
+<!-- HOME L2 -->
+<figure class="shot">
+<div class="phone t-light" role="img" aria-label="Verbas, camada 2: cartão Mercado aberto">
+  <div class="sb"><span>9:41</span><span>▴ ◼</span></div>
+  <div class="appbar"><span class="t">Verbas</span><span class="act">+ Nova</span></div>
+  <div class="scr">
+    <div class="vcard">
+      <div class="vrow"><span class="vname">Lazer</span><span class="vval over num">R$ 37<small>além do limite</small></span></div>
+      <div class="bar"><i class="f-over" style="width:100%"></i></div>
+      <div class="state"><span class="chip c-over">! Passou</span> de R$ 400 por mês<span class="chev">⌄</span></div>
+    </div>
+    <div class="vcard open">
+      <div class="vrow"><span class="vname">Mercado</span><span class="vval num">R$ 820<small>livres</small></span></div>
+      <div class="bar tall"><i class="f-fast" style="width:31.7%"></i><span class="tick" style="left:13.3%"></span></div>
+      <div class="ticklab"><span style="left:13.3%">esperado hoje</span></div>
+      <div class="state"><span class="chip c-fast">↗ Rápido</span> para o dia 4<span class="chev">⌃</span></div>
+      <div class="l2">
+        <p>Em 4 dias você gastou <b>R$ 380</b>. Para os R$ 1.200 durarem até o dia 30, o esperado até hoje era uns <b>R$ 160</b>.</p>
+        <p>Se continuar assim, o mês fecha perto de <b>R$ 2.850</b>, R$ 1.650 além do limite. Ainda dá tempo: <b>R$ 30 por dia</b> até o fim do mês mantém tudo dentro.</p>
+        <table class="kv num">
+          <tr><td>Limite do mês</td><td>R$ 1.200,00</td></tr>
+          <tr><td>Gasto</td><td>− R$ 380,00</td></tr>
+          <tr class="tot"><td>Livre</td><td>R$ 820,00</td></tr>
+        </table>
+        <div class="more"><span>Gastos, plano por semana</span><span>›</span></div>
+      </div>
+    </div>
+    <div class="vcard">
+      <div class="vrow"><span class="vname">Casa</span><span class="vval num">R$ 840<small>livres</small></span></div>
+      <div class="bar"><i class="f-ok" style="width:5.3%"></i><i class="res" style="left:5.3%;width:66.7%"></i></div>
+      <div class="state"><span class="chip c-ok">✓ No ritmo</span> R$ 2.000 guardados p/ aluguel<span class="chev">⌄</span></div>
+    </div>
+  </div>
+  <div class="nav"><span class="on"><i></i>Verbas</span><span><i></i>Recados<em class="badge">3</em></span><span><i></i>Gastos</span><span><i></i>Resumo</span><span><i></i>Ajustes</span></div>
+</div>
+<figcaption><b>Camada 2</b>Tocar no cartão abre no lugar. Só aqui aparece a marca do ritmo ("esperado hoje"), com rótulo, e a projeção, sempre em frase. Novo: "R$ 30 por dia" (livre ÷ dias restantes), a forma mais acionável de dizer "devagar".
+<span class="tb">"R$ 30 por dia" é derivado novo (margem ÷ dias que faltam, contando hoje) e é uma decisão do dono, não do spec.</span></figcaption>
+</figure>
+
+<!-- Casa L2 -->
+<figure class="shot">
+<div class="phone t-light" role="img" aria-label="Verbas, camada 2: cartão Casa aberto, com conta prevista">
+  <div class="sb"><span>9:41</span><span>▴ ◼</span></div>
+  <div class="appbar"><span class="t">Verbas</span><span class="act">+ Nova</span></div>
+  <div class="scr">
+    <div class="vcard open">
+      <div class="vrow"><span class="vname">Casa</span><span class="vval num">R$ 840<small>livres</small></span></div>
+      <div class="bar tall"><i class="f-ok" style="width:5.3%"></i><i class="res" style="left:5.3%;width:66.7%"></i><span class="tick" style="left:74.6%"></span></div>
+      <div class="ticklab"><span style="left:74.6%">esperado hoje</span></div>
+      <div class="state"><span class="chip c-ok">✓ No ritmo</span><span class="chev">⌃</span></div>
+      <div class="l2">
+        <p><b>R$ 2.000 estão guardados</b> para o aluguel, que chega dia 10. Contas assim não contam no ritmo: só o gasto do dia a dia conta.</p>
+        <p>Do dia a dia, você gastou R$ 40; o esperado até hoje era uns R$ 117. Bem no ritmo.</p>
+        <table class="kv num">
+          <tr><td>Limite do mês</td><td>R$ 3.000,00</td></tr>
+          <tr><td>Gasto <span class="muted">(com a internet)</span></td><td>− R$ 160,00</td></tr>
+          <tr><td>Guardado: aluguel, dia 10</td><td>− R$ 2.000,00</td></tr>
+          <tr class="tot"><td>Livre</td><td>R$ 840,00</td></tr>
+        </table>
+        <div class="more"><span>Gastos, contas, plano por semana</span><span>›</span></div>
+      </div>
+    </div>
+    <div class="vcard">
+      <div class="vrow"><span class="vname">Transporte</span><span class="vval num">R$ 308<small>livres</small></span></div>
+      <div class="bar"><i class="f-ok" style="width:12%"></i></div>
+      <div class="state"><span class="chip c-ok">✓ No ritmo</span><span class="chev">⌄</span></div>
+    </div>
+  </div>
+  <div class="nav"><span class="on"><i></i>Verbas</span><span><i></i>Recados<em class="badge">3</em></span><span><i></i>Gastos</span><span><i></i>Resumo</span><span><i></i>Ajustes</span></div>
+</div>
+<figcaption><b>Resolve a confusão 2</b>O "No ritmo com margem pequena" deixa de ser contraditório porque a camada 2 diz em frase que o aluguel está guardado e fora do ritmo. "Cota livre" e "gasto variável" não aparecem como termos.
+<span class="tb">A marca do ritmo fica em "guardado + esperado do dia a dia", como no M11, mas só nesta camada.</span></figcaption>
+</figure>
+
+<!-- Verba detail L3 -->
+<figure class="shot">
+<div class="phone t-light" role="img" aria-label="Detalhe da verba Casa, camada 3">
+  <div class="sb"><span>9:41</span><span>▴ ◼</span></div>
+  <div class="appbar"><span><span class="back">←</span><span class="t">Casa</span></span><span class="act">Editar</span></div>
+  <div class="scr">
+    <div class="seg"><span>‹ out</span><span class="on">novembro</span><span style="color:var(--tinta-3)">dez ›</span></div>
+    <div class="mhead" style="padding-bottom:6px">
+      <div class="big num" style="font-size:32px">R$ 840 <small>livres de R$ 3.000</small></div>
+      <div class="say"><span class="chip c-ok">✓ No ritmo</span></div>
+    </div>
+    <div class="lh">Contas previstas · novembro</div>
+    <div class="li"><span style="display:flex;align-items:center"><span class="cal done">2<small>nov</small></span><span>Internet<div class="s">lançada em 2 nov</div></span></span><span class="v">R$ 120,00</span></div>
+    <div class="li"><span style="display:flex;align-items:center"><span class="cal">10<small>nov</small></span><span>Aluguel<div class="s">esperando · todo mês</div></span></span><span class="v" style="color:var(--tinta-2)">R$ 2.000,00</span></div>
+    <div class="opt"><span>Plano por semana<br><span class="r">Automático · uns R$ 205 por semana</span></span><span class="r">›</span></div>
+    <div class="lh">Gastos de novembro</div>
+    <div class="li"><span>Internet<div class="s">3 nov · casa, internet</div></span><span class="v">R$ 120,00</span></div>
+    <div class="li"><span>Leroy<div class="s">2 nov · ferramenta</div></span><span class="v">R$ 28,00</span></div>
+    <div class="li"><span>Padaria do Zé<div class="s">1 nov · gás</div></span><span class="v">R$ 12,00</span></div>
+  </div>
+  <div class="nav"><span class="on"><i></i>Verbas</span><span><i></i>Recados<em class="badge">3</em></span><span><i></i>Gastos</span><span><i></i>Resumo</span><span><i></i>Ajustes</span></div>
+</div>
+<figcaption><b>Camada 3</b>Tudo o que o detalhe tem hoje continua (seletor de mês, previstos, passos editáveis, lançamentos), mas em ordem de pergunta: quanto sobra → que contas vêm → como foi o mês. O plano por semana vira uma linha recolhida, opcional, que abre a tela de passos atual.
+<span class="tb">"Soma corrida" e "cota atingida aqui" ficam na lista, mas só quando a verba passou.</span></figcaption>
+</figure>
+  </div>
+
+  <h3>3.3 Recados (Pauta): triagem com um toque</h3>
+  <div class="gallery">
+<figure class="shot">
+<div class="phone t-light" role="img" aria-label="Tela Recados com quatro recados">
+  <div class="sb"><span>9:41</span><span>▴ ◼</span></div>
+  <div class="appbar"><span class="t">Recados</span><span class="act" style="color:var(--tinta-3)">4 para decidir</span></div>
+  <div class="scr">
+    <div class="rc novo">
+      <div class="meta"><span>Cartão Ipê · novo</span><span>09:12</span></div>
+      <div class="what"><span class="m">Padaria do Zé</span><span class="v">R$ 46,90</span></div>
+      <div class="sug"><span>Como da última vez:</span><span class="vb">Mercado</span><span class="tg">padaria</span><span class="tg">café</span></div>
+      <div class="acts"><span class="btn pri grow">Lançar</span><span class="btn">Mudar</span><span class="btn txt">Não é gasto</span></div>
+    </div>
+    <div class="rc novo">
+      <div class="meta"><span>Cartão Ipê · novo</span><span>08:03</span></div>
+      <div class="what"><span class="m">SMARTFIT</span><span class="v">R$ 119,90</span></div>
+      <div class="band">É a conta prevista <b>Academia</b> · Saúde · dia 15</div>
+      <div class="acts"><span class="btn pri grow">Lançar conta</span><span class="btn">Não é</span><span class="btn txt">Não é gasto</span></div>
+    </div>
+    <div class="rc">
+      <div class="meta"><span>Banco Aurora</span><span>ontem 19:40</span></div>
+      <div class="what"><span class="m">PAG*JOSEDASILVA</span><span class="v">R$ 72,00</span></div>
+      <div class="sug"><span>Primeira vez aqui. Escolha a verba e um marcador.</span></div>
+      <div class="acts"><span class="btn pri grow">Escolher e lançar</span><span class="btn txt">Não é gasto</span></div>
+    </div>
+    <div class="rc">
+      <div class="meta"><span>PagFácil · <span class="ad">Parece propaganda</span></span><span>ontem</span></div>
+      <div class="what"><span class="m" style="font-size:15px;color:var(--tinta-2)">"Você tem R$ 5.000 pré-aprovados…"</span></div>
+      <div class="acts"><span class="btn pri grow">Não é gasto</span><span class="btn txt">Lançar mesmo assim</span></div>
+    </div>
+  </div>
+  <div class="nav"><span><i></i>Verbas</span><span class="on"><i></i>Recados<em class="badge">4</em></span><span><i></i>Gastos</span><span><i></i>Resumo</span><span><i></i>Ajustes</span></div>
+</div>
+<figcaption><b>Camada 1 da triagem</b>A sugestão (verba e marcadores do último lançamento do lugar) aparece no cartão, rotulada "Como da última vez". Se está certa, <b>Lançar</b> grava direto, sem formulário. "Mudar" e tocar no corpo abrem o formulário. Sem histórico, o botão principal diz o que falta. Em propaganda, o principal se inverte.
+<span class="tb">TalkBack: "Novo. Padaria do Zé, R$ 46,90, Cartão Ipê, 9:12. Como da última vez: verba Mercado, marcadores padaria e café. Ações: Lançar, Mudar, Não é gasto."</span></figcaption>
+</figure>
+
+<figure class="shot">
+<div class="phone t-light" role="img" aria-label="Recados depois de lançar com um toque, com snackbar">
+  <div class="sb"><span>9:41</span><span>▴ ◼</span></div>
+  <div class="appbar"><span class="t">Recados</span><span class="act" style="color:var(--tinta-3)">3 para decidir</span></div>
+  <div class="scr">
+    <div class="rc novo">
+      <div class="meta"><span>Cartão Ipê · novo</span><span>08:03</span></div>
+      <div class="what"><span class="m">SMARTFIT</span><span class="v">R$ 119,90</span></div>
+      <div class="band">É a conta prevista <b>Academia</b> · Saúde · dia 15</div>
+      <div class="acts"><span class="btn pri grow">Lançar conta</span><span class="btn">Não é</span><span class="btn txt">Não é gasto</span></div>
+    </div>
+    <div class="rc">
+      <div class="meta"><span>Banco Aurora</span><span>ontem 19:40</span></div>
+      <div class="what"><span class="m">PAG*JOSEDASILVA</span><span class="v">R$ 72,00</span></div>
+      <div class="sug"><span>Primeira vez aqui. Escolha a verba e um marcador.</span></div>
+      <div class="acts"><span class="btn pri grow">Escolher e lançar</span><span class="btn txt">Não é gasto</span></div>
+    </div>
+    <div class="rc">
+      <div class="meta"><span>PagFácil · <span class="ad">Parece propaganda</span></span><span>ontem</span></div>
+      <div class="what"><span class="m" style="font-size:15px;color:var(--tinta-2)">"Você tem R$ 5.000 pré-aprovados…"</span></div>
+      <div class="acts"><span class="btn pri grow">Não é gasto</span><span class="btn txt">Lançar mesmo assim</span></div>
+    </div>
+  </div>
+  <div class="snack"><span>Lançado em Mercado. Ficam R$ 773 livres.</span><b>Desfazer</b></div>
+  <div class="nav"><span><i></i>Verbas</span><span class="on"><i></i>Recados<em class="badge">3</em></span><span><i></i>Gastos</span><span><i></i>Resumo</span><span><i></i>Ajustes</span></div>
+</div>
+<figcaption><b>Depois do toque</b>O snackbar confirma onde entrou e o efeito em "livre" (a prévia que hoje só existe no formulário). Desfazer devolve o recado como está hoje no spec.
+<span class="tb">Na Pauta vazia: "Nada para decidir. Os recados novos aparecem aqui sozinhos." Anotação pausada continua como faixa no topo.</span></figcaption>
+</figure>
+  </div>
+
+  <h3>3.4 Lançar: o essencial à vista, o resto em "Mais opções"</h3>
+  <div class="gallery">
+<figure class="shot">
+<div class="phone t-light" role="img" aria-label="Formulário Lançar, camada 1">
+  <div class="sb"><span>9:41</span><span>▴ ◼</span></div>
+  <div class="appbar"><span><span class="back">✕</span><span class="t">Lançar</span></span></div>
+  <div class="scr">
+    <div class="quote">Banco Aurora, ontem 19:40: "Compra aprovada R$ 72,00 PAG*JOSEDASILVA"</div>
+    <div class="fld"><div class="lab">Valor</div><div class="val amt">R$ 72,00</div></div>
+    <div class="fld"><div class="lab">Nome</div><div class="val">Feira do José <span class="aux">vale para as próximas</span></div>
+      <div class="hint">No banco: PAG*JOSEDASILVA</div></div>
+    <div class="fld"><div class="lab">Verba</div><div class="val"><span class="pick">Mercado <span class="aux">· R$ 773 livres</span></span></div></div>
+    <div class="fld"><div class="lab">Marcadores</div><div class="val" style="justify-content:flex-start;gap:6px"><span class="tg">feira ✕</span></div>
+      <div class="srch">Buscar ou criar marcador</div></div>
+    <div class="fld"><div class="lab">Quando</div><div class="val">Ontem, 19:40</div></div>
+    <div class="disc"><span>Mais opções</span><span>parcelas · repete · …  ⌄</span></div>
+    <div class="prev">Mercado fica com <b>R$ 701 livres</b>.</div>
+  </div>
+  <div class="foot"><span class="btn txt">Não é gasto</span><span class="btn pri grow">Lançar R$ 72,00</span></div>
+</div>
+<figcaption><b>Camada 1 do formulário</b>Cinco campos. "Apelido" vira só <b>Nome</b>, com a regra dita ao lado ("vale para as próximas"); o texto do banco desce a uma dica. A prévia vira frase em "livre". Sugestão, quando existe, entra preenchida com o rótulo "como da última vez" no lugar do tracejado.
+<span class="tb">Faltando verba ou marcador, o botão fica desligado e a linha da prévia diz o que falta: "Falta escolher a verba."</span></figcaption>
+</figure>
+
+<figure class="shot">
+<div class="phone t-light" role="img" aria-label="Formulário Lançar com Mais opções aberto">
+  <div class="sb"><span>9:41</span><span>▴ ◼</span></div>
+  <div class="appbar"><span><span class="back">✕</span><span class="t">Lançar</span></span></div>
+  <div class="scr">
+    <div class="fld"><div class="lab">Quando</div><div class="val">Ontem, 19:40</div></div>
+    <div class="disc"><span>Mais opções</span><span>⌃</span></div>
+    <div class="opt"><span>Parcelas<br><span class="r">Informe o total; cada parcela entra no seu mês</span></span><span class="r">À vista ›</span></div>
+    <div class="opt"><span>Repete<br><span class="r">Todo mês vira conta prevista e guarda o valor</span></span><span class="r">Só uma vez ›</span></div>
+    <div class="opt"><span>Nome só deste gasto<br><span class="r">Ex.: "Bolo do aniversário da Ana"</span></span><span class="r">+ ›</span></div>
+    <div class="opt"><span>Corrigir o que o banco disse<br><span class="r">Valor, nome ou data errados na notificação</span></span><span class="r">›</span></div>
+    <div class="opt"><span>É uma conta prevista?<br><span class="r">Ligar a Aluguel, Academia…</span></span><span class="r">Ligar ›</span></div>
+    <div class="opt" style="border:0"><span>É um estorno?<br><span class="r">Escolher a compra que voltou</span></span><span class="r">›</span></div>
+    <div class="prev">Mercado fica com <b>R$ 701 livres</b>.</div>
+  </div>
+  <div class="foot"><span class="btn txt">Não é gasto</span><span class="btn pri grow">Lançar R$ 72,00</span></div>
+</div>
+<figcaption><b>Camada 2 do formulário</b>Tudo que o formulário faz hoje, recolhido numa lista onde cada linha tem uma frase de uma linha dizendo para que serve. O estado de cada opção fica à direita, então quem abriu sabe o que está ligado sem expandir.
+<span class="tb">Se uma opção está fora do padrão (parcelado, repete, nome só deste gasto, ligado), o rótulo do recolhido mostra: "Mais opções · 10× · todo mês". Na edição, as opções em uso já abrem à vista.</span></figcaption>
+</figure>
+  </div>
+
+  <h3>3.5 Resumo (Leitura) e Gastos</h3>
+  <div class="gallery">
+<figure class="shot">
+<div class="phone t-light" role="img" aria-label="Tela Resumo">
+  <div class="sb"><span>9:41</span><span>▴ ◼</span></div>
+  <div class="appbar"><span class="t">Resumo</span><span class="act">novembro ⌄</span></div>
+  <div class="scr">
+    <div class="card">
+      <div class="rub">Para onde foi · até dia 4</div>
+      <div class="say">R$ 1.019 gastos. <b>Lazer</b> e <b>Mercado</b> levam 80%.</div>
+      <div class="hb"><span>Lazer</span><i class="t" style="width:100%;background:var(--c3)"></i><span class="n">R$ 437</span></div>
+      <div class="hb"><span>Mercado</span><i class="t" style="width:87%;background:var(--c1)"></i><span class="n">R$ 380</span></div>
+      <div class="hb"><span>Casa</span><i class="t" style="width:37%;background:var(--c2)"></i><span class="n">R$ 160</span></div>
+      <div class="hb"><span>Transporte</span><i class="t" style="width:10%;background:var(--c4)"></i><span class="n">R$ 42</span></div>
+    </div>
+    <div class="card">
+      <div class="seg"><span class="on">Marcadores</span><span>Lugares</span></div>
+      <div class="say" style="font-size:15.5px">"bar" puxa a fila.</div>
+      <div class="li"><span>bar <span class="s">· 4</span></span><span class="v">R$ 286</span></div>
+      <div class="li"><span>feira <span class="s">· 3</span></span><span class="v">R$ 210</span></div>
+      <div class="li" style="border:0"><span>padaria <span class="s">· 6</span></span><span class="v">R$ 96</span></div>
+    </div>
+    <div class="opt"><span>Ritmo do mês<br><span class="r">Mercado está R$ 220 acima do esperado</span></span><span class="r">›</span></div>
+    <div class="opt"><span>Mês a mês<br><span class="r">Lazer passou em 2 dos últimos 6 meses</span></span><span class="r">›</span></div>
+    <div class="opt" style="border:0"><span>Dias que mais pesam<br><span class="r">Os sábados pesam</span></span><span class="r">›</span></div>
+  </div>
+  <div class="nav"><span><i></i>Verbas</span><span><i></i>Recados</span><span><i></i>Gastos</span><span class="on"><i></i>Resumo</span><span><i></i>Ajustes</span></div>
+</div>
+<figcaption><b>Camada 1 do Resumo</b>Começa pelo gráfico mais fácil (barras por verba, que hoje não existe) e o ranking. Os três gráficos analíticos de hoje viram linhas que já trazem a conclusão em frase; tocar abre o gráfico atual inteiro.
+<span class="tb">O seletor de mês e a regra "um mês para a página toda" ficam. A escolha de verba do Ritmo e do Mês a mês passa para dentro de cada gráfico.</span></figcaption>
+</figure>
+
+<figure class="shot">
+<div class="phone t-light" role="img" aria-label="Resumo, camada 2: Mês a mês">
+  <div class="sb"><span>9:41</span><span>▴ ◼</span></div>
+  <div class="appbar"><span><span class="back">←</span><span class="t">Mês a mês</span></span><span class="act">Lazer ⌄</span></div>
+  <div class="scr">
+    <div class="card">
+      <div class="say">Lazer passou do limite em <b>2 dos últimos 6 meses</b>.</div>
+      <div class="cols6">
+        <span class="lim" style="bottom:66%"></span>
+        <div style="height:55%"></div><div class="over" style="height:78%"></div><div style="height:60%"></div><div style="height:48%"></div><div class="over" style="height:72%"></div><div class="over" style="height:72%;opacity:.55"></div>
+      </div>
+      <div class="mlab"><span>jun</span><span>jul</span><span>ago</span><span>set</span><span>out</span><span>nov</span></div>
+      <p class="muted" style="font-size:13px;margin-top:8px">Linha tracejada: limite de R$ 400. Barra vermelha: passou. Novembro ainda está em curso.</p>
+    </div>
+    <div class="card">
+      <div class="rub">Ritmo do mês · Mercado</div>
+      <div class="say" style="font-size:15.5px">R$ 220 acima do esperado até hoje. Se continuar assim, fecha perto de R$ 2.850.</div>
+      <svg viewBox="0 0 300 110" width="100%" height="110" aria-hidden="true">
+        <line x1="0" y1="20" x2="300" y2="20" stroke="var(--tinta-2)" stroke-dasharray="2 3"/>
+        <text x="4" y="14" font-size="10" fill="var(--tinta-2)">limite R$ 1.200</text>
+        <line x1="0" y1="105" x2="300" y2="20" stroke="var(--tinta-3)" stroke-dasharray="5 4"/>
+        <polyline points="0,105 10,90 20,82 30,76 40,72" fill="none" stroke="var(--ocre)" stroke-width="2.5"/>
+        <line x1="40" y1="72" x2="120" y2="0" stroke="var(--ocre)" stroke-dasharray="1 4" stroke-width="2"/>
+        <rect x="40" y="0" width="260" height="105" fill="var(--folha-2)" opacity=".5"/>
+        <text x="150" y="98" font-size="10" fill="var(--tinta-3)">esperado</text>
+      </svg>
+    </div>
+  </div>
+  <div class="nav"><span><i></i>Verbas</span><span><i></i>Recados</span><span><i></i>Gastos</span><span class="on"><i></i>Resumo</span><span><i></i>Ajustes</span></div>
+</div>
+<figcaption><b>Camada 2 do Resumo</b>Os gráficos atuais, sem perder nada, mas cada um com uma frase de conclusão em cima e uma linha de legenda escrita embaixo. "Ritmo ideal" é rotulado "esperado"; "no passo atual" vira "se continuar assim".
+<span class="tb">TalkBack lê a frase de conclusão e depois os números de cada mês, como o spec já pede.</span></figcaption>
+</figure>
+
+<figure class="shot">
+<div class="phone t-light" role="img" aria-label="Tela Gastos">
+  <div class="sb"><span>9:41</span><span>▴ ◼</span></div>
+  <div class="appbar"><span class="t">Gastos</span><span class="act">+ Gasto</span></div>
+  <div class="scr">
+    <div class="opt" style="background:var(--folha);border:1px solid var(--fio);border-radius:10px;padding:10px 12px;margin-bottom:6px"><span><span class="rub">Contas a caminho</span><br>2 contas · R$ 2.119,90 guardados<br><span class="r">1 com recado esperando</span></span><span class="r">⌄</span></div>
+    <div class="lh">Hoje</div>
+    <div class="li"><span>Padaria do Zé<div class="s">Mercado · padaria, café</div></span><span class="v">R$ 46,90</span></div>
+    <div class="lh">Ontem</div>
+    <div class="li"><span>Feira do José<div class="s">Mercado · feira</div></span><span class="v">R$ 72,00</span></div>
+    <div class="li"><span><i>Bolo do aniversário da Ana</i><div class="s">em Padaria do Zé · Lazer · festa</div></span><span class="v">R$ 89,00</span></div>
+    <div class="lh">2 nov</div>
+    <div class="li"><span>Internet<div class="s">Casa · internet · conta prevista</div></span><span class="v">R$ 120,00</span></div>
+    <div class="li"><span>Loja Estação<div class="s">Lazer · roupa · <span style="color:var(--anil)">estornada</span></div></span><span class="v" style="text-decoration:line-through;color:var(--tinta-3)">R$ 199,00</span></div>
+    <div class="li"><span>Magalu<div class="s">Casa · cadeira · parcela 3 de 10</div></span><span class="v">R$ 120,00</span></div>
+    <div class="li"><span>Uber<div class="s">Transporte · uber · corrigido</div></span><span class="v">R$ 18,40</span></div>
+  </div>
+  <div class="nav"><span><i></i>Verbas</span><span><i></i>Recados</span><span class="on"><i></i>Gastos</span><span><i></i>Resumo</span><span><i></i>Ajustes</span></div>
+</div>
+<figcaption><b>Gastos (Lançamentos)</b>Quase igual ao de hoje: "A caminho" vira "Contas a caminho", recolhido, e diz "guardados" em vez de explicar a reserva. "‸ emendado" vira "corrigido". Legenda segue em itálico com "em …".
+<span class="tb">Folha da conta prevista sem mudança de ações: Lançar sem recado, Pular este mês, Editar, Apagar.</span></figcaption>
+</figure>
+
+<figure class="shot">
+<div class="phone t-dark" role="img" aria-label="Tela Ajustes com Avançado recolhido, tema escuro">
+  <div class="sb"><span>9:41</span><span>▴ ◼</span></div>
+  <div class="appbar"><span class="t">Ajustes</span></div>
+  <div class="scr">
+    <div class="opt"><span>Apps que o Margem lê<br><span class="r">Banco Aurora, Cartão Ipê, PagFácil</span></span><span class="r">›</span></div>
+    <div class="opt"><span>Marcadores<br><span class="r">23 marcadores</span></span><span class="r">›</span></div>
+    <div class="opt"><span>Não eram gasto<br><span class="r">Recados riscados, para trazer de volta</span></span><span class="r">›</span></div>
+    <div class="opt"><span>Tema</span><span class="r">Sistema ›</span></div>
+    <div class="disc" style="color:var(--tinta)"><span class="rub" style="color:var(--tinta-2)">Avançado</span><span>⌃</span></div>
+    <div class="opt"><span>Teto do planejamento<br><span class="r">Máximo para a soma dos limites · R$ 6.000</span></span><span class="r">›</span></div>
+    <div class="opt"><span>Seu mês começa no dia<br><span class="r">E a semana, na segunda</span></span><span class="r">1 ›</span></div>
+    <div class="opt"><span>Ordem das verbas e do widget</span><span class="r">Mais em risco ›</span></div>
+    <div class="opt"><span>Backup</span><span class="r">›</span></div>
+    <div class="opt" style="border:0"><span>Importar do cobudget</span><span class="r">›</span></div>
+  </div>
+  <div class="nav"><span><i></i>Verbas</span><span><i></i>Recados</span><span><i></i>Gastos</span><span><i></i>Resumo</span><span class="on"><i></i>Ajustes</span></div>
+</div>
+<figcaption><b>Ajustes ▸ Avançado</b>A camada 3 que não pertence a nenhuma verba: teto (também alcançável pela folha do total), início do mês e da semana, ordem, backup, importação. Recolhido por padrão, lembra se foi aberto.
+<span class="tb">Mesmo conteúdo do §7.6; só a ordem e os nomes mudam.</span></figcaption>
+</figure>
+  </div>
+
+  <h3>3.6 Widgets</h3>
+  <p class="tx">Seguem a camada 1: nome, "R$ 820 livres" e o chip de estado, sem marca do ritmo na barra. O widget de recados troca "Pauta" por "3 recados para decidir".</p>
+</section>
+
+<!-- ============================================================ 4 -->
+<section class="sec" id="vocab">
+  <div class="sec-n">4</div>
+  <h2>Vocabulário</h2>
+  <p class="tx">Princípio: <b>o nome da coisa na tela é o que a pessoa diria em voz alta</b>. O código e o spec podem manter os termos atuais; a tabela é só para a interface. O glossário teria a coluna "Evitar" revisada (por exemplo, "limite" deixa de ser evitado).</p>
+  <div class="tblw">
+  <table class="tbl">
+    <thead><tr><th>Hoje</th><th>Proposta</th><th></th><th>Por quê</th></tr></thead>
+    <tbody>
+      <tr><td>Margem</td><td class="new">livre · "R$ 820 livres"</td><td><span class="tag-k k-ren">troca</span></td><td>"Margem" segue como nome do app e do conceito no código, mas o número na tela é dito como adjetivo que responde a pergunta: quanto está livre.</td></tr>
+      <tr><td>Fora da margem · "R$ 12,00 além"</td><td class="new">Passou · "R$ 37 além do limite"</td><td><span class="tag-k k-ren">troca</span></td><td>Verbo comum, curto, cabe num chip.</td></tr>
+      <tr><td>Acima do ritmo</td><td class="new">Rápido · "Rápido para o dia 4"</td><td><span class="tag-k k-ren">troca</span></td><td>Diz a direção (rápido demais) sem a pessoa precisar saber o que é ritmo ideal.</td></tr>
+      <tr><td>No ritmo</td><td>No ritmo</td><td><span class="tag-k k-keep">mantém</span></td><td>Já é linguagem comum.</td></tr>
+      <tr><td>Cota</td><td class="new">limite do mês · "de R$ 1.200 por mês"</td><td><span class="tag-k k-ren">troca</span></td><td>"Cota" e "margem" eram confundidas. Com o teto fora da camada 1, "limite" fica sem concorrente.</td></tr>
+      <tr><td>Verba</td><td>Verba</td><td><span class="tag-k k-keep">mantém</span></td><td>Palavra comum em pt-BR para dinheiro separado para um fim; o estado vazio já a explica.</td></tr>
+      <tr><td>Teto</td><td class="new">Teto do planejamento</td><td><span class="tag-k k-hide">esconde</span></td><td>Mantido, mas só na folha do total e em Avançado, sempre com a frase "máximo para a soma dos limites".</td></tr>
+      <tr><td>Cota livre</td><td class="new">"o que sobra depois das contas"</td><td><span class="tag-k k-del">sai</span></td><td>Não aparece como termo; só dentro de frases da camada 2 e do plano por semana.</td></tr>
+      <tr><td>Gasto variável</td><td class="new">gasto do dia a dia</td><td><span class="tag-k k-del">sai</span></td><td>Idem; aparece só quando há conta prevista na verba.</td></tr>
+      <tr><td>Ritmo ideal</td><td class="new">esperado até hoje</td><td><span class="tag-k k-ren">troca</span></td><td>"Ideal" soa como meta moral; "esperado" diz que é uma conta.</td></tr>
+      <tr><td>No passo atual</td><td class="new">se continuar assim</td><td><span class="tag-k k-ren">troca</span></td><td>Frase condicional que todo mundo entende.</td></tr>
+      <tr><td>Passo semanal</td><td class="new">Plano por semana</td><td><span class="tag-k k-hide">esconde</span></td><td>Opcional, camada 3. "Plano" diz que é escolha da pessoa, não limite.</td></tr>
+      <tr><td>Previsto</td><td class="new">conta prevista</td><td><span class="tag-k k-ren">troca</span></td><td>"Previsto" sozinho é adjetivo sem substantivo. "Conta prevista" diz o que é. Em aberto, o valor está "guardado".</td></tr>
+      <tr><td>(reserva na margem)</td><td class="new">guardado · "R$ 2.000 guardados"</td><td><span class="tag-k k-ren">novo</span></td><td>Uma palavra para o efeito do previsto em aberto, que hoje só se vê pelo tracejado.</td></tr>
+      <tr><td>A caminho</td><td class="new">Contas a caminho</td><td><span class="tag-k k-ren">troca</span></td><td>Acrescenta o substantivo.</td></tr>
+      <tr><td>Pauta</td><td class="new">Recados (aba)</td><td><span class="tag-k k-ren">troca</span></td><td>A aba ganha o nome do que tem dentro; uma palavra a menos para aprender. "Pauta limpa" vira "Nada para decidir".</td></tr>
+      <tr><td>Recado</td><td>Recado</td><td><span class="tag-k k-keep">mantém</span></td><td>Simples e já diz "algo que chegou".</td></tr>
+      <tr><td>Lançar · Lançamento</td><td>Lançar · <span class="new">Gasto</span></td><td><span class="tag-k k-ren">troca</span></td><td>O verbo fica (é o botão); a coisa resultante é "gasto", que é o que ela é. Aba "Gastos".</td></tr>
+      <tr><td>Riscar · Riscados</td><td class="new">Não é gasto · Não eram gasto</td><td><span class="tag-k k-ren">troca</span></td><td>O botão diz o motivo, não o gesto. O código mantém <code>dismiss()</code>.</td></tr>
+      <tr><td>Lançar previsto</td><td class="new">Lançar conta</td><td><span class="tag-k k-ren">troca</span></td><td>Curto e coerente com "conta prevista".</td></tr>
+      <tr><td>Apelido</td><td class="new">Nome · "vale para as próximas"</td><td><span class="tag-k k-ren">troca</span></td><td>O campo principal é o nome do lugar; a regra de persistência vira dica.</td></tr>
+      <tr><td>Texto do banco</td><td class="new">No banco: …</td><td><span class="tag-k k-keep">mantém</span></td><td>Já é a forma usada no formulário; o termo some das outras telas.</td></tr>
+      <tr><td>Legenda</td><td class="new">Nome só deste gasto</td><td><span class="tag-k k-ren">troca</span></td><td>Explica por si a diferença com o Nome. Fica em Mais opções.</td></tr>
+      <tr><td>Emenda · ‸ emendado</td><td class="new">Corrigir · corrigido</td><td><span class="tag-k k-ren">troca</span></td><td>Verbo comum; o glifo ‸ não é lido por ninguém (nem pelo TalkBack).</td></tr>
+      <tr><td>Marcador</td><td>Marcador</td><td><span class="tag-k k-keep">mantém</span></td><td>Funciona; o formulário mostra o exemplo como chip.</td></tr>
+      <tr><td>Marcador / verba sugerida (tracejado)</td><td class="new">"Como da última vez"</td><td><span class="tag-k k-ren">troca</span></td><td>Rótulo explícito no lugar de um código visual.</td></tr>
+      <tr><td>Estorno · Parcelas</td><td>Estorno · Parcelas</td><td><span class="tag-k k-keep">mantém</span></td><td>Vocabulário bancário que a pessoa já usa.</td></tr>
+      <tr><td>Leitura</td><td class="new">Resumo</td><td><span class="tag-k k-ren">troca</span></td><td>"Leitura" se confunde com "ler notificações". "Resumo" diz o que é.</td></tr>
+      <tr><td>Fonte</td><td class="new">Apps que o Margem lê</td><td><span class="tag-k k-ren">troca</span></td><td>Descreve a coisa; "fonte" é jargão.</td></tr>
+      <tr><td>Virada · Mês da verba · Dia de início</td><td class="new">"Seu mês começa no dia 1"</td><td><span class="tag-k k-ren">troca</span></td><td>Frase no lugar de três termos.</td></tr>
+      <tr><td>Anotação automática / pausada</td><td>mantém</td><td><span class="tag-k k-keep">mantém</span></td><td>Aparece pouco e já é clara.</td></tr>
+    </tbody>
+  </table>
+  </div>
+</section>
+
+<!-- ============================================================ 5 -->
+<section class="sec" id="ds">
+  <div class="sec-n">5</div>
+  <h2>Design system: o que fica e o que muda</h2>
+  <div class="two">
+    <div class="box"><h3>Mantido</h3>
+      <ul class="bul">
+        <li>Todos os tokens de cor (papel, folha, tinta 1–3, argila, musgo/ocre/lacre/anil com fundos), claro e escuro.</li>
+        <li>Newsreader para nomes e frases; Source Sans 3 para números e rótulos; rubricas em caixa-alta espaçada.</li>
+        <li>Cores de estado (musgo no ritmo, ocre rápido, lacre passou) e anil para ação/informação.</li>
+        <li>Folhinha do dia para contas previstas (tracejada em aberto, cheia lançada).</li>
+        <li>Legenda em itálico; chips de marcador; snackbars com Desfazer.</li>
+      </ul></div>
+    <div class="box"><h3>Mudado</h3>
+      <ul class="bul">
+        <li><b>Régua em duas versões.</b> Camada 1: trilho + uma faixa de "usado" na cor do estado + listrado neutro para o guardado. Camada 2: a régua atual, mais alta, com a marca do ritmo <i>rotulada</i>. Hachura de excesso e fio duplo saem da camada 1 (passou = barra cheia em lacre).</li>
+        <li><b>Chip de estado</b> com ícone + palavra (✓ ↗ !), no lugar do estado em texto solto.</li>
+        <li><b>Componente "por quê?"</b>: link anil com ⓘ que abre uma folha de explicação (frase + tabela de conta com total).</li>
+        <li><b>Tabela de conta</b> (limite − gasto − guardado = livre), sempre na mesma ordem em todo lugar.</li>
+        <li><b>Linha de opção com descrição</b> ("Mais opções", Avançado, gráficos recolhidos): título + uma frase + estado à direita.</li>
+        <li><b>Caixa de sugestão</b> no cartão do recado ("Como da última vez"), em folha-2.</li>
+        <li>Reais inteiros na camada 1; centavos só onde se age (formulário, tabela de conta).</li>
+      </ul></div>
+  </div>
+</section>
+
+<!-- ============================================================ 6 -->
+<section class="sec" id="perdas">
+  <div class="sec-n">6</div>
+  <h2>Trade-offs: o que se perde</h2>
+  <ul class="bul">
+    <li><b>O ritmo não está mais à vista.</b> Quem olhava a marquinha para saber "quanto à frente estou" precisa de um toque. A palavra "Rápido" cobre o caso comum, mas não diz o quanto.</li>
+    <li><b>A barra da camada 1 junta coisas.</b> Gasto e guardado aparecem na mesma faixa (só o listrado separa); a distinção entre conta prevista lançada e gasto do dia a dia some até a camada 2.</li>
+    <li><b>Lançar com um toque erra com um toque.</b> Se o mesmo lugar às vezes é Mercado e às vezes Lazer, o botão rápido lança na verba da última vez. O snackbar com Desfazer e o "livre" atualizado ajudam, mas o erro passa a ser possível sem ver o formulário.</li>
+    <li><b>O total "R$ 2.111 livres" esconde a forma.</b> Uma verba que passou desconta do total; a pessoa pode ver um total saudável e ignorar a frase "Lazer passou". A frase vem antes da lista por isso, mas o número grande chama mais.</li>
+    <li><b>Teto e plano por semana ficam pouco descobertos.</b> Quem nunca abre a folha do total ou o detalhe da verba pode nunca saber que existem. É intencional na direção B, mas reduz o uso deles.</li>
+    <li><b>Mais toques para casos avançados.</b> Parcelar, repetir, nome só deste gasto e ligar a conta prevista custam um toque a mais (abrir "Mais opções").</li>
+    <li><b>Mais texto para manter.</b> Cada frase explicativa tem variantes (no ritmo, rápido, passou, sem gasto, com e sem conta prevista, mês passado). Mais copy, mais testes de interface, mais trabalho de TalkBack.</li>
+    <li><b>Custo da renomeação.</b> Spec, glossário (coluna Evitar), testes que procuram texto e o hábito do dono mudam. "Margem" deixa de ser a palavra do número, e o nome do app fica um pouco menos literal.</li>
+    <li><b>Telas mais longas quando abertas.</b> O cartão expandido empurra as outras verbas para baixo; com 7+ verbas, abrir uma esconde as demais. Mitigação: só um cartão aberto por vez.</li>
+    <li><b>Um derivado novo.</b> "R$ 30 por dia" não existe no spec; acrescenta um número (útil, mas é mais um) e precisa de regra para dia de hoje e verba que passou.</li>
+  </ul>
+  <p class="tx muted" style="margin-top:20px">Nada do modelo de dados muda: uma verba por gasto, ≥1 marcador, virada mensal, estorno e parcelas seguem as regras de §2–§6. Esta proposta é só sobre o que cada tela mostra primeiro.</p>
+</section>
+
+</div>
+</body>
+</html>

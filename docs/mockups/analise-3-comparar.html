@@ -1,0 +1,1088 @@
+<!doctype html>
+<html lang="pt-BR">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Margem, Análise comparada</title>
+<meta name="description" content="Direção 3 da Análise do Margem: toda tela começa dizendo se o gasto está acima ou abaixo do normal, no mesmo trecho do mês, com buscas fixadas no topo.">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Newsreader:ital,opsz,wght@0,6..72,300..700;1,6..72,300..700&family=Source+Sans+3:ital,wght@0,300..800;1,400..600&display=swap" rel="stylesheet">
+<style>
+/* ===== TOKENS: the current Margem palette, unchanged ===== */
+:root, .t-light{
+  color-scheme:light;
+  --papel:#F3EEE4; --folha:#FBF8F1; --folha-2:#ECE5D8;
+  --fio:#DDD3C2; --fio-forte:#8A7E6A;
+  --tinta:#1E1B16; --tinta-2:#514A40; --tinta-3:#6B6254;
+  --argila:#A44D29;
+  --musgo:#3E5E38; --musgo-fundo:#E3EADB;
+  --ocre:#85590F;  --ocre-fundo:#F4E7CC;
+  --lacre:#9A2A20; --lacre-fundo:#F6E3DC;
+  --anil:#2D4C6E;  --anil-fundo:#DFE6EE;
+  --acao:#1E1B16; --sobre-acao:#FBF8F1;
+  --snack-acao:#E09470;
+  --sombra:0 1px 2px rgba(30,27,22,.06),0 12px 30px -12px rgba(30,27,22,.28);
+  --c1:#2F5FA8; --c2:#D0682E; --c3:#139488; --c4:#7E2F78; --c5:#B8860B; --c6:#C25C7E;
+  --parede:linear-gradient(165deg,#E4E2D2 0%,#EDE4D2 50%,#D9C6AA 100%);
+  --wg-fundo:rgba(251,248,241,.94);
+  --s0:#F1E4D6; --s1:#E3C3A6; --s2:#CF9871; --s3:#B46A43; --s4:#8A4422;
+}
+:root[data-theme="dark"], .t-dark{
+  color-scheme:dark;
+  --papel:#171512; --folha:#201D19; --folha-2:#2A2621;
+  --fio:#36312A; --fio-forte:#7C7262;
+  --tinta:#EEE7DA; --tinta-2:#BDB3A3; --tinta-3:#988E7F;
+  --argila:#E09470;
+  --musgo:#A3C092; --musgo-fundo:#24301F;
+  --ocre:#DDB063;  --ocre-fundo:#382C17;
+  --lacre:#EE937E; --lacre-fundo:#3A221C;
+  --anil:#A3BCDB;  --anil-fundo:#1F2A36;
+  --acao:#EEE7DA; --sobre-acao:#171512;
+  --snack-acao:#A44D29;
+  --sombra:0 1px 0 rgba(0,0,0,.35),0 14px 34px -10px rgba(0,0,0,.7);
+  --c1:#5584D0; --c2:#D06A30; --c3:#20A898; --c4:#8E4A8A; --c5:#B98A14; --c6:#CC6487;
+  --parede:linear-gradient(165deg,#1B211B 0%,#13120F 55%,#211913 100%);
+  --wg-fundo:rgba(32,29,25,.94);
+  --s0:#2B231E; --s1:#4E3324; --s2:#7E4A2E; --s3:#B66C44; --s4:#E6A27C;
+}
+@media (prefers-color-scheme: dark){
+  :root:not([data-theme="light"]){
+    color-scheme:dark;
+    --papel:#171512; --folha:#201D19; --folha-2:#2A2621;
+    --fio:#36312A; --fio-forte:#7C7262;
+    --tinta:#EEE7DA; --tinta-2:#BDB3A3; --tinta-3:#988E7F;
+    --argila:#E09470;
+    --musgo:#A3C092; --musgo-fundo:#24301F;
+    --ocre:#DDB063;  --ocre-fundo:#382C17;
+    --lacre:#EE937E; --lacre-fundo:#3A221C;
+    --anil:#A3BCDB;  --anil-fundo:#1F2A36;
+    --acao:#EEE7DA; --sobre-acao:#171512;
+    --snack-acao:#A44D29;
+    --sombra:0 1px 0 rgba(0,0,0,.35),0 14px 34px -10px rgba(0,0,0,.7);
+    --c1:#5584D0; --c2:#D06A30; --c3:#20A898; --c4:#8E4A8A; --c5:#B98A14; --c6:#CC6487;
+    --parede:linear-gradient(165deg,#1B211B 0%,#13120F 55%,#211913 100%);
+    --wg-fundo:rgba(32,29,25,.94);
+    --s0:#2B231E; --s1:#4E3324; --s2:#7E4A2E; --s3:#B66C44; --s4:#E6A27C;
+  }
+}
+
+/* ===== PAGE ===== */
+*{box-sizing:border-box;margin:0;padding:0}
+body{background:var(--papel);color:var(--tinta);font:400 17px/1.6 'Source Sans 3',system-ui,sans-serif;overflow-x:hidden}
+h1,h2,h3,.serif{font-family:'Newsreader',Georgia,serif;font-weight:400}
+.num{font-variant-numeric:lining-nums tabular-nums}
+.wrap{max-width:1180px;margin:0 auto;padding:0 16px 96px}
+@media (min-width:720px){.wrap{padding:0 40px 120px}}
+header.cover{padding:48px 0 40px;border-bottom:2px solid var(--tinta)}
+.kick{font:600 12px/1.3 'Source Sans 3';letter-spacing:.14em;text-transform:uppercase;color:var(--argila)}
+h1{font:italic 400 clamp(44px,8vw,96px)/.95 'Newsreader';letter-spacing:-.03em;margin:14px 0 18px}
+.lede{font:300 clamp(19px,2.4vw,24px)/1.45 'Newsreader';color:var(--tinta-2);max-width:40em}
+.lede em{color:var(--tinta)}
+section{padding:64px 0 24px;border-bottom:1px solid var(--fio)}
+h2{font:400 clamp(30px,4.4vw,46px)/1.05 'Newsreader';letter-spacing:-.015em;margin:8px 0 18px;max-width:20em}
+h2 em{color:var(--argila)}
+h3{font:500 22px/1.25 'Newsreader';margin:36px 0 10px}
+p{max-width:44em;margin-bottom:14px}
+.muted{color:var(--tinta-2)}
+.small{font-size:15px}
+a{color:var(--anil)}
+.grid2{display:grid;grid-template-columns:repeat(auto-fit,minmax(min(100%,320px),1fr));gap:20px 28px}
+.card{background:var(--folha);border:1px solid var(--fio);border-radius:8px;padding:20px 22px}
+.card h3{margin:0 0 8px;font-size:20px}
+.card .n{font:italic 300 40px/1 'Newsreader';color:var(--argila);float:left;margin:0 14px 4px 0}
+.card p{font-size:15.5px;line-height:1.5;margin-bottom:8px;color:var(--tinta-2)}
+.card p b{color:var(--tinta)}
+.tblw{overflow-x:auto;margin:12px 0 20px}
+table{width:100%;border-collapse:collapse;font-size:15px;line-height:1.45}
+th{font:600 11px/1.3 'Source Sans 3';letter-spacing:.12em;text-transform:uppercase;text-align:left;padding:10px 14px 10px 0;border-top:2px solid var(--tinta);border-bottom:1px solid var(--tinta);white-space:nowrap}
+td{padding:10px 14px 10px 0;border-bottom:1px solid var(--fio);vertical-align:top}
+td.t{font:500 17px/1.3 'Newsreader';white-space:nowrap}
+td .x{color:var(--tinta-3);text-decoration:line-through}
+.pill{display:inline-block;font:600 11px/1.2 'Source Sans 3';letter-spacing:.06em;text-transform:uppercase;padding:3px 7px;border-radius:3px;white-space:nowrap}
+.p-keep{background:var(--musgo-fundo);color:var(--musgo)}
+.p-ren{background:var(--anil-fundo);color:var(--anil)}
+.p-hide{background:var(--ocre-fundo);color:var(--ocre)}
+.p-cut{background:var(--lacre-fundo);color:var(--lacre)}
+.ia{display:grid;grid-template-columns:repeat(auto-fit,minmax(min(100%,250px),1fr));gap:16px}
+.ia .col{border-top:3px solid var(--tinta);padding-top:12px}
+.ia .col.c2{border-color:var(--anil)}.ia .col.c3{border-color:var(--ocre)}.ia .col.c4{border-color:var(--lacre)}
+.ia .col h4{font:600 12px/1.3 'Source Sans 3';letter-spacing:.12em;text-transform:uppercase;margin-bottom:8px}
+.ia ul{list-style:none;font-size:15px;line-height:1.45}
+.ia li{padding:7px 0;border-bottom:1px solid var(--fio)}
+.ia li small{display:block;color:var(--tinta-3);font-size:13px}
+.tabs-map{display:grid;grid-template-columns:repeat(auto-fit,minmax(min(100%,300px),1fr));gap:20px;margin:20px 0}
+.tabs-map .box{border:1px solid var(--fio);border-radius:8px;padding:16px 18px;background:var(--folha)}
+.tabs-map .row{display:flex;gap:6px;flex-wrap:wrap;margin:8px 0}
+.tab{font:600 13px 'Source Sans 3';padding:6px 10px;border-radius:4px;border:1px solid var(--fio-forte)}
+.tab.gone{border-style:dashed;color:var(--tinta-3);text-decoration:line-through}
+.tab.new{background:var(--tinta);color:var(--papel);border-color:var(--tinta)}
+.arrow{font:italic 15px 'Newsreader';color:var(--tinta-2)}
+ul.plain{padding-left:20px;max-width:46em}
+ul.plain li{margin-bottom:10px}
+ul.plain li b{font-weight:600}
+#tema{position:fixed;bottom:16px;right:16px;z-index:20;min-height:44px;padding:0 16px;border-radius:4px;border:1px solid var(--fio-forte);background:var(--folha);color:var(--tinta);font:600 13px 'Source Sans 3';letter-spacing:.06em;text-transform:uppercase;cursor:pointer}
+
+/* ===== PHONE ===== */
+.shots{display:flex;flex-wrap:wrap;gap:40px 32px;align-items:flex-start;margin:24px 0}
+.shot{margin:0;max-width:380px;width:100%}
+.shot figcaption{margin-top:12px;font:italic 15px/1.45 'Newsreader';color:var(--tinta-2)}
+.shot figcaption b{display:block;font:600 11px 'Source Sans 3';letter-spacing:.12em;text-transform:uppercase;color:var(--tinta);font-style:normal;margin-bottom:3px}
+.ph{width:100%;max-width:380px;padding:10px;border-radius:48px;background:#0D0C0A;box-shadow:0 0 0 1px #3a352e,0 40px 70px -40px rgba(20,16,10,.55)}
+.scr{width:100%;height:800px;border-radius:38px;overflow:hidden;position:relative;background:var(--papel);color:var(--tinta);font:400 15px/1.45 'Source Sans 3';display:flex;flex-direction:column}
+.sbar{height:34px;padding:4px 26px 0;display:flex;justify-content:space-between;align-items:center;font:600 13px 'Source Sans 3';flex:none}
+.tb{height:56px;display:flex;align-items:center;padding:0 8px 0 20px;flex:none;gap:4px}
+.tb .t{font:500 21px 'Newsreader';flex:1}
+.tb .wm{font:italic 500 24px 'Newsreader';letter-spacing:-.02em;flex:1}
+.tb .back{width:40px;height:40px;display:grid;place-items:center;margin-left:-14px}
+.ib{width:44px;height:44px;display:grid;place-items:center;color:var(--tinta-2)}
+.ico{width:22px;height:22px;fill:none;stroke:currentColor;stroke-width:1.6;stroke-linecap:round;stroke-linejoin:round}
+.bd{flex:1;overflow:hidden;padding:0 20px;position:relative}
+.navb{height:68px;display:grid;grid-template-columns:repeat(4,1fr);border-top:1px solid var(--fio);background:var(--papel);flex:none}
+.navb a{display:flex;flex-direction:column;align-items:center;justify-content:center;gap:2px;font:500 12px 'Source Sans 3';color:var(--tinta-3);position:relative;text-decoration:none}
+.navb a.on{color:var(--tinta);font-weight:700}
+.navb a.on::before{content:"";position:absolute;top:-1px;left:28%;right:28%;height:2px;background:var(--tinta)}
+.bdg{position:absolute;top:8px;left:calc(50% + 8px);min-width:18px;height:18px;border-radius:9px;background:var(--argila);color:var(--folha);font:700 11px/18px 'Source Sans 3';text-align:center;padding:0 5px}
+.gbar{height:20px;flex:none;display:grid;place-items:center}
+.gbar::after{content:"";width:108px;height:4px;border-radius:2px;background:var(--tinta);opacity:.35}
+
+/* home */
+.over{font:600 11px/1.3 'Source Sans 3';letter-spacing:.12em;text-transform:uppercase;color:var(--tinta-3)}
+.hero{font:400 60px/1 'Newsreader';letter-spacing:-.025em;margin:10px 0 4px;font-variant-numeric:lining-nums tabular-nums}
+.hero .cur{font:500 .34em 'Source Sans 3';color:var(--tinta-2);vertical-align:.9em;margin-right:.12em;letter-spacing:0}
+.hero .ct{font-size:.45em;color:var(--tinta-2)}
+.herosub{font:17px/1.35 'Source Sans 3';color:var(--tinta-2)}
+.alert{display:flex;gap:8px;align-items:center;margin-top:12px;font:600 14px/1.3 'Source Sans 3';color:var(--lacre)}
+.dot{width:8px;height:8px;border-radius:50%;background:currentColor;flex:none}
+.strip{display:flex;align-items:center;gap:10px;margin:18px 0 6px;padding:12px 8px 12px 16px;background:var(--folha-2);border-radius:6px;position:relative;font:600 15px 'Source Sans 3'}
+.strip::before{content:"";position:absolute;left:6px;top:11px;bottom:11px;width:4px;border-left:1px solid var(--argila);border-right:1px solid var(--argila)}
+.strip span{flex:1;padding-left:4px}
+.strip small{display:block;font-weight:400;font-size:13px;color:var(--tinta-3)}
+.secl{display:flex;justify-content:space-between;align-items:baseline;margin-top:20px;padding-bottom:4px;border-bottom:1px solid var(--tinta);font:600 11px 'Source Sans 3';letter-spacing:.12em;text-transform:uppercase}
+.secl i{font:400 13px 'Source Sans 3';letter-spacing:0;text-transform:none;color:var(--tinta-3);font-style:normal}
+.vr{padding:11px 0 10px;border-bottom:1px solid var(--fio)}
+.vr .l1{display:flex;justify-content:space-between;align-items:baseline;gap:10px}
+.vr .nm{font:500 18px/1.2 'Newsreader'}
+.vr .v{font:500 18px/1.2 'Newsreader';font-variant-numeric:lining-nums tabular-nums;white-space:nowrap}
+.vr .v small{font:400 12.5px 'Source Sans 3';color:var(--tinta-3);margin-left:3px}
+.fuel{height:6px;border-radius:3px;background:var(--fio);margin:8px 0 0;overflow:hidden}
+.fuel b{display:block;height:100%;background:var(--tinta-2);border-radius:3px}
+.fuel.over{background:transparent;border:1.5px solid var(--lacre);height:7px}
+.st{font:600 12.5px/1.2 'Source Sans 3';margin-top:6px;display:flex;gap:6px;align-items:center}
+.st.ocre{color:var(--ocre)}.st.lacre{color:var(--lacre)}
+.vr .v.neg{color:var(--lacre)}
+
+/* triage */
+.bulk{display:flex;align-items:center;gap:10px;padding:10px 10px 10px 14px;border:1px solid var(--fio);border-radius:8px;background:var(--folha);margin:6px 0 12px;font:14px/1.3 'Source Sans 3';color:var(--tinta-2)}
+.bulk span{flex:1}
+.bulk b{color:var(--tinta)}
+.rec{background:var(--folha);border:1px solid var(--fio);border-radius:8px;padding:12px 14px 10px;margin-bottom:10px;position:relative}
+.rec.novo{padding-left:22px}
+.rec.novo::before{content:"";position:absolute;left:8px;top:14px;bottom:14px;width:4px;border-left:1px solid var(--argila);border-right:1px solid var(--argila)}
+.rec .top{display:flex;justify-content:space-between;align-items:baseline;gap:10px}
+.rec .mer{font:500 18px/1.2 'Newsreader'}
+.rec .amt{font:500 18px/1.2 'Newsreader';font-variant-numeric:lining-nums tabular-nums;white-space:nowrap}
+.rec .src{font:12.5px 'Source Sans 3';color:var(--tinta-3);margin-top:1px}
+.sug{margin-top:8px;font:14px/1.35 'Source Sans 3';color:var(--tinta-2)}
+.sug b{color:var(--tinta);font-weight:600}
+.sug .w{display:block;color:var(--lacre);font-size:13px;font-weight:600}
+.band{margin-top:8px;padding:7px 10px;border-radius:4px;background:var(--anil-fundo);color:var(--anil);font:600 13.5px/1.35 'Source Sans 3'}
+.band small{display:block;font-weight:400;color:var(--tinta-2)}
+.band.ocre{background:var(--ocre-fundo);color:var(--ocre)}
+.acts{display:flex;justify-content:flex-end;gap:6px;margin-top:10px;align-items:center}
+.btn{display:inline-flex;align-items:center;justify-content:center;min-height:40px;padding:0 14px;border-radius:4px;font:600 14px 'Source Sans 3';border:1px solid transparent;white-space:nowrap}
+.btn.pri{background:var(--acao);color:var(--sobre-acao)}
+.btn.sec{border-color:var(--fio-forte);color:var(--tinta)}
+.btn.txt{color:var(--tinta-2);padding:0 8px}
+.btn.big{min-height:52px;font-size:16px;flex:1}
+.snack{position:absolute;left:12px;right:12px;bottom:12px;display:flex;align-items:center;gap:8px;background:var(--tinta);color:var(--papel);border-radius:6px;padding:4px 4px 4px 14px;min-height:50px;font:14px/1.3 'Source Sans 3';box-shadow:var(--sombra)}
+.snack span{flex:1}
+.snack b{color:var(--snack-acao);font-weight:700;letter-spacing:.04em;padding:0 12px}
+
+/* form */
+.quote{background:var(--folha-2);border-radius:6px;padding:9px 12px;font:italic 14px/1.4 'Newsreader';color:var(--tinta-2);margin-bottom:12px}
+.quote b{display:block;font:600 10.5px 'Source Sans 3';letter-spacing:.1em;text-transform:uppercase;font-style:normal;color:var(--tinta-3);margin-bottom:2px}
+.money{font:400 44px/1 'Newsreader';font-variant-numeric:lining-nums tabular-nums;border-bottom:1.5px solid var(--tinta);padding:4px 0 8px;display:flex;align-items:baseline;gap:6px}
+.money .cur{font:500 16px 'Source Sans 3';color:var(--tinta-2)}
+.money .dt{margin-left:auto;font:500 13px 'Source Sans 3';color:var(--tinta-2);border:1px solid var(--fio-forte);border-radius:16px;padding:4px 10px;align-self:center}
+.lbl{font:600 11px 'Source Sans 3';letter-spacing:.1em;text-transform:uppercase;color:var(--tinta-3);margin:14px 0 6px}
+.fld{border:1px solid var(--fio-forte);border-radius:4px;padding:9px 12px;font:500 17px 'Newsreader';background:var(--folha)}
+.hint{font:12.5px 'Source Sans 3';color:var(--tinta-3);margin-top:4px}
+.vgrid{display:grid;grid-template-columns:1fr 1fr;gap:6px}
+.vchip{border:1px solid var(--fio);border-radius:6px;padding:7px 10px;background:var(--folha);font:600 14px/1.2 'Source Sans 3'}
+.vchip small{display:block;font:400 12.5px 'Source Sans 3';color:var(--tinta-3);font-variant-numeric:tabular-nums}
+.vchip.on{border:2px solid var(--tinta);padding:6px 9px}
+.vchip.on small{color:var(--tinta-2)}
+.vchip.neg small{color:var(--lacre)}
+.chips{display:flex;gap:6px;flex-wrap:wrap;align-items:center}
+.chip{display:inline-flex;align-items:center;gap:6px;height:32px;padding:0 10px 0 12px;border-radius:16px;background:var(--tinta);color:var(--papel);font:500 14px 'Source Sans 3'}
+.chip.add{background:transparent;color:var(--tinta-3);border:1px dashed var(--fio-forte);font-weight:400}
+.more{display:flex;justify-content:space-between;align-items:center;margin-top:14px;padding:10px 0;border-top:1px solid var(--fio);border-bottom:1px solid var(--fio);font:600 14px 'Source Sans 3'}
+.more small{display:block;font:400 12.5px 'Source Sans 3';color:var(--tinta-3)}
+.prev{margin-top:12px;font:14px/1.4 'Source Sans 3';color:var(--tinta-2)}
+.prev b{color:var(--tinta)}
+.dock{position:absolute;left:0;right:0;bottom:0;padding:12px 20px;background:var(--papel);border-top:1px solid var(--fio);display:flex;gap:10px}
+
+/* detail + gastos */
+.math{margin:12px 0 4px;border:1px solid var(--fio);border-radius:6px;padding:8px 12px;background:var(--folha);font:14px/1.4 'Source Sans 3'}
+.math .r{display:flex;justify-content:space-between;padding:3px 0;font-variant-numeric:tabular-nums;color:var(--tinta-2)}
+.math .r.tot{border-top:1px solid var(--tinta);margin-top:4px;padding-top:6px;color:var(--tinta);font-weight:600}
+.lrow{display:flex;justify-content:space-between;align-items:baseline;gap:10px;padding:9px 0;border-bottom:1px solid var(--fio)}
+.lrow .n{font:500 16.5px/1.2 'Newsreader'}
+.lrow .w{display:block;font:12.5px 'Source Sans 3';color:var(--tinta-3);margin-top:2px}
+.lrow .w.anil{color:var(--anil);font-weight:600}
+.lrow .a{font:500 16px 'Newsreader';font-variant-numeric:lining-nums tabular-nums;white-space:nowrap}
+.lrow .a.res{color:var(--tinta-3)}
+.mbars{display:flex;gap:8px;align-items:flex-end;height:66px;margin-top:10px}
+.mbars div{flex:1;display:flex;flex-direction:column;align-items:center;gap:3px;font:11px 'Source Sans 3';color:var(--tinta-3)}
+.mbars i{display:block;width:100%;background:var(--tinta-2);border-radius:2px 2px 0 0}
+.mbars i.o{background:var(--lacre)}
+.mbars i.p{background:var(--fio-forte);opacity:.6}
+.seg{display:flex;border:1px solid var(--fio-forte);border-radius:6px;overflow:hidden;margin:14px 0 8px}
+.seg span{flex:1;text-align:center;padding:7px 0;font:600 13px 'Source Sans 3';color:var(--tinta-2)}
+.seg span.on{background:var(--tinta);color:var(--papel)}
+.rk{display:grid;grid-template-columns:86px 1fr auto;gap:8px;align-items:center;padding:5px 0;font:14px 'Source Sans 3'}
+.rk i{display:block;height:12px;border-radius:2px}
+.rk .a{font-variant-numeric:tabular-nums;text-align:right;color:var(--tinta-2)}
+.monthsel{display:flex;align-items:center;justify-content:space-between;font:500 17px 'Newsreader'}
+.monthsel span{color:var(--tinta-3);font:20px 'Source Sans 3'}
+.dayh{display:flex;align-items:center;gap:8px;margin:14px 0 2px;font:600 11px 'Source Sans 3';letter-spacing:.12em;text-transform:uppercase;color:var(--tinta-3)}
+.dayh::after{content:"";flex:1;height:1px;background:var(--fio)}
+.fold{display:flex;justify-content:space-between;align-items:center;padding:11px 0;border-top:1px solid var(--tinta);border-bottom:1px solid var(--fio);margin-top:14px;font:600 14px 'Source Sans 3'}
+.fold small{display:block;font:400 12.5px 'Source Sans 3';color:var(--tinta-3)}
+.set{padding:13px 0;border-bottom:1px solid var(--fio);display:flex;justify-content:space-between;align-items:center;gap:10px}
+.set b{font:500 17px 'Newsreader';font-weight:500}
+.set small{display:block;font:13px 'Source Sans 3';color:var(--tinta-3)}
+.set .v{font:14px 'Source Sans 3';color:var(--tinta-2);white-space:nowrap}
+.wall{max-width:380px;width:100%;border-radius:32px;padding:20px 16px;background:var(--parede);box-shadow:0 0 0 1px var(--fio)}
+.wg{background:var(--wg-fundo);border-radius:22px;padding:14px 16px;box-shadow:var(--sombra);color:var(--tinta)}
+.wg .h{font:600 10.5px 'Source Sans 3';letter-spacing:.12em;text-transform:uppercase;color:var(--tinta-3)}
+.wg .big{font:400 34px/1.1 'Newsreader';font-variant-numeric:lining-nums tabular-nums}
+.wg .r{display:flex;justify-content:space-between;font:14px 'Source Sans 3';padding:3px 0;font-variant-numeric:tabular-nums}
+
+/* leitura */
+.say{font:400 21px/1.25 'Newsreader';letter-spacing:-.005em;margin:4px 0 8px;font-variant-numeric:lining-nums tabular-nums}
+.say b{font-weight:500}
+.say .sub{display:block;font:14.5px/1.4 'Source Sans 3';color:var(--tinta-2);margin-top:4px;letter-spacing:0}
+.say.s{font-size:18px}
+.mk{display:flex;justify-content:space-between;gap:10px;padding:5px 0;border-bottom:1px solid var(--fio);font:14.5px 'Source Sans 3'}
+.mk .c{color:var(--tinta-3)}
+.mk .a{font-variant-numeric:tabular-nums;color:var(--tinta-2)}
+.see{font:600 13.5px 'Source Sans 3';color:var(--anil);padding:7px 0 0}
+.drill{display:flex;justify-content:space-between;align-items:center;gap:8px;padding:7px 0;border-bottom:1px solid var(--fio)}
+.drill.first{border-top:1px solid var(--tinta);margin-top:10px}
+.drill span{flex:1}
+.drill b{display:block;font:600 14px/1.3 'Source Sans 3'}
+.drill i{display:block;font:italic 16px/1.3 'Newsreader';color:var(--tinta-2)}
+.drill i.lacre{color:var(--lacre)}
+.pick{font:500 13px 'Source Sans 3';color:var(--tinta-2);border:1px solid var(--fio-forte);border-radius:16px;padding:4px 10px;margin-right:8px;white-space:nowrap}
+.chart{display:block;width:100%;height:auto;margin:6px 0 2px;overflow:visible}
+.legend{list-style:none;margin:6px 0 0;padding:8px 0 0;border-top:1px solid var(--fio);font:13px/1.4 'Source Sans 3';color:var(--tinta-2)}
+.legend li{display:flex;gap:8px;align-items:center;padding:2px 0}
+.legend svg{flex:none;width:24px;height:12px}
+.legend .sw{flex:none;width:12px;height:12px;border-radius:2px}
+.steps{display:flex;gap:2px}
+.steps i{width:14px;height:14px;display:block}
+.leit .rk{padding:3px 0}
+.leit .seg{margin:10px 0 6px}
+/* busca */
+.sbox{display:flex;align-items:center;gap:8px;min-height:44px;padding:0 12px;border:1px solid var(--fio-forte);border-radius:6px;background:var(--folha);font:15px 'Source Sans 3';color:var(--tinta-3)}
+.sbox .ico{width:18px;height:18px;flex:none}
+.sbox.on{border:2px solid var(--tinta);padding:0 11px;color:var(--tinta)}
+.sbox.on .q{font-weight:600}
+.sbox.on .q::after{content:"";display:inline-block;width:1.5px;height:17px;background:var(--argila);vertical-align:-3px;margin-left:1px}
+.sbox .x{margin-left:auto;color:var(--tinta-3)}
+.fcs{display:flex;gap:6px;margin:10px 0 4px;overflow:hidden;white-space:nowrap}
+.fc{flex:none;display:inline-flex;align-items:center;height:30px;padding:0 11px;border-radius:15px;border:1px solid var(--fio-forte);font:600 13px 'Source Sans 3';color:var(--tinta-2)}
+.fc.on{background:var(--tinta);border-color:var(--tinta);color:var(--papel)}
+.fc small{font-weight:400;margin-left:4px;opacity:.8}
+.typ{font:600 10.5px 'Source Sans 3';letter-spacing:.1em;text-transform:uppercase;color:var(--tinta-3)}
+.kpis{display:grid;grid-template-columns:1fr 1fr;gap:0 14px;margin-top:6px}
+.kpi{padding:7px 0 6px;border-top:1px solid var(--fio)}
+.kpi .typ{display:block}
+.kpi b{display:block;font:500 20px/1.15 'Newsreader';font-variant-numeric:lining-nums tabular-nums}
+.kpi small{display:block;font:12.5px/1.3 'Source Sans 3';color:var(--tinta-3)}
+.mbars.s{height:54px;margin-top:6px}
+.mbars.s div{font-size:10.5px}
+.mbars.s i.lim{background:var(--lacre)}
+.stack{display:flex;height:12px;border-radius:2px;overflow:hidden;margin:8px 0 4px}
+.stack i{display:block;height:100%}
+.ent .secl{margin-top:12px}
+.ent .mk{padding:4px 0}
+.ent .say{font-size:19px}
+.ent .seg{margin:8px 0 4px}
+.ent .seg span{padding:5px 0}
+.alts .card h3{margin-top:0}
+
+
+/* ===== DIREÇÃO 3: comparar primeiro ===== */
+.vd{font:600 12.5px/1.25 'Source Sans 3';white-space:nowrap}
+.vd.mais{color:var(--ocre)}
+.vd.menos{color:var(--tinta-2);font-weight:500}
+.vd.nor{color:var(--tinta-3);font-weight:500}
+.verdict{font:400 22px/1.22 'Newsreader';letter-spacing:-.005em;margin:6px 0 4px;font-variant-numeric:lining-nums tabular-nums}
+.verdict b{font-weight:500}
+.verdict .mais{color:var(--ocre);font-weight:500}
+.verdict .sub{display:block;font:14px/1.4 'Source Sans 3';color:var(--tinta-2);margin-top:5px;letter-spacing:0}
+.verdict.s{font-size:20px}
+.vlink{display:flex;align-items:center;justify-content:space-between;gap:8px}
+.vlink .ico{width:18px;height:18px;color:var(--tinta-3);flex:none}
+.cmpl{display:flex;justify-content:space-between;gap:10px;font:13.5px/1.35 'Source Sans 3';color:var(--tinta-2);padding:6px 0;border-top:1px solid var(--fio);border-bottom:1px solid var(--fio);margin:8px 0 2px;font-variant-numeric:tabular-nums}
+.cmpl b{color:var(--tinta);font-weight:600}
+.fx{display:flex;justify-content:space-between;align-items:center;gap:10px;padding:8px 0;border-bottom:1px solid var(--fio)}
+.fx .l{flex:1;min-width:0}
+.fx .n{display:block;font:500 17px/1.2 'Newsreader'}
+.fx .t{display:block;font:12px/1.2 'Source Sans 3';color:var(--tinta-3);margin-top:1px}
+.fx .r{text-align:right}
+.fx .a{display:block;font:500 16px/1.2 'Newsreader';font-variant-numeric:lining-nums tabular-nums}
+.fx .ico{width:18px;height:18px;color:var(--tinta-3);flex:none}
+.fx.drag .ico{color:var(--tinta-3)}
+.rk4{display:grid;grid-template-columns:76px 1fr 50px 40px;gap:8px;align-items:center;padding:4px 0;font:14px 'Source Sans 3'}
+.rk4 .trk{position:relative;height:14px}
+.rk4 .trk i{position:absolute;left:0;top:1px;height:12px;border-radius:2px}
+.rk4 .trk b{position:absolute;top:-2px;width:2px;height:18px;background:var(--tinta);border-radius:1px}
+.rk4 .a{font-variant-numeric:tabular-nums;text-align:right;color:var(--tinta-2)}
+.rk4 .d{font:600 12.5px 'Source Sans 3';font-variant-numeric:tabular-nums;text-align:right;color:var(--tinta-3)}
+.rk4 .d.mais{color:var(--ocre)}
+.tickleg{display:flex;align-items:center;gap:6px;font:12.5px/1.3 'Source Sans 3';color:var(--tinta-3);margin-top:4px}
+.tickleg i{display:inline-block;width:2px;height:13px;background:var(--tinta);border-radius:1px}
+.mk .d{font:600 12.5px 'Source Sans 3';color:var(--tinta-3);margin-left:6px}
+.mk .d.mais{color:var(--ocre)}
+.pinon{color:var(--tinta)}
+.pinon .ico{fill:currentColor}
+.scrim{position:absolute;inset:0;background:rgba(20,16,10,.45)}
+.sheet{position:absolute;left:0;right:0;bottom:0;background:var(--folha);border-radius:18px 18px 0 0;padding:10px 20px 18px;box-shadow:var(--sombra)}
+.sheet .grab{width:36px;height:4px;border-radius:2px;background:var(--fio-forte);margin:0 auto 12px}
+.sheet h4{font:500 20px/1.2 'Newsreader';margin-bottom:2px}
+.sheet .hint{margin-bottom:6px}
+.ent .verdict{font-size:21px}
+.ent .cmpl{margin-top:6px}
+.empty{padding:22px 0 6px}
+.empty .say{font-size:22px}
+.note{margin-top:10px;padding:9px 12px;border-radius:6px;background:var(--folha-2);font:13.5px/1.4 'Source Sans 3';color:var(--tinta-2)}
+.note b{color:var(--tinta)}
+.go{display:flex;justify-content:space-between;align-items:center;padding:9px 0;border-bottom:1px solid var(--fio);font:600 14px 'Source Sans 3'}
+.go small{display:block;font:400 12.5px 'Source Sans 3';color:var(--tinta-3)}
+.go .ico{width:18px;height:18px;color:var(--tinta-3)}
+.base-t td b{font-weight:600}
+.flow{display:grid;grid-template-columns:repeat(auto-fit,minmax(min(100%,200px),1fr));gap:10px;margin:18px 0 8px;counter-reset:f}
+.flow div{border:1px solid var(--fio);border-radius:8px;background:var(--folha);padding:12px 14px;font:14.5px/1.4 'Source Sans 3';color:var(--tinta-2);position:relative}
+.flow div b{display:block;font:500 18px/1.2 'Newsreader';color:var(--tinta);margin-bottom:4px}
+.fcs{flex-wrap:wrap;overflow:visible;white-space:normal;row-gap:6px}
+.leit .secl{margin-top:12px}
+.flow div::before{counter-increment:f;content:counter(f);position:absolute;top:10px;right:12px;font:italic 300 26px/1 'Newsreader';color:var(--argila)}
+</style>
+</head>
+<body>
+<button id="tema" type="button" aria-label="Alternar tema claro e escuro">Tema</button>
+<div class="wrap">
+
+<header class="cover">
+  <div class="kick">Análise do Margem · Direção 3, comparar primeiro</div>
+  <h1>Mais ou menos que o normal?</h1>
+  <p class="lede">Um número sozinho não diz nada: <em>R$ 804,10 até o dia 4</em> é muito ou pouco? Nesta direção, cada tela da Análise começa pela comparação, numa frase só ("Delivery: R$ 144 a mais que o normal até hoje"), e o detalhe vem depois. A base é sempre justa: o dia 4 de agora contra o dia 4 dos meses anteriores. As coisas que a pessoa quer vigiar (feira, Uber) ficam fixadas no topo, cada uma numa linha.</p>
+</header>
+
+<!-- ================= 1 ================= -->
+<section id="confusao">
+  <div class="kick">1 · Diagnóstico</div>
+  <h2>O que confunde na <em>Análise</em> de hoje</h2>
+  <p class="muted">Lido no mock escolhido (redesign-ab.html, seções 3 e 4), com a Alternativa 1 da busca.</p>
+  <div class="grid2">
+    <div class="card"><span class="n">1</span><h3>Números sem régua</h3>
+      <p>"R$ 804,10 gastos. Mercado e Delivery levam 84%." diz quanto e onde, não se é muito. A única referência é a linha pequena de outubro embaixo, e as barras por verba não têm nenhuma. Na análise da "feira", "22 vezes, uma a cada 7 dias" é um fato. <b>A pessoa recebe a conta e precisa fazer o julgamento sozinha.</b></p></div>
+    <div class="card"><span class="n">2</span><h3>Cada tela compara com outra coisa</h3>
+      <p>Para onde foi compara com outubro. O Ritmo compara com o "esperado", Mês a mês com o limite, o ranking com as outras linhas do mês ("puxa a fila"), e a busca não compara com nada. São quatro réguas, nenhuma com nome. <b>A mesma verba pode estar "acima" numa tela e "normal" na outra, sem que se diga por quê.</b></p></div>
+    <div class="card"><span class="n">3</span><h3>Três controles de período</h3>
+      <p>O seletor de mês no topo, o "Mês · 6 meses · Tudo" na tela da coisa e o link "Buscar em todos os meses" nos resultados. A busca mostra novembro, e a análise que ela abre começa em 6 meses: <b>o mesmo "feira" vale R$ 98 numa tela e R$ 1.096 na seguinte.</b></p></div>
+    <div class="card"><span class="n">4</span><h3>O começo do mês assusta</h3>
+      <p>No dia 4, a projeção diz que Delivery "fecha em R$ 1.965", quase oito vezes o limite, a partir de quatro dias com três pedidos. Em Dias que mais pesam, a frase de novembro é "Nenhum dia da semana pesa ainda" e o gráfico é de outubro. <b>Nos primeiros dias, a Análise exagera ou fica muda, justo quando a pessoa ainda pode mudar o mês.</b></p></div>
+    <div class="card"><span class="n">5</span><h3>Achar não leva a acompanhar</h3>
+      <p>Quem quer saber como anda a feira toda semana precisa digitar "feira" toda semana, passar pelos quatro grupos e tocar no resultado. A busca responde uma vez e esquece. <b>A pergunta mais comum ("e a feira, como está?") custa três passos sempre.</b></p></div>
+  </div>
+</section>
+
+<!-- ================= 2 ================= -->
+<section id="ia">
+  <div class="kick">2 · Arquitetura de informação</div>
+  <h2>Uma régua para a página <em>toda</em></h2>
+  <p>A Análise passa a ter uma régua só, <b>o normal</b>: a média do mesmo trecho do mês nos 6 meses anteriores, sem as contas reservadas. Todo número grande vem com ela. O limite continua aparecendo, mas como segunda linha (é a régua do Início, não da Análise). O mês do topo é o único controle de período.</p>
+
+  <h3>A página, de cima para baixo</h3>
+  <div class="flow">
+    <div><b>Busca</b>uma caixa; resultados agrupados por tipo, cada linha com a dica da comparação.</div>
+    <div><b>Mês do topo</b>"Novembro, até dia 4". Vale para tudo, inclusive para a busca e para a análise que ela abre.</div>
+    <div><b>Veredito do mês</b>uma frase: R$ 804,10, R$ 149 a mais que o normal. Toque: o gráfico Comparado ao normal.</div>
+    <div><b>Fixados</b>até 5 linhas: nome, quanto até hoje, veredito. Toque: a análise da coisa.</div>
+    <div><b>Para onde foi</b>barras por verba com um traço no normal e a diferença ao lado; depois marcadores e lugares.</div>
+    <div><b>Gráficos</b>Comparado ao normal, Ritmo do mês, Mês a mês, Dias que mais pesam; cada linha com a conclusão.</div>
+  </div>
+
+  <h3>Mapa dos conceitos</h3>
+  <div class="ia">
+    <div class="col"><h4>Sempre à vista</h4><ul>
+      <li>Busca<small>verba, marcador, gasto, aviso, em todos os meses</small></li>
+      <li>Mês do topo<small>"até dia 4" no mês atual</small></li>
+      <li>Veredito do mês<small>quanto foi e quanto a mais ou a menos que o normal</small></li>
+      <li>Fixados<small>uma linha cada, com o veredito</small></li>
+      <li>Para onde foi, por verba<small>barra, traço do normal, diferença</small></li>
+      <li>Marcadores e lugares<small>ranking do mês, com a diferença só quando foge do normal</small></li>
+    </ul></div>
+    <div class="col c2"><h4>A um toque</h4><ul>
+      <li>Análise de uma coisa<small>veredito, o que mudou, 7 meses até o mesmo dia, números do mês inteiro</small></li>
+      <li>Comparado ao normal<small>barras para os dois lados, uma por verba</small></li>
+      <li>Ritmo do mês<small>esperado, "se continuar assim" e o ponto do normal</small></li>
+      <li>Mês a mês<small>6 meses contra o limite</small></li>
+      <li>Dias que mais pesam<small>calendário de calor</small></li>
+      <li>Fixar e tirar<small>alfinete na análise; toque longo na linha fixada</small></li>
+    </ul></div>
+    <div class="col c3"><h4>Escondido</h4><ul>
+      <li>Como o normal é calculado<small>"O que é o normal?" no pé de cada análise</small></li>
+      <li>Todos os meses de uma coisa<small>"Ver todos os meses", lista simples</small></li>
+      <li>Reordenar os fixados<small>Editar, no cabeçalho dos fixados</small></li>
+      <li>Avisos descartados um a um<small>na análise da fonte, depois da comparação</small></li>
+    </ul></div>
+    <div class="col c4"><h4>Removido</h4><ul>
+      <li>"Mês · 6 meses · Tudo"<small>o mês do topo manda; o histórico é sempre o mesmo trecho em 7 meses</small></li>
+      <li>"Buscar em todos os meses"<small>a busca já olha tudo; a linha mostra o mês do topo</small></li>
+      <li>"puxa a fila"<small>a frase do ranking dá lugar à diferença com o normal</small></li>
+      <li>Média por vez e dia da semana como quadros<small>viram parte da frase "mais vezes / mais caro"</small></li>
+    </ul></div>
+  </div>
+</section>
+
+<!-- ================= 3 ================= -->
+<section id="telas">
+  <div class="kick">3 · Telas</div>
+  <h2>Os mocks, em <em>novembro, dia 4</em></h2>
+  <p class="muted">Mesmos dados de redesign-ab: R$ 804,10 gastos até o dia 4 (Mercado 412,30 · Delivery 262,00 · Lazer 48,00 · Transporte 41,80 · Casa 40,00), outubro até o dia 4 R$ 690,40. O normal até o dia 4, média de maio a outubro sem contas reservadas: R$ 655,00 (Mercado 296 · Delivery 118 · Lazer 92 · Transporte 74 · Casa 45 · Saúde 30). Use o botão Tema para ver tudo no escuro.</p>
+
+  <h3>Entrada</h3>
+  <div class="shots">
+
+  <!-- ENTRADA CLARO -->
+  <figure class="shot">
+    <div class="ph"><div class="scr t-light">
+      <div class="sbar"><span>9:41</span><span>●●● ▮</span></div>
+      <div class="tb"><span class="t">Análise</span></div>
+      <div class="bd leit">
+        <div class="sbox"><svg class="ico" viewBox="0 0 24 24"><circle cx="11" cy="11" r="6"/><path d="m20 20-4.5-4.5"/></svg>Buscar verba, marcador, gasto ou aviso</div>
+        <div class="monthsel" style="margin-top:12px"><span>‹</span>Novembro, até dia 4<span style="opacity:.3">›</span></div>
+        <div class="vlink"><div class="verdict">R$ 804,10 até hoje, <span class="mais">R$ 149 a mais</span> que o normal.<span class="sub">O normal até o dia 4 é R$ 655. Em outubro, até o dia 4, foram R$ 690,40.</span></div><svg class="ico" viewBox="0 0 24 24"><path d="m9 6 6 6-6 6"/></svg></div>
+        <div class="secl">Fixados <i>Editar</i></div>
+        <div class="fx"><span class="l"><span class="n">Delivery</span><span class="t">verba</span></span><span class="r"><span class="a">R$ 262,00</span><span class="vd mais">R$ 144 a mais</span></span></div>
+        <div class="fx"><span class="l"><span class="n">feira</span><span class="t">marcador</span></span><span class="r"><span class="a">R$ 98,00</span><span class="vd mais">R$ 40 a mais</span></span></div>
+        <div class="fx"><span class="l"><span class="n">Uber</span><span class="t">gasto</span></span><span class="r"><span class="a">R$ 41,80</span><span class="vd nor">no normal</span></span></div>
+        <div class="over" style="margin-top:14px">Para onde foi</div>
+        <div class="rk4"><span>Mercado</span><span class="trk"><i style="background:var(--c2);width:100%"></i><b style="left:71.8%"></b></span><span class="a">412,30</span><span class="d mais">+116</span></div>
+        <div class="rk4"><span>Delivery</span><span class="trk"><i style="background:var(--c6);width:63.5%"></i><b style="left:28.6%"></b></span><span class="a">262,00</span><span class="d mais">+144</span></div>
+        <div class="rk4"><span>Lazer</span><span class="trk"><i style="background:var(--c4);width:11.6%"></i><b style="left:22.3%"></b></span><span class="a">48,00</span><span class="d">−44</span></div>
+        <div class="rk4"><span>Transporte</span><span class="trk"><i style="background:var(--c5);width:10.1%"></i><b style="left:17.9%"></b></span><span class="a">41,80</span><span class="d">−32</span></div>
+        <div class="rk4"><span>Casa</span><span class="trk"><i style="background:var(--c1);width:9.7%"></i><b style="left:10.9%"></b></span><span class="a">40,00</span><span class="d">−5</span></div>
+        <div class="rk4"><span>Saúde</span><span class="trk"><b style="left:7.3%"></b></span><span class="a">0,00</span><span class="d">−30</span></div>
+        <div class="tickleg"><i></i>o normal até o dia 4 · à direita, a diferença em reais</div>
+      </div>
+      <nav class="navb"><a>Início</a><a>A confirmar<span class="bdg">5</span></a><a>Gastos</a><a class="on">Análise</a></nav>
+      <div class="gbar"></div>
+    </div></div>
+    <figcaption><b>Entrada · claro</b>A primeira frase já é a comparação. Os fixados vêm logo abaixo, uma linha cada: nome, quanto até hoje e o veredito. Só "a mais" ganha cor (ocre, como "gastando rápido"); "a menos" e "no normal" ficam em tinta, porque o normal não precisa de selo. Nas barras, o traço preto marca o normal de cada verba: Delivery passou longe dele, Lazer nem chegou. TalkBack: "Delivery, R$ 262,00 até hoje, R$ 144,00 a mais que o normal."</figcaption>
+  </figure>
+
+  <!-- ENTRADA ESCURO -->
+  <figure class="shot">
+    <div class="ph"><div class="scr t-dark">
+      <div class="sbar"><span>9:41</span><span>●●● ▮</span></div>
+      <div class="tb"><span class="t">Análise</span></div>
+      <div class="bd leit">
+        <div class="sbox"><svg class="ico" viewBox="0 0 24 24"><circle cx="11" cy="11" r="6"/><path d="m20 20-4.5-4.5"/></svg>Buscar verba, marcador, gasto ou aviso</div>
+        <div class="monthsel" style="margin-top:12px"><span>‹</span>Novembro, até dia 4<span style="opacity:.3">›</span></div>
+        <div class="vlink"><div class="verdict">R$ 804,10 até hoje, <span class="mais">R$ 149 a mais</span> que o normal.<span class="sub">O normal até o dia 4 é R$ 655. Em outubro, até o dia 4, foram R$ 690,40.</span></div><svg class="ico" viewBox="0 0 24 24"><path d="m9 6 6 6-6 6"/></svg></div>
+        <div class="secl">Fixados <i>Editar</i></div>
+        <div class="fx"><span class="l"><span class="n">Delivery</span><span class="t">verba</span></span><span class="r"><span class="a">R$ 262,00</span><span class="vd mais">R$ 144 a mais</span></span></div>
+        <div class="fx"><span class="l"><span class="n">feira</span><span class="t">marcador</span></span><span class="r"><span class="a">R$ 98,00</span><span class="vd mais">R$ 40 a mais</span></span></div>
+        <div class="fx"><span class="l"><span class="n">Uber</span><span class="t">gasto</span></span><span class="r"><span class="a">R$ 41,80</span><span class="vd nor">no normal</span></span></div>
+        <div class="over" style="margin-top:14px">Para onde foi</div>
+        <div class="rk4"><span>Mercado</span><span class="trk"><i style="background:var(--c2);width:100%"></i><b style="left:71.8%"></b></span><span class="a">412,30</span><span class="d mais">+116</span></div>
+        <div class="rk4"><span>Delivery</span><span class="trk"><i style="background:var(--c6);width:63.5%"></i><b style="left:28.6%"></b></span><span class="a">262,00</span><span class="d mais">+144</span></div>
+        <div class="rk4"><span>Lazer</span><span class="trk"><i style="background:var(--c4);width:11.6%"></i><b style="left:22.3%"></b></span><span class="a">48,00</span><span class="d">−44</span></div>
+        <div class="rk4"><span>Transporte</span><span class="trk"><i style="background:var(--c5);width:10.1%"></i><b style="left:17.9%"></b></span><span class="a">41,80</span><span class="d">−32</span></div>
+        <div class="rk4"><span>Casa</span><span class="trk"><i style="background:var(--c1);width:9.7%"></i><b style="left:10.9%"></b></span><span class="a">40,00</span><span class="d">−5</span></div>
+        <div class="rk4"><span>Saúde</span><span class="trk"><b style="left:7.3%"></b></span><span class="a">0,00</span><span class="d">−30</span></div>
+        <div class="tickleg"><i></i>o normal até o dia 4 · à direita, a diferença em reais</div>
+      </div>
+      <nav class="navb"><a>Início</a><a>A confirmar<span class="bdg">5</span></a><a>Gastos</a><a class="on">Análise</a></nav>
+      <div class="gbar"></div>
+    </div></div>
+    <figcaption><b>Entrada · escuro</b>Os mesmos tokens do design system. O traço do normal usa tinta, que no escuro fica claro, e continua visível sobre as cores c1–c6. Nenhuma cor nova.</figcaption>
+  </figure>
+
+  <!-- ENTRADA ROLADA -->
+  <figure class="shot">
+    <div class="ph"><div class="scr">
+      <div class="sbar"><span>9:41</span><span>●●● ▮</span></div>
+      <div class="tb"><span class="t">Análise</span></div>
+      <div class="bd leit">
+        <div class="rk4"><span>Casa</span><span class="trk"><i style="background:var(--c1);width:9.7%"></i><b style="left:10.9%"></b></span><span class="a">40,00</span><span class="d">−5</span></div>
+        <div class="rk4"><span>Saúde</span><span class="trk"><b style="left:7.3%"></b></span><span class="a">0,00</span><span class="d">−30</span></div>
+        <div class="tickleg"><i></i>o normal até o dia 4 · à direita, a diferença em reais</div>
+        <div class="seg"><span class="on">Marcadores</span><span>Lugares</span></div>
+        <div class="say s">ifood e feira estão acima do normal.</div>
+        <div class="mk"><span>mercado <span class="c">· 1</span></span><span class="a">R$ 238,40</span></div>
+        <div class="mk"><span>ifood <span class="c">· 3</span></span><span class="a">R$ 207,40<span class="d mais">+89</span></span></div>
+        <div class="mk"><span>feira <span class="c">· 2</span></span><span class="a">R$ 98,00<span class="d mais">+40</span></span></div>
+        <div class="mk"><span>padaria <span class="c">· 5</span></span><span class="a">R$ 75,90</span></div>
+        <div class="mk"><span>bebida <span class="c">· 1</span></span><span class="a">R$ 54,60<span class="d mais">+55</span></span></div>
+        <div class="see">Ver todos (8)</div>
+        <div class="drill first"><span><b>Comparado ao normal</b><i>Delivery e Mercado explicam tudo</i></span><svg class="ico" viewBox="0 0 24 24"><path d="m9 6 6 6-6 6"/></svg></div>
+        <div class="drill"><span><b>Ritmo do mês</b><i class="lacre">Delivery passou R$ 12,00 do limite</i></span><svg class="ico" viewBox="0 0 24 24"><path d="m9 6 6 6-6 6"/></svg></div>
+        <div class="drill"><span><b>Mês a mês</b><i>Delivery passou em 3 dos últimos 6 meses</i></span><svg class="ico" viewBox="0 0 24 24"><path d="m9 6 6 6-6 6"/></svg></div>
+        <div class="drill"><span><b>Dias que mais pesam</b><i>Cedo para dizer; em outubro, os sábados</i></span><svg class="ico" viewBox="0 0 24 24"><path d="m9 6 6 6-6 6"/></svg></div>
+      </div>
+      <nav class="navb"><a>Início</a><a>A confirmar<span class="bdg">5</span></a><a>Gastos</a><a class="on">Análise</a></nav>
+      <div class="gbar"></div>
+    </div></div>
+    <figcaption><b>Entrada · rolando</b>Marcadores e lugares seguem por valor, como hoje; a diferença aparece só ao lado do que foge do normal, então a lista não vira uma tabela. A frase troca "puxa a fila" por quem está acima. Os quatro gráficos ficam onde estavam, cada um com a conclusão; o novo, Comparado ao normal, vem primeiro.</figcaption>
+  </figure>
+
+  </div>
+
+  <h3>Busca: digitando, filtrando, nada achado</h3>
+  <div class="shots">
+
+  <!-- BUSCA -->
+  <figure class="shot">
+    <div class="ph"><div class="scr">
+      <div class="sbar"><span>9:41</span><span>●●● ▮</span></div>
+      <div class="tb"><span class="back"><svg class="ico" viewBox="0 0 24 24"><path d="m15 6-6 6 6 6"/></svg></span><span class="t">Buscar</span></div>
+      <div class="bd">
+        <div class="sbox on"><svg class="ico" viewBox="0 0 24 24"><circle cx="11" cy="11" r="6"/><path d="m20 20-4.5-4.5"/></svg><span class="q">mercado</span><span class="x">✕</span></div>
+        <div class="fcs"><span class="fc on">Tudo<small>7</small></span><span class="fc">Verbas<small>1</small></span><span class="fc">Marcadores<small>1</small></span><span class="fc">Gastos<small>4</small></span><span class="fc">Avisos<small>1</small></span></div>
+        <div class="hint">Busca em todos os meses. Valores de novembro até o dia 4, comparados com o normal.</div>
+        <div class="secl">Verbas</div>
+        <div class="lrow"><span><span class="n">Mercado</span><span class="w">8 gastos · <span class="vd mais">R$ 116 a mais</span></span></span><span class="a">R$ 412,30</span></div>
+        <div class="secl">Marcadores</div>
+        <div class="lrow"><span><span class="n">mercado</span><span class="w">1 gasto · em Mercado · no normal</span></span><span class="a">R$ 238,40</span></div>
+        <div class="secl">Gastos <i>1 de 4</i></div>
+        <div class="lrow"><span><span class="n">Pão de Açúcar</span><span class="w">1 vez · no normal</span></span><span class="a">R$ 238,40</span></div>
+        <div class="see" style="padding-bottom:4px">Ver os 4 gastos</div>
+        <div class="secl">Avisos</div>
+        <div class="lrow"><span><span class="n">"Oferta MERCADO LIVRE: frete grátis"</span><span class="w">Cartão Ipê · chega uns 2 por mês · sempre descartado</span></span><span class="a res">—</span></div>
+      </div>
+      <nav class="navb"><a>Início</a><a>A confirmar<span class="bdg">5</span></a><a>Gastos</a><a class="on">Análise</a></nav>
+      <div class="gbar"></div>
+    </div></div>
+    <figcaption><b>Digitando "mercado"</b>A Alternativa 1, com uma linha a mais de informação em cada resultado: o veredito, nas mesmas palavras dos fixados. A busca olha todos os meses (o link "Buscar em todos os meses" sai); o valor à direita é do mês do topo. O que não teve gasto no mês diz o costume ("costuma ir 1 vez por mês"), não um zero solto. Com muitos resultados, cada grupo mostra os primeiros e "Ver os 4" abre o resto no lugar; quem não teve gasto no mês diz o costume (no chip Gastos, ao lado).</figcaption>
+  </figure>
+
+  <!-- CHIP -->
+  <figure class="shot">
+    <div class="ph"><div class="scr">
+      <div class="sbar"><span>9:41</span><span>●●● ▮</span></div>
+      <div class="tb"><span class="back"><svg class="ico" viewBox="0 0 24 24"><path d="m15 6-6 6 6 6"/></svg></span><span class="t">Buscar</span></div>
+      <div class="bd">
+        <div class="sbox on"><svg class="ico" viewBox="0 0 24 24"><circle cx="11" cy="11" r="6"/><path d="m20 20-4.5-4.5"/></svg><span class="q">mercado</span><span class="x">✕</span></div>
+        <div class="fcs"><span class="fc">Tudo<small>7</small></span><span class="fc">Verbas<small>1</small></span><span class="fc">Marcadores<small>1</small></span><span class="fc on">Gastos<small>4</small></span><span class="fc">Avisos<small>1</small></span></div>
+        <div class="hint">Gastos com "mercado" no nome ou no marcador. Primeiro os de novembro.</div>
+        <div class="secl">4 gastos</div>
+        <div class="lrow"><span><span class="n">Pão de Açúcar</span><span class="w">1 vez · marcador mercado · no normal</span></span><span class="a">R$ 238,40</span></div>
+        <div class="lrow"><span><span class="n">Carrefour</span><span class="w">nada em novembro · costuma ir 1 vez por mês, depois do dia 10</span></span><span class="a res">—</span></div>
+        <div class="lrow"><span><span class="n">Mercadinho Bom Preço</span><span class="w">nada em novembro · costuma ir 1 vez por mês</span></span><span class="a res">—</span></div>
+        <div class="lrow"><span><span class="n">Mercado Livre</span><span class="w">nada em novembro · 2 vezes em outubro, em Lazer</span></span><span class="a res">—</span></div>
+        <div class="note">Também há "mercado" em <b>1 verba</b>, <b>1 marcador</b> e <b>1 aviso</b>. Toque em Tudo para ver.</div>
+      </div>
+      <nav class="navb"><a>Início</a><a>A confirmar<span class="bdg">5</span></a><a>Gastos</a><a class="on">Análise</a></nav>
+      <div class="gbar"></div>
+    </div></div>
+    <figcaption><b>Chip Gastos</b>O chip estreita para um tipo e mostra a lista inteira dele. A ordem é a do mês do topo (quem teve gasto vem antes), depois o nome. Carrefour mostra por que está em zero: a pessoa costuma ir depois do dia 10, então nada até o dia 4 é o normal. O quadro no pé lembra o que ficou de fora do filtro.</figcaption>
+  </figure>
+
+  <!-- SEM RESULTADO -->
+  <figure class="shot">
+    <div class="ph"><div class="scr">
+      <div class="sbar"><span>9:41</span><span>●●● ▮</span></div>
+      <div class="tb"><span class="back"><svg class="ico" viewBox="0 0 24 24"><path d="m15 6-6 6 6 6"/></svg></span><span class="t">Buscar</span></div>
+      <div class="bd">
+        <div class="sbox on"><svg class="ico" viewBox="0 0 24 24"><circle cx="11" cy="11" r="6"/><path d="m20 20-4.5-4.5"/></svg><span class="q">farmacia</span><span class="x">✕</span></div>
+        <div class="empty">
+          <div class="say">Nada com "farmacia".</div>
+          <p class="small muted" style="margin:6px 0 0">A busca olha os nomes dos gastos, os marcadores, as verbas e o texto dos avisos, em todos os meses, sem diferença de acento.</p>
+        </div>
+        <div class="secl">Talvez seja</div>
+        <div class="lrow"><span><span class="n">Saúde</span><span class="w">verba · nada até hoje · R$ 30 a menos que o normal</span></span><span class="a">R$ 0,00</span></div>
+        <div class="lrow"><span><span class="n">Drogasil</span><span class="w">gasto · em Saúde · costuma ir 2 vezes por mês</span></span><span class="a res">—</span></div>
+        <div class="lrow"><span><span class="n">remédio</span><span class="w">marcador · 9 vezes em 6 meses</span></span><span class="a res">—</span></div>
+        <div class="note">"Talvez seja" mostra a verba e os gastos que mais aparecem com marcadores parecidos. Se nunca houve nada parecido, fica só a primeira frase.</div>
+      </div>
+      <nav class="navb"><a>Início</a><a>A confirmar<span class="bdg">5</span></a><a>Gastos</a><a class="on">Análise</a></nav>
+      <div class="gbar"></div>
+    </div></div>
+    <figcaption><b>Nada achado</b>Diz o que foi buscado e onde a busca olha, para a pessoa saber se o problema é a palavra. "Talvez seja" é proposta: usa só dados que já existem (a verba e os gastos da verba onde "remédio" aparece). Sem palpite, nada de lista vazia: a tela fica com a frase.</figcaption>
+  </figure>
+
+  </div>
+
+  <h3>Análise de uma coisa: os quatro tipos</h3>
+  <p class="muted">A mesma ordem em todas: tipo e mês do topo; o veredito; a mesma comparação com outubro numa linha; o que mudou (mais vezes ou mais caro); o mesmo trecho do mês nos últimos 7 meses, com a linha do normal; e só então os números do mês inteiro. O alfinete no topo fixa ou tira.</p>
+  <div class="shots">
+
+  <!-- VERBA -->
+  <figure class="shot">
+    <div class="ph"><div class="scr">
+      <div class="sbar"><span>9:41</span><span>●●● ▮</span></div>
+      <div class="tb"><span class="back"><svg class="ico" viewBox="0 0 24 24"><path d="m15 6-6 6 6 6"/></svg></span><span class="t">Delivery</span>
+        <span class="ib pinon" aria-label="Fixado. Tocar tira dos fixados"><svg class="ico" viewBox="0 0 24 24"><path d="M9 3h6l-1 7 3 3H7l3-3z"/><path d="M12 13v8"/></svg></span></div>
+      <div class="bd ent">
+        <div class="typ">Verba · novembro, até dia 4</div>
+        <div class="verdict"><span class="mais">R$ 144 a mais</span> que o normal até hoje.<span class="sub">R$ 262,00 gastos; o normal até o dia 4 é R$ 118. Já passou R$ 12,00 do limite de R$ 250.</span></div>
+        <div class="cmpl"><span>Em outubro, até o dia 4</span><b>R$ 125,00</b></div>
+        <div class="secl">O que mudou</div>
+        <div class="mk"><span>ifood <span class="c">· 3 pedidos, o normal é 1 ou 2</span></span><span class="a">+R$ 89,40</span></div>
+        <div class="mk"><span>bebida <span class="c">· Zé Delivery, novo</span></span><span class="a">+R$ 54,60</span></div>
+        <div class="secl">Até o dia 4, mês a mês</div>
+        <svg class="chart" viewBox="0 0 320 100" role="img" aria-label="Delivery do dia 1 ao dia 4 de cada mês. Maio R$ 104, junho 96, julho 142, agosto 110, setembro 131, outubro 125. Novembro R$ 262. O normal é R$ 118.">
+          <line x1="0" y1="80" x2="320" y2="80" stroke="var(--fio-forte)"/>
+          <rect x="10" y="56.2" width="30" height="23.8" fill="var(--tinta-3)" opacity=".55"/>
+          <rect x="54" y="58" width="30" height="22" fill="var(--tinta-3)" opacity=".55"/>
+          <rect x="98" y="47.5" width="30" height="32.5" fill="var(--tinta-3)" opacity=".55"/>
+          <rect x="142" y="54.8" width="30" height="25.2" fill="var(--tinta-3)" opacity=".55"/>
+          <rect x="186" y="50" width="30" height="30" fill="var(--tinta-3)" opacity=".55"/>
+          <rect x="230" y="51.4" width="30" height="28.6" fill="var(--tinta-3)" opacity=".55"/>
+          <rect x="274" y="20" width="30" height="60" fill="var(--ocre)"/>
+          <text x="289" y="15" text-anchor="middle" font-family="Source Sans 3" font-size="11.5" font-weight="700" fill="var(--ocre)">262</text>
+          <line x1="4" y1="53" x2="316" y2="53" stroke="var(--tinta)" stroke-width="1.25" stroke-dasharray="4 3"/>
+          <g font-family="Source Sans 3" font-size="11" fill="var(--tinta-3)" text-anchor="middle"><text x="25" y="96">mai</text><text x="69" y="96">jun</text><text x="113" y="96">jul</text><text x="157" y="96">ago</text><text x="201" y="96">set</text><text x="245" y="96">out</text><text x="289" y="96" fill="var(--tinta)" font-weight="700">nov</text></g>
+        </svg>
+        <ul class="legend" style="margin-top:2px">
+          <li><svg viewBox="0 0 24 12"><line x1="1" y1="6" x2="23" y2="6" stroke="var(--tinta)" stroke-width="1.25" stroke-dasharray="4 3"/></svg>o normal: média de maio a outubro, R$ 118</li>
+        </ul>
+        <div class="kpis">
+          <div class="kpi"><span class="typ">Mês inteiro</span><b>R$ 249</b><small>em média, mai a out</small></div>
+          <div class="kpi"><span class="typ">Maior</span><b>R$ 89,20</b><small>iFood, 1 nov</small></div>
+        </div>
+        <div class="go"><span>Ritmo do mês de Delivery<small>esperado e "se continuar assim"</small></span><svg class="ico" viewBox="0 0 24 24"><path d="m9 6 6 6-6 6"/></svg></div>
+      </div>
+      <nav class="navb"><a>Início</a><a>A confirmar<span class="bdg">5</span></a><a>Gastos</a><a class="on">Análise</a></nav>
+      <div class="gbar"></div>
+    </div></div>
+    <figcaption><b>Verba · Delivery</b>A frase compara com o hábito; o limite vem na segunda linha, com as palavras do Início ("passou R$ 12,00"), para as duas réguas nunca se confundirem. "O que mudou" divide a diferença pelos marcadores que mais se afastaram do normal: os dois somam os R$ 144. O gráfico mostra só o trecho do dia 1 ao dia 4 de cada mês, então as barras são comparáveis; o mês inteiro fica num número embaixo. O Ritmo abre daqui, já com Delivery.</figcaption>
+  </figure>
+
+  <!-- MARCADOR -->
+  <figure class="shot">
+    <div class="ph"><div class="scr">
+      <div class="sbar"><span>9:41</span><span>●●● ▮</span></div>
+      <div class="tb"><span class="back"><svg class="ico" viewBox="0 0 24 24"><path d="m15 6-6 6 6 6"/></svg></span><span class="t">feira</span>
+        <span class="ib pinon" aria-label="Fixado. Tocar tira dos fixados"><svg class="ico" viewBox="0 0 24 24"><path d="M9 3h6l-1 7 3 3H7l3-3z"/><path d="M12 13v8"/></svg></span></div>
+      <div class="bd ent">
+        <div class="typ">Marcador · novembro, até dia 4</div>
+        <div class="verdict"><span class="mais">R$ 40 a mais</span> que o normal até hoje.<span class="sub">Duas idas em vez de uma, cada uma no preço de sempre (uns R$ 49). O normal até o dia 4 é R$ 58.</span></div>
+        <div class="cmpl"><span>Em outubro, até o dia 4</span><b>R$ 54,00</b></div>
+        <div class="secl">Onde</div>
+        <div class="mk"><span>Feira do José <span class="c">· 2 nov</span></span><span class="a">R$ 52,00</span></div>
+        <div class="mk"><span>Hortifruti Pomar <span class="c">· 1 nov</span></span><span class="a">R$ 46,00</span></div>
+        <div class="secl">Até o dia 4, mês a mês</div>
+        <svg class="chart" viewBox="0 0 320 100" role="img" aria-label="feira do dia 1 ao dia 4 de cada mês. Maio R$ 101, junho 49, julho 46, agosto 98, setembro nada, outubro 54. Novembro R$ 98. O normal é R$ 58.">
+          <line x1="0" y1="80" x2="320" y2="80" stroke="var(--fio-forte)"/>
+          <rect x="10" y="20" width="30" height="60" fill="var(--tinta-3)" opacity=".55"/>
+          <rect x="54" y="50.9" width="30" height="29.1" fill="var(--tinta-3)" opacity=".55"/>
+          <rect x="98" y="52.7" width="30" height="27.3" fill="var(--tinta-3)" opacity=".55"/>
+          <rect x="142" y="21.8" width="30" height="58.2" fill="var(--tinta-3)" opacity=".55"/>
+          <rect x="230" y="47.9" width="30" height="32.1" fill="var(--tinta-3)" opacity=".55"/>
+          <rect x="274" y="21.8" width="30" height="58.2" fill="var(--ocre)"/>
+          <text x="289" y="16.8" text-anchor="middle" font-family="Source Sans 3" font-size="11.5" font-weight="700" fill="var(--ocre)">98</text>
+          <text x="201" y="76" text-anchor="middle" font-family="Source Sans 3" font-size="11" fill="var(--tinta-3)">0</text>
+          <line x1="4" y1="45.5" x2="316" y2="45.5" stroke="var(--tinta)" stroke-width="1.25" stroke-dasharray="4 3"/>
+          <g font-family="Source Sans 3" font-size="11" fill="var(--tinta-3)" text-anchor="middle"><text x="25" y="96">mai</text><text x="69" y="96">jun</text><text x="113" y="96">jul</text><text x="157" y="96">ago</text><text x="201" y="96">set</text><text x="245" y="96">out</text><text x="289" y="96" fill="var(--tinta)" font-weight="700">nov</text></g>
+        </svg>
+        <ul class="legend" style="margin-top:2px">
+          <li><svg viewBox="0 0 24 12"><line x1="1" y1="6" x2="23" y2="6" stroke="var(--tinta)" stroke-width="1.25" stroke-dasharray="4 3"/></svg>o normal: média de maio a outubro, R$ 58</li>
+        </ul>
+        <div class="kpis">
+          <div class="kpi"><span class="typ">Mês inteiro</span><b>R$ 183</b><small>em média, 3 a 4 idas</small></div>
+          <div class="kpi"><span class="typ">Quando</span><b>Domingo</b><small>17 das 22 vezes</small></div>
+        </div>
+        <div class="secl">Parecidos <i>andam nos mesmos gastos</i></div>
+        <div class="chips" style="margin-top:8px"><span class="fc">hortifruti</span><span class="fc">padaria</span><span class="fc">mercado</span></div>
+      </div>
+      <nav class="navb"><a>Início</a><a>A confirmar<span class="bdg">5</span></a><a>Gastos</a><a class="on">Análise</a></nav>
+      <div class="gbar"></div>
+    </div></div>
+    <figcaption><b>Marcador · feira</b>A segunda linha explica a diferença em vez de só medi-la: "mais vezes" ou "mais caro". Aqui são mais vezes. O gráfico é honesto sobre o começo do mês: em maio e agosto também houve duas idas até o dia 4, e em setembro nenhuma. Quem olha vê que R$ 40 a mais no dia 4 é variação comum para algo semanal.</figcaption>
+  </figure>
+
+  <!-- GASTO -->
+  <figure class="shot">
+    <div class="ph"><div class="scr">
+      <div class="sbar"><span>9:41</span><span>●●● ▮</span></div>
+      <div class="tb"><span class="back"><svg class="ico" viewBox="0 0 24 24"><path d="m15 6-6 6 6 6"/></svg></span><span class="t">Uber</span>
+        <span class="ib pinon" aria-label="Fixado. Tocar tira dos fixados"><svg class="ico" viewBox="0 0 24 24"><path d="M9 3h6l-1 7 3 3H7l3-3z"/><path d="M12 13v8"/></svg></span></div>
+      <div class="bd ent">
+        <div class="typ">Gasto · todos com este nome · novembro, até dia 4</div>
+        <div class="verdict">No normal até hoje.<span class="sub">Uma corrida de R$ 41,80. Até o dia 4, o normal é R$ 34: menos vezes que de costume, mas uma corrida mais cara.</span></div>
+        <div class="cmpl"><span>Em outubro, até o dia 4</span><b>R$ 34,00</b></div>
+        <div class="secl">Até o dia 4, mês a mês</div>
+        <svg class="chart" viewBox="0 0 320 100" role="img" aria-label="Uber do dia 1 ao dia 4 de cada mês. Maio R$ 24, junho 48, julho 22, agosto 30, setembro 46, outubro 34. Novembro R$ 41,80. O normal é R$ 34.">
+          <line x1="0" y1="80" x2="320" y2="80" stroke="var(--fio-forte)"/>
+          <rect x="10" y="50" width="30" height="30" fill="var(--tinta-3)" opacity=".55"/>
+          <rect x="54" y="20" width="30" height="60" fill="var(--tinta-3)" opacity=".55"/>
+          <rect x="98" y="52.5" width="30" height="27.5" fill="var(--tinta-3)" opacity=".55"/>
+          <rect x="142" y="42.5" width="30" height="37.5" fill="var(--tinta-3)" opacity=".55"/>
+          <rect x="186" y="22.5" width="30" height="57.5" fill="var(--tinta-3)" opacity=".55"/>
+          <rect x="230" y="37.5" width="30" height="42.5" fill="var(--tinta-3)" opacity=".55"/>
+          <rect x="274" y="27.75" width="30" height="52.25" fill="var(--tinta)"/>
+          <text x="289" y="22.75" text-anchor="middle" font-family="Source Sans 3" font-size="11.5" font-weight="700" fill="var(--tinta)">41,80</text>
+          <line x1="4" y1="37.5" x2="316" y2="37.5" stroke="var(--tinta)" stroke-width="1.25" stroke-dasharray="4 3"/>
+          <g font-family="Source Sans 3" font-size="11" fill="var(--tinta-3)" text-anchor="middle"><text x="25" y="96">mai</text><text x="69" y="96">jun</text><text x="113" y="96">jul</text><text x="157" y="96">ago</text><text x="201" y="96">set</text><text x="245" y="96">out</text><text x="289" y="96" fill="var(--tinta)" font-weight="700">nov</text></g>
+        </svg>
+        <ul class="legend" style="margin-top:2px">
+          <li><svg viewBox="0 0 24 12"><line x1="1" y1="6" x2="23" y2="6" stroke="var(--tinta)" stroke-width="1.25" stroke-dasharray="4 3"/></svg>o normal: média de maio a outubro, R$ 34</li>
+        </ul>
+        <div class="kpis">
+          <div class="kpi"><span class="typ">Mês inteiro</span><b>R$ 152</b><small>em média, 6 corridas</small></div>
+          <div class="kpi"><span class="typ">Por corrida</span><b>R$ 24,01</b><small>em média</small></div>
+        </div>
+        <div class="secl">Verba e marcadores <i>sempre Transporte</i></div>
+        <div class="mk"><span>corrida <span class="c">· 34 em 6 meses</span></span><span class="a">R$ 744,10</span></div>
+        <div class="mk"><span>aeroporto <span class="c">· 4</span></span><span class="a">R$ 168,30</span></div>
+        <div class="secl">Parecidos <i>mesmo marcador</i></div>
+        <div class="mk"><span>99 <span class="c">· nada em novembro</span></span><span class="a">no normal</span></div>
+      </div>
+      <nav class="navb"><a>Início</a><a>A confirmar<span class="bdg">5</span></a><a>Gastos</a><a class="on">Análise</a></nav>
+      <div class="gbar"></div>
+    </div></div>
+    <figcaption><b>Gasto · Uber</b>R$ 7,80 acima da média passa pela faixa do normal (diferença menor que R$ 20), então o veredito é "no normal", sem cor. A segunda linha ainda conta o detalhe: menos vezes, mais caro. A barra de novembro fica em tinta, não em ocre, porque não fugiu do normal.</figcaption>
+  </figure>
+
+  <!-- AVISO -->
+  <figure class="shot">
+    <div class="ph"><div class="scr">
+      <div class="sbar"><span>9:41</span><span>●●● ▮</span></div>
+      <div class="tb"><span class="back"><svg class="ico" viewBox="0 0 24 24"><path d="m15 6-6 6 6 6"/></svg></span><span class="t">Cartão Ipê</span>
+        <span class="ib" aria-label="Fixar"><svg class="ico" viewBox="0 0 24 24"><path d="M9 3h6l-1 7 3 3H7l3-3z"/><path d="M12 13v8"/></svg></span></div>
+      <div class="bd ent">
+        <div class="typ">Avisos · fonte · novembro, até dia 4</div>
+        <div class="verdict"><span class="mais">5 avisos a mais</span> que o normal até hoje.<span class="sub">Chegaram 14; até o dia 4 costumam chegar 9. Os de sobra são quase todos do iFood.</span></div>
+        <div class="cmpl"><span>Em outubro, até o dia 4</span><b>9 avisos</b></div>
+        <div class="stack"><i style="width:57.1%;background:var(--tinta-2)"></i><i style="width:21.4%;background:var(--fio-forte)"></i><i style="width:21.5%;background:var(--argila)"></i></div>
+        <div class="hint" style="margin-top:0">8 viraram gasto · 3 descartados · 3 a confirmar</div>
+        <div class="note" style="margin-top:8px">Descartados <b>no normal</b>: 1 em cada 4 decididos, como sempre.</div>
+        <div class="secl">O que chegou a mais</div>
+        <div class="mk"><span>iFood <span class="c">· 4, o normal é 1</span></span><span class="a">+3</span></div>
+        <div class="mk"><span>Zé Delivery <span class="c">· 1, novo</span></span><span class="a">+1</span></div>
+        <div class="secl">Até o dia 4, mês a mês</div>
+        <svg class="chart" viewBox="0 0 320 100" role="img" aria-label="Avisos do Cartão Ipê do dia 1 ao dia 4 de cada mês. Maio 8, junho 9, julho 10, agosto 7, setembro 11, outubro 9. Novembro 14. O normal é 9.">
+          <line x1="0" y1="80" x2="320" y2="80" stroke="var(--fio-forte)"/>
+          <rect x="10" y="45.7" width="30" height="34.3" fill="var(--tinta-3)" opacity=".55"/>
+          <rect x="54" y="41.4" width="30" height="38.6" fill="var(--tinta-3)" opacity=".55"/>
+          <rect x="98" y="37.1" width="30" height="42.9" fill="var(--tinta-3)" opacity=".55"/>
+          <rect x="142" y="50" width="30" height="30" fill="var(--tinta-3)" opacity=".55"/>
+          <rect x="186" y="32.9" width="30" height="47.1" fill="var(--tinta-3)" opacity=".55"/>
+          <rect x="230" y="41.4" width="30" height="38.6" fill="var(--tinta-3)" opacity=".55"/>
+          <rect x="274" y="20" width="30" height="60" fill="var(--ocre)"/>
+          <text x="289" y="15" text-anchor="middle" font-family="Source Sans 3" font-size="11.5" font-weight="700" fill="var(--ocre)">14</text>
+          <line x1="4" y1="41.4" x2="316" y2="41.4" stroke="var(--tinta)" stroke-width="1.25" stroke-dasharray="4 3"/>
+          <g font-family="Source Sans 3" font-size="11" fill="var(--tinta-3)" text-anchor="middle"><text x="25" y="96">mai</text><text x="69" y="96">jun</text><text x="113" y="96">jul</text><text x="157" y="96">ago</text><text x="201" y="96">set</text><text x="245" y="96">out</text><text x="289" y="96" fill="var(--tinta)" font-weight="700">nov</text></g>
+        </svg>
+        <ul class="legend" style="margin-top:2px">
+          <li><svg viewBox="0 0 24 12"><line x1="1" y1="6" x2="23" y2="6" stroke="var(--tinta)" stroke-width="1.25" stroke-dasharray="4 3"/></svg>o normal: média de maio a outubro, 9 avisos</li>
+        </ul>
+      </div>
+      <nav class="navb"><a>Início</a><a>A confirmar<span class="bdg">5</span></a><a>Gastos</a><a class="on">Análise</a></nav>
+      <div class="gbar"></div>
+    </div></div>
+    <figcaption><b>Aviso · fonte Cartão Ipê</b>Para avisos, a unidade é a fonte e a medida é a contagem, não reais. O veredito compara quantos chegaram; a faixa embaixo diz o que aconteceu com eles e se a parte descartada fugiu do costume. Um aviso achado na busca abre esta tela com o nome dele em "O que chegou a mais", se estiver lá. Alfinete vazio: esta fonte não está fixada.</figcaption>
+  </figure>
+
+  </div>
+
+  <h3>Fixar e tirar</h3>
+  <div class="shots">
+
+  <!-- FIXAR -->
+  <figure class="shot">
+    <div class="ph"><div class="scr">
+      <div class="sbar"><span>9:41</span><span>●●● ▮</span></div>
+      <div class="tb"><span class="back"><svg class="ico" viewBox="0 0 24 24"><path d="m15 6-6 6 6 6"/></svg></span><span class="t">iFood</span>
+        <span class="ib pinon" aria-label="Fixado. Tocar tira dos fixados"><svg class="ico" viewBox="0 0 24 24"><path d="M9 3h6l-1 7 3 3H7l3-3z"/><path d="M12 13v8"/></svg></span></div>
+      <div class="bd ent">
+        <div class="typ">Gasto · todos com este nome · novembro, até dia 4</div>
+        <div class="verdict"><span class="mais">R$ 89 a mais</span> que o normal até hoje.<span class="sub">Três pedidos em vez de um ou dois, cada um no valor de sempre (uns R$ 69). O normal até o dia 4 é R$ 118.</span></div>
+        <div class="cmpl"><span>Em outubro, até o dia 4</span><b>R$ 125,00</b></div>
+        <div class="secl">Pedidos de novembro</div>
+        <div class="mk"><span>3 nov <span class="c">· ter</span></span><span class="a">R$ 54,30</span></div>
+        <div class="mk"><span>2 nov <span class="c">· seg</span></span><span class="a">R$ 63,90</span></div>
+        <div class="mk"><span>1 nov <span class="c">· dom</span></span><span class="a">R$ 89,20</span></div>
+        <div class="secl">Até o dia 4, mês a mês</div>
+        <div class="mbars s"><div><i style="height:20px"></i>mai</div><div><i style="height:19px"></i>jun</div><div><i style="height:28px"></i>jul</div><div><i style="height:22px"></i>ago</div><div><i style="height:26px"></i>set</div><div><i style="height:25px"></i>out</div><div><i style="height:42px;background:var(--ocre)"></i>nov</div></div>
+      </div>
+      <div class="snack"><span>iFood fixado. Aparece no topo da Análise.</span><b>DESFAZER</b></div>
+    </div></div>
+    <figcaption><b>Fixar</b>O alfinete fica no topo de toda análise. Um toque fixa (até 5) e a snackbar diz onde a linha vai aparecer, com Desfazer. Também dá para fixar com um toque longo num resultado da busca. Fixa-se a <i>coisa</i> (o gasto iFood), não o texto digitado, então a linha nunca mistura tipos. No sexto, a snackbar diz "Já são 5 fixados. Tire um para fixar iFood." e abre a edição.</figcaption>
+  </figure>
+
+  <!-- TIRAR -->
+  <figure class="shot">
+    <div class="ph"><div class="scr">
+      <div class="sbar"><span>9:41</span><span>●●● ▮</span></div>
+      <div class="tb"><span class="t">Análise</span></div>
+      <div class="bd leit">
+        <div class="sbox"><svg class="ico" viewBox="0 0 24 24"><circle cx="11" cy="11" r="6"/><path d="m20 20-4.5-4.5"/></svg>Buscar verba, marcador, gasto ou aviso</div>
+        <div class="monthsel" style="margin-top:12px"><span>‹</span>Novembro, até dia 4<span style="opacity:.3">›</span></div>
+        <div class="verdict">R$ 804,10 até hoje, <span class="mais">R$ 149 a mais</span> que o normal.</div>
+        <div class="secl">Fixados <i>Editar</i></div>
+        <div class="fx"><span class="l"><span class="n">Delivery</span></span><span class="r"><span class="a">R$ 262,00</span></span></div>
+      </div>
+      <div class="scrim"></div>
+      <div class="sheet">
+        <div class="grab"></div>
+        <h4>Fixados</h4>
+        <div class="hint">Arraste para mudar a ordem. Até 5.</div>
+        <div class="fx drag"><svg class="ico" viewBox="0 0 24 24"><path d="M5 9h14M5 15h14"/></svg><span class="l"><span class="n">Delivery</span><span class="t">verba</span></span><span class="ib" style="width:36px;height:36px">✕</span></div>
+        <div class="fx drag"><svg class="ico" viewBox="0 0 24 24"><path d="M5 9h14M5 15h14"/></svg><span class="l"><span class="n">feira</span><span class="t">marcador</span></span><span class="ib" style="width:36px;height:36px">✕</span></div>
+        <div class="fx drag"><svg class="ico" viewBox="0 0 24 24"><path d="M5 9h14M5 15h14"/></svg><span class="l"><span class="n">iFood</span><span class="t">gasto</span></span><span class="ib" style="width:36px;height:36px">✕</span></div>
+        <div class="hint" style="margin-top:10px">Uma coisa apagada (verba, marcador) sai daqui sozinha.</div>
+        <div class="acts"><span class="btn pri">Pronto</span></div>
+      </div>
+      <div class="snack" style="bottom:344px"><span>Uber saiu dos fixados.</span><b>DESFAZER</b></div>
+    </div></div>
+    <figcaption><b>Tirar e reordenar</b>"Editar", no cabeçalho dos fixados, abre esta folha: arrastar muda a ordem, ✕ tira na hora, com Desfazer. Os outros caminhos para tirar: o alfinete na análise da coisa, ou um toque longo na linha fixada ("Tirar dos fixados"). Sem fixados, a seção vira uma linha só: "Toque no alfinete de uma análise para acompanhá-la aqui."</figcaption>
+  </figure>
+
+  <!-- POUCA HISTORIA -->
+  <figure class="shot">
+    <div class="ph"><div class="scr">
+      <div class="sbar"><span>9:41</span><span>●●● ▮</span></div>
+      <div class="tb"><span class="back"><svg class="ico" viewBox="0 0 24 24"><path d="m15 6-6 6 6 6"/></svg></span><span class="t">Zé Delivery</span>
+        <span class="ib" aria-label="Fixar"><svg class="ico" viewBox="0 0 24 24"><path d="M9 3h6l-1 7 3 3H7l3-3z"/><path d="M12 13v8"/></svg></span></div>
+      <div class="bd ent">
+        <div class="typ">Gasto · todos com este nome · novembro, até dia 4</div>
+        <div class="verdict">Ainda sem com o que comparar.<span class="sub">O primeiro gasto foi em 12 de outubro. Em outubro, até o dia 4, ele ainda não existia.</span></div>
+        <div class="cmpl"><span>Novembro, até hoje</span><b>1 vez · R$ 54,60</b></div>
+        <div class="cmpl" style="margin-top:0;border-top:0"><span>Outubro, de 12 a 31</span><b>2 vezes · R$ 98,20</b></div>
+        <div class="note"><b>O normal aparece em janeiro</b>, com 3 meses de história. Até lá, a tela mostra os meses que existem, lado a lado.</div>
+        <div class="secl">Para comparar agora</div>
+        <div class="go"><span>bebida<small>marcador · 6 meses de história · R$ 55 a mais até hoje</small></span><svg class="ico" viewBox="0 0 24 24"><path d="m9 6 6 6-6 6"/></svg></div>
+        <div class="go"><span>Delivery<small>verba · R$ 144 a mais até hoje</small></span><svg class="ico" viewBox="0 0 24 24"><path d="m9 6 6 6-6 6"/></svg></div>
+        <div class="secl">Gastos</div>
+        <div class="mk"><span>3 nov <span class="c">· bebida</span></span><span class="a">R$ 54,60</span></div>
+        <div class="mk"><span>25 out <span class="c">· bebida</span></span><span class="a">R$ 61,30</span></div>
+        <div class="mk"><span>12 out <span class="c">· bebida</span></span><span class="a">R$ 36,90</span></div>
+      </div>
+      <nav class="navb"><a>Início</a><a>A confirmar<span class="bdg">5</span></a><a>Gastos</a><a class="on">Análise</a></nav>
+      <div class="gbar"></div>
+    </div></div>
+    <figcaption><b>Pouca história</b>Com menos de 3 meses, não há "normal" e o veredito diz isso com todas as letras, em vez de inventar uma média de um mês e meio. A tela mostra o que existe e quando a comparação chega, e oferece as coisas maiores a que ele pertence (o marcador e a verba), que já têm história. Com 1 ou 2 meses completos, a frase compara só com o mês passado: "R$ 20 a mais que em outubro até o dia 4".</figcaption>
+  </figure>
+
+  </div>
+
+  <h3>Gráficos</h3>
+  <div class="shots">
+
+  <!-- COMPARADO AO NORMAL -->
+  <figure class="shot">
+    <div class="ph"><div class="scr">
+      <div class="sbar"><span>9:41</span><span>●●● ▮</span></div>
+      <div class="tb"><span class="back"><svg class="ico" viewBox="0 0 24 24"><path d="m15 6-6 6 6 6"/></svg></span><span class="t">Comparado ao normal</span></div>
+      <div class="bd">
+        <div class="over">Novembro · até dia 4</div>
+        <div class="say">R$ 149 a mais que o normal. <b>Delivery e Mercado</b> explicam tudo; as outras verbas estão abaixo.</div>
+        <svg class="chart" viewBox="0 0 320 200" role="img" aria-label="Diferença de cada verba para o normal até o dia 4. Delivery R$ 144 a mais. Mercado R$ 116 a mais. Casa no normal, R$ 5 a menos. Saúde R$ 30 a menos. Transporte R$ 32 a menos. Lazer R$ 44 a menos.">
+          <text x="190" y="9" text-anchor="middle" font-family="Source Sans 3" font-size="11" font-weight="600" fill="var(--tinta-2)">o normal</text>
+          <line x1="190" y1="14" x2="190" y2="180" stroke="var(--tinta)" stroke-width="1.25"/>
+          <g font-family="Source Sans 3" font-size="13" fill="var(--tinta)">
+            <text x="0" y="31">Delivery</text><text x="0" y="59">Mercado</text><text x="0" y="87">Casa</text><text x="0" y="115">Saúde</text><text x="0" y="143">Transporte</text><text x="0" y="171">Lazer</text>
+          </g>
+          <rect x="191" y="20" width="90" height="14" rx="2" fill="var(--ocre)"/>
+          <rect x="191" y="48" width="72.7" height="14" rx="2" fill="var(--ocre)"/>
+          <rect x="186.9" y="76" width="3.1" height="14" rx="1" fill="var(--fio-forte)"/>
+          <rect x="171.2" y="104" width="18.8" height="14" rx="2" fill="var(--tinta-3)"/>
+          <rect x="169.9" y="132" width="20.1" height="14" rx="2" fill="var(--tinta-3)"/>
+          <rect x="162.5" y="160" width="27.5" height="14" rx="2" fill="var(--tinta-3)"/>
+          <g font-family="Source Sans 3" font-size="12" font-weight="700">
+            <text x="285" y="31" fill="var(--ocre)">+144</text>
+            <text x="267.7" y="59" fill="var(--ocre)">+116</text>
+            <text x="196" y="87" fill="var(--tinta-3)" font-weight="500">no normal</text>
+            <text x="167" y="115" text-anchor="end" fill="var(--tinta-2)">−30</text>
+            <text x="165.7" y="143" text-anchor="end" fill="var(--tinta-2)">−32</text>
+            <text x="158.3" y="171" text-anchor="end" fill="var(--tinta-2)">−44</text>
+          </g>
+          <g font-family="Source Sans 3" font-size="11" fill="var(--tinta-3)"><text x="184" y="195" text-anchor="end">← a menos</text><text x="196" y="195">a mais →</text></g>
+        </svg>
+        <ul class="legend">
+          <li><span class="sw" style="background:var(--ocre)"></span>a mais que o normal até o dia 4</li>
+          <li><span class="sw" style="background:var(--tinta-3)"></span>a menos que o normal</li>
+          <li><span class="sw" style="background:var(--fio-forte)"></span>no normal: diferença menor que R$ 20 ou que 20%</li>
+        </ul>
+        <div class="math">
+          <div class="r"><span>Novembro, até o dia 4</span><span>R$ 804,10</span></div>
+          <div class="r"><span>O normal até o dia 4</span><span>R$ 655,00</span></div>
+          <div class="r tot"><span>A mais</span><span>R$ 149,10</span></div>
+        </div>
+        <div class="hint">O normal: média de maio a outubro, do dia 1 ao dia 4 de cada mês, sem as contas reservadas. Em outubro, até o dia 4: R$ 690,40.</div>
+      </div>
+      <nav class="navb"><a>Início</a><a>A confirmar<span class="bdg">5</span></a><a>Gastos</a><a class="on">Análise</a></nav>
+      <div class="gbar"></div>
+    </div></div>
+    <figcaption><b>Comparado ao normal</b>O único gráfico novo, aberto pelo veredito do mês. Uma barra por verba, a partir da linha do normal: para a direita, a mais; para a esquerda, a menos. Ordem pela diferença, a maior primeiro. Responde de uma vez "o mês está acima por causa de quê?" sem a pessoa abrir verba por verba. A conta embaixo mostra que as barras somam os R$ 149.</figcaption>
+  </figure>
+
+  <!-- RITMO -->
+  <figure class="shot">
+    <div class="ph"><div class="scr">
+      <div class="sbar"><span>9:41</span><span>●●● ▮</span></div>
+      <div class="tb"><span class="back"><svg class="ico" viewBox="0 0 24 24"><path d="m15 6-6 6 6 6"/></svg></span><span class="t">Ritmo do mês</span><span class="pick">Delivery ▾</span></div>
+      <div class="bd">
+        <div class="over">Novembro · até dia 4</div>
+        <div class="say">Delivery passou <b>R$ 12,00</b> do limite, com R$ 144 a mais que o normal. Se continuar assim, o mês fecha em R$ 1.965.</div>
+        <svg class="chart" viewBox="0 0 320 200" role="img" aria-label="Ritmo do mês de Delivery. Passou R$ 12,00 do limite de R$ 250. Esperado até hoje R$ 33,33. O normal até hoje R$ 118. Gasto até hoje R$ 262,00. Se continuar assim, o mês fecha em R$ 1.965.">
+          <rect x="48.5" y="16" width="263.5" height="160" fill="var(--folha-2)"/>
+          <line x1="8" y1="176" x2="312" y2="176" stroke="var(--fio-forte)" stroke-width="1"/>
+          <line x1="8" y1="76.0" x2="312" y2="76.0" stroke="var(--tinta-2)" stroke-width="1"/>
+          <text x="312" y="71.0" text-anchor="end" font-family="Source Sans 3" font-size="11.5" font-weight="600" fill="var(--tinta-2)">limite R$ 250</text>
+          <line x1="8" y1="176" x2="312" y2="76.0" stroke="var(--tinta-3)" stroke-width="1.5" stroke-dasharray="5 4"/>
+          <text x="232" y="130" font-family="Newsreader" font-style="italic" font-size="14" fill="var(--tinta-3)">esperado</text>
+          <line x1="48.5" y1="71.2" x2="69.9" y2="16" stroke="var(--ocre)" stroke-width="2" stroke-dasharray="1 4" stroke-linecap="round"/>
+          <path d="M65.9 21 L69.9 14 L73.4 22" fill="none" stroke="var(--ocre)" stroke-width="1.5"/>
+          <text x="77.9" y="24" font-family="Source Sans 3" font-size="11.5" font-weight="600" fill="var(--ocre)">R$ 1.965 no dia 30 · se continuar assim</text>
+          <polyline points="8.0,176.0 18.1,140.3 28.3,114.8 38.4,71.2 48.5,71.2" fill="none" stroke="var(--tinta)" stroke-width="2.25" stroke-linejoin="round"/>
+          <circle cx="48.5" cy="128.8" r="4" fill="var(--folha-2)" stroke="var(--tinta)" stroke-width="1.5"/>
+          <text x="56.5" y="111" font-family="Source Sans 3" font-size="11.5" font-weight="600" fill="var(--tinta-2)">normal até hoje · R$ 118</text>
+          <circle cx="48.5" cy="71.2" r="4.5" fill="var(--lacre)" stroke="var(--folha-2)" stroke-width="2"/>
+          <text x="56.5" y="91.2" font-family="Source Sans 3" font-size="12.5" font-weight="700" fill="var(--tinta)">R$ 262,00 · hoje</text>
+          <g font-family="Source Sans 3" font-size="11" fill="var(--tinta-3)" text-anchor="middle"><text x="18.1" y="192">1</text><text x="109.3" y="192">10</text><text x="210.7" y="192">20</text><text x="312.0" y="192">30</text></g>
+        </svg>
+        <ul class="legend">
+          <li><svg viewBox="0 0 24 12"><line x1="1" y1="6" x2="23" y2="6" stroke="var(--tinta)" stroke-width="2.25"/></svg>gasto do mês, dia a dia</li>
+          <li><svg viewBox="0 0 24 12"><line x1="1" y1="6" x2="23" y2="6" stroke="var(--tinta-3)" stroke-width="1.5" stroke-dasharray="5 4"/></svg>esperado: R$ 8,33 por dia, até chegar ao limite no dia 30</li>
+          <li><svg viewBox="0 0 24 12"><circle cx="12" cy="6" r="4" fill="none" stroke="var(--tinta)" stroke-width="1.5"/></svg>o normal até hoje: média de maio a outubro</li>
+          <li><svg viewBox="0 0 24 12"><line x1="1" y1="6" x2="23" y2="6" stroke="var(--ocre)" stroke-width="2" stroke-dasharray="1 4" stroke-linecap="round"/></svg>se continuar assim, no mesmo passo dos 4 primeiros dias</li>
+        </ul>
+        <div class="math">
+          <div class="r"><span>Gasto até hoje</span><span>R$ 262,00</span></div>
+          <div class="r"><span>O normal até hoje</span><span>R$ 118,00</span></div>
+          <div class="r"><span>Esperado até hoje</span><span>R$ 33,33</span></div>
+          <div class="r tot"><span>Se continuar assim</span><span>R$ 1.965,00</span></div>
+        </div>
+      </div>
+      <nav class="navb"><a>Início</a><a>A confirmar<span class="bdg">5</span></a><a>Gastos</a><a class="on">Análise</a></nav>
+      <div class="gbar"></div>
+    </div></div>
+    <figcaption><b>Ritmo do mês</b>O gráfico de redesign-ab, com um elemento a mais: um ponto vazado no dia de hoje, o normal até hoje. Não é uma quarta linha; é um ponto só, ao lado do "esperado". O esperado diz onde o plano mandava estar, o ponto diz onde a pessoa costuma estar. Aqui os dois concordam que Delivery está alto, e a projeção de R$ 1.965 fica mais fácil de desconfiar quando se vê que o normal é R$ 118. Ritmo e projeção continuam só na Análise.</figcaption>
+  </figure>
+
+  </div>
+</section>
+
+<!-- ================= 4 ================= -->
+<section id="metricas">
+  <div class="kick">4 · Métricas, bases e período</div>
+  <h2>Comparado <em>com o quê</em>, e por quê</h2>
+
+  <h3>As bases</h3>
+  <div class="tblw"><table class="base-t">
+    <thead><tr><th>Base</th><th>Conta</th><th>Onde aparece</th><th>Por quê</th></tr></thead>
+    <tbody>
+    <tr><td class="t">O normal</td><td>Média dos <b>6 meses anteriores</b> ao mês do topo, só o <b>mesmo trecho</b>: do dia 1 ao dia de hoje (mês passado no topo: o mês inteiro). Mês sem gasto conta como zero, desde que a coisa já existisse.</td><td>Veredito de toda tela, fixados, dica da busca, traço nas barras, ponto no Ritmo</td><td>Um mês só é barulhento; seis meses dão o costume da pessoa. O mesmo trecho é a única comparação justa no dia 4: comparar R$ 804 com um mês inteiro de R$ 2.900 sempre diria "pouco".</td></tr>
+    <tr><td class="t">O mês passado</td><td>O mesmo trecho do mês anterior (outubro, do dia 1 ao 4).</td><td>Linha logo abaixo do veredito</td><td>É o que a pessoa lembra ("e no mês passado?"). Vem como linha secundária, sem veredito, para não haver duas conclusões.</td></tr>
+    <tr><td class="t">O limite</td><td>Como no Início: resta, passou, gastando rápido.</td><td>Segunda linha da frase das verbas; Ritmo; Mês a mês</td><td>É a régua do plano. Fica com as palavras do Início e nunca com a palavra "normal", para não virar um segundo juiz com o mesmo nome.</td></tr>
+    </tbody>
+  </table></div>
+  <ul class="plain">
+    <li><b>Faixa do normal.</b> A coisa está "no normal" quando a diferença é menor que <b>R$ 20 ou que 20%</b> do normal; só fora das duas vira "a mais" ou "a menos". Para avisos, 3 avisos ou 20%. Isso impede que R$ 7,80 do Uber ou R$ 5 da Casa vire alerta.</li>
+    <li><b>Contas reservadas ficam fora</b> da comparação de verba. O aluguel pago no dia 5 em vez do dia 4 faria Casa pular R$ 2.000 entre "a menos" e "a mais" por um dia de diferença. O limite continua contando com elas, como hoje.</li>
+    <li><b>Parcelas</b> contam pela data de cada parcela, e estornos não contam, como no Gasto do mês (§3 e §7.5 da spec).</li>
+    <li><b>Pouca história.</b> Menos de 1 mês completo antes: "Ainda sem com o que comparar", e a tela oferece o marcador ou a verba de que a coisa faz parte. Com 1 ou 2 meses: compara só com o mês passado, sem a palavra "normal". Com 3 ou mais: o normal (média de até 6).</li>
+    <li><b>Começo do mês.</b> Do dia 1 ao 3, a frase do mês diz o número e "cedo para comparar", e os fixados mostram só o valor. Do dia 4 em diante, a comparação aparece. Dias que mais pesam segue a regra de hoje (dois dias de cada para comparar).</li>
+  </ul>
+
+  <h3>O período</h3>
+  <p><b>Um controle só: o mês do topo, que abre no mês atual, até hoje.</b> Ele vale para a página, para os fixados, para o valor de cada resultado da busca e para a análise que o resultado abre (que repete o mês no cabeçalho). O "Mês · 6 meses · Tudo" sai: o histórico de cada coisa é sempre o mesmo trecho nos últimos 7 meses (6 anteriores mais o do topo), e o mês inteiro aparece em um número ("Mês inteiro: R$ 249 em média"). "Ver todos os meses", no pé da análise, abre a lista de todos os meses, sem gráfico. Motivo: com um controle só, um número igual significa sempre a mesma coisa, e o primeiro problema do diagnóstico (R$ 98 numa tela, R$ 1.096 na seguinte) some.</p>
+
+  <h3>Métricas por tipo</h3>
+  <div class="tblw"><table>
+    <thead><tr><th>Tipo</th><th>Veredito</th><th>O que mudou</th><th>Histórico</th><th>Números do mês inteiro</th><th>Junto</th></tr></thead>
+    <tbody>
+    <tr><td class="t">Verba</td><td>R$ a mais ou a menos que o normal, sem contas reservadas; o limite na segunda linha</td><td>os 2 ou 3 marcadores que mais se afastaram do normal, com os reais de cada</td><td>7 barras até o mesmo dia, linha do normal</td><td>média do mês inteiro, maior gasto</td><td>link para o Ritmo dela</td></tr>
+    <tr><td class="t">Marcador</td><td>R$ a mais ou a menos; "mais vezes" ou "mais caro"</td><td>os lugares do mês</td><td>7 barras até o mesmo dia</td><td>média do mês inteiro e quantas vezes; dia da semana mais comum</td><td>marcadores que andam nos mesmos gastos</td></tr>
+    <tr><td class="t">Gasto (nome)</td><td>R$ a mais ou a menos; "mais vezes" ou "mais caro"</td><td>os gastos do mês, um por linha</td><td>7 barras até o mesmo dia</td><td>média do mês inteiro, média por vez</td><td>verba e marcadores; outros nomes com o mesmo marcador</td></tr>
+    <tr><td class="t">Aviso (fonte)</td><td>avisos a mais ou a menos que o normal</td><td>os nomes que mais chegaram a mais; a parte descartada contra a de sempre</td><td>7 barras de contagem até o mesmo dia</td><td>viraram gasto, descartados, a confirmar</td><td>nomes que mais chegam e o que costuma acontecer com eles</td></tr>
+    </tbody>
+  </table></div>
+  <p class="muted small">"Mais vezes" ou "mais caro": a diferença em reais se divide em quantas vezes a mais (contra a média de vezes até o mesmo dia) e quanto a mais por vez (contra a média por vez). A frase diz a parte maior; se as duas pesam, diz as duas.</p>
+</section>
+
+<!-- ================= 5 ================= -->
+<section id="vocab">
+  <div class="kick">5 · Vocabulário</div>
+  <h2>Palavras novas, <em>poucas</em></h2>
+  <p class="muted">Só o que esta direção acrescenta ou muda sobre o vocabulário de redesign-ab. Nenhum termo novo pede glossário: "normal" é usado no sentido de todo dia.</p>
+  <div class="tblw"><table>
+    <thead><tr><th>Antes (redesign-ab)</th><th>Proposta</th><th></th><th>Por quê</th></tr></thead>
+    <tbody>
+    <tr><td class="t">—</td><td class="t">o normal</td><td><span class="pill p-ren">novo</span></td><td>O nome da régua da Análise. "Média" diz a conta e não o sentido; "o normal" é como se fala ("gastei mais que o normal"). A conta fica em "O que é o normal?" e no pé de cada gráfico.</td></tr>
+    <tr><td class="t">—</td><td class="t">R$ 40 a mais · R$ 30 a menos · no normal</td><td><span class="pill p-ren">novo</span></td><td>As três respostas possíveis, sempre nestas palavras. "Acima" e "abaixo" ficam fora para não lembrar "Acima do ritmo".</td></tr>
+    <tr><td class="t">até dia 4</td><td class="t">até hoje · até o dia 4</td><td><span class="pill p-keep">fica</span></td><td>"Até hoje" no veredito; "até o dia 4" onde há uma conta, para a pessoa ver que o trecho é o mesmo.</td></tr>
+    <tr><td class="t">—</td><td class="t">Fixar · Fixados · Tirar dos fixados</td><td><span class="pill p-ren">novo</span></td><td>A palavra que o WhatsApp e o Android já ensinaram para "deixar no topo". O ícone é o alfinete de lá.</td></tr>
+    <tr><td class="t">—</td><td class="t">mais vezes · mais caro</td><td><span class="pill p-ren">novo</span></td><td>Explicam a diferença sem falar em frequência ou preço médio.</td></tr>
+    <tr><td class="t">—</td><td class="t">Ainda sem com o que comparar</td><td><span class="pill p-ren">novo</span></td><td>Diz o motivo de não haver veredito, sem "dados insuficientes".</td></tr>
+    <tr><td class="t">—</td><td class="t">Comparado ao normal</td><td><span class="pill p-ren">novo</span></td><td>Nome do gráfico novo; como os outros, é a pergunta que ele responde.</td></tr>
+    <tr><td class="t">"mercado" puxa a fila</td><td class="t">ifood e feira estão acima do normal</td><td><span class="pill p-ren">troca</span></td><td>A frase do ranking passa a dizer o que fugiu do costume, não só o que é maior.</td></tr>
+    <tr><td class="t">Mês · 6 meses · Tudo</td><td class="t">(o mês do topo) · Ver todos os meses</td><td><span class="pill p-cut">sai</span></td><td>Um controle de período só.</td></tr>
+    <tr><td class="t">Buscar em todos os meses</td><td class="t">—</td><td><span class="pill p-cut">sai</span></td><td>A busca já olha tudo.</td></tr>
+    <tr><td class="t">Soma · Média · Maior · Dia da semana (quadros)</td><td class="t">Mês inteiro · Maior · Quando</td><td><span class="pill p-hide">desce</span></td><td>Ficam abaixo do veredito e do histórico, dois por tela.</td></tr>
+    <tr><td class="t">costuma (novo uso)</td><td class="t">costuma ir 1 vez por mês</td><td><span class="pill p-ren">novo</span></td><td>No lugar de um zero, quando a coisa não teve gasto no mês.</td></tr>
+    </tbody>
+  </table></div>
+</section>
+
+<!-- ================= 6 ================= -->
+<section id="tradeoffs">
+  <div class="kick">6 · Trade-offs e decisões</div>
+  <h2>O que se <em>ganha</em> e o que se paga</h2>
+  <ul class="plain">
+    <li><b>O normal pode ser ruim.</b> "No normal" não quer dizer "bem". Quem sempre passa do limite de Delivery vai ver "no normal" num mês em que passou de novo. Por isso o limite fica na segunda linha da frase de verba, com a palavra do Início ("passou"), e o Mês a mês continua contando os meses além do limite.</li>
+    <li><b>Duas réguas, de novo.</b> O diagnóstico de redesign-ab reclamava de dois juízes que discordam. Aqui há dois de propósito: o Início julga pelo plano (limite), a Análise pelo costume (normal). A defesa é que nunca dividem palavras; o risco é Mercado aparecer "gastando rápido" no Início e "no normal" na Análise no mesmo dia.</li>
+    <li><b>Começo do mês ainda é barulhento.</b> No dia 4, um domingo a mais ou a menos muda tudo para coisas semanais (a feira). A faixa de R$ 20 e 20% e o gráfico do mesmo trecho ajudam, mas não corrigem o dia da semana.</li>
+    <li><b>Uma média engana com um gasto grande.</b> Uma compra de R$ 312 no Pão de Açúcar em julho sobe o normal de Mercado por seis meses.</li>
+    <li><b>Mais uma coisa para cuidar.</b> Fixados são estado que a pessoa cria e precisa limpar. O teto de 5 e a saída automática do que for apagado seguram isso.</li>
+    <li><b>Um gráfico novo.</b> Comparado ao normal é um tipo de gráfico que o app ainda não tem (barras para os dois lados). Ele fica a um toque do veredito, não na primeira tela.</li>
+    <li><b>Menos controle de período.</b> Quem quer ver "tudo desde o começo" num gráfico perde isso; fica uma lista em "Ver todos os meses".</li>
+    <li><b>Mais conta por tela.</b> Cada linha dos fixados e da busca precisa do mesmo trecho de 6 meses. É uma soma por mês e por coisa, mas é uma consulta a mais em cada resultado.</li>
+  </ul>
+
+  <h3>Decisões para o dono</h3>
+  <div class="tblw"><table>
+    <thead><tr><th>#</th><th>Decisão</th><th>Recomendação</th></tr></thead>
+    <tbody>
+    <tr><td class="t">1</td><td>Qual base leva o veredito: o normal (média de 6 meses) ou o mês passado?</td><td><b>O normal.</b> O mês passado vem como linha secundária. Um mês só faz o veredito oscilar.</td></tr>
+    <tr><td class="t">2</td><td>A faixa do "no normal".</td><td><b>Menos de R$ 20 ou menos de 20%</b> (avisos: 3 ou 20%). Testar com os dados reais do backup antes de fechar.</td></tr>
+    <tr><td class="t">3</td><td>Média ou mediana para o normal?</td><td><b>Média</b>, porque se explica numa linha ("média de maio a outubro"). Mediana resiste ao gasto grande, mas pede uma palavra que ninguém usa.</td></tr>
+    <tr><td class="t">4</td><td>Contas reservadas na comparação de verba.</td><td><b>Fora</b>, como no ritmo da spec (§5). O limite segue com elas.</td></tr>
+    <tr><td class="t">5</td><td>Fixar a coisa ou o texto buscado?</td><td><b>A coisa.</b> Uma linha fixada com "mercado" misturaria verba, marcador e gastos, e não teria um veredito só.</td></tr>
+    <tr><td class="t">6</td><td>Quantos fixados, e onde.</td><td><b>Até 5, só na Análise.</b> O Início fica com um número, como na direção A.</td></tr>
+    <tr><td class="t">7</td><td>Um único controle de período (o mês do topo), sem "Mês · 6 meses · Tudo".</td><td><b>Sim</b>, com "Ver todos os meses" como lista no pé da análise.</td></tr>
+    <tr><td class="t">8</td><td>Quanta história para haver normal.</td><td><b>3 meses.</b> Com 1 ou 2, compara só com o mês passado.</td></tr>
+    <tr><td class="t">9</td><td>Corrigir o normal pelo dia da semana (um domingo a mais no trecho)?</td><td><b>Não, por enquanto.</b> Explicar "mesmo trecho" é fácil; explicar "ajustado pelos dias da semana" não é.</td></tr>
+    <tr><td class="t">10</td><td>Dar cor a "a menos" (musgo)?</td><td><b>Não.</b> Só "a mais" ganha ocre, como "gastando rápido". O normal não leva selo, e "a menos" nem sempre é bom (Saúde em zero pode ser consulta adiada).</td></tr>
+    <tr><td class="t">11</td><td>O traço do normal nas barras de Para onde foi.</td><td><b>Sim</b>, com a diferença em reais ao lado. Se parecer carregado no teste, fica só a diferença.</td></tr>
+    <tr><td class="t">12</td><td>O ponto do normal no gráfico do Ritmo.</td><td><b>Sim</b>, um ponto só, no dia de hoje. Uma linha inteira do normal fica de fora.</td></tr>
+    <tr><td class="t">13</td><td>Quando a comparação do mês começa.</td><td><b>No dia 4.</b> Do dia 1 ao 3, "cedo para comparar".</td></tr>
+    </tbody>
+  </table></div>
+</section>
+
+</div>
+<script>
+(function(){
+  var b=document.getElementById('tema'),r=document.documentElement;
+  try{var s=localStorage.getItem('tema');if(s)r.setAttribute('data-theme',s);}catch(e){}
+  b.addEventListener('click',function(){
+    var dark=r.getAttribute('data-theme')?r.getAttribute('data-theme')==='dark':matchMedia('(prefers-color-scheme: dark)').matches;
+    var n=dark?'light':'dark';r.setAttribute('data-theme',n);
+    try{localStorage.setItem('tema',n);}catch(e){}
+  });
+})();
+</script>
+</body>
+</html>

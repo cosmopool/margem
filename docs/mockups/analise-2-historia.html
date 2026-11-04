@@ -1,0 +1,984 @@
+<!doctype html>
+<html lang="pt-BR">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Análise em frases</title>
+<meta name="description" content="Direção 2 para a Análise do Margem: o mês contado em frases curtas, cada uma uma porta para o seu gráfico ou para a análise de uma verba, marcador, lugar ou aviso.">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Newsreader:ital,opsz,wght@0,6..72,300..700;1,6..72,300..700&family=Source+Sans+3:ital,wght@0,300..800;1,400..600&display=swap" rel="stylesheet">
+<style>
+/* ===== TOKENS: the current Margem palette, unchanged ===== */
+:root, .t-light{
+  color-scheme:light;
+  --papel:#F3EEE4; --folha:#FBF8F1; --folha-2:#ECE5D8;
+  --fio:#DDD3C2; --fio-forte:#8A7E6A;
+  --tinta:#1E1B16; --tinta-2:#514A40; --tinta-3:#6B6254;
+  --argila:#A44D29;
+  --musgo:#3E5E38; --musgo-fundo:#E3EADB;
+  --ocre:#85590F;  --ocre-fundo:#F4E7CC;
+  --lacre:#9A2A20; --lacre-fundo:#F6E3DC;
+  --anil:#2D4C6E;  --anil-fundo:#DFE6EE;
+  --acao:#1E1B16; --sobre-acao:#FBF8F1;
+  --snack-acao:#E09470;
+  --sombra:0 1px 2px rgba(30,27,22,.06),0 12px 30px -12px rgba(30,27,22,.28);
+  --c1:#2F5FA8; --c2:#D0682E; --c3:#139488; --c4:#7E2F78; --c5:#B8860B; --c6:#C25C7E;
+  --parede:linear-gradient(165deg,#E4E2D2 0%,#EDE4D2 50%,#D9C6AA 100%);
+  --wg-fundo:rgba(251,248,241,.94);
+  --s0:#F1E4D6; --s1:#E3C3A6; --s2:#CF9871; --s3:#B46A43; --s4:#8A4422;
+}
+:root[data-theme="dark"], .t-dark{
+  color-scheme:dark;
+  --papel:#171512; --folha:#201D19; --folha-2:#2A2621;
+  --fio:#36312A; --fio-forte:#7C7262;
+  --tinta:#EEE7DA; --tinta-2:#BDB3A3; --tinta-3:#988E7F;
+  --argila:#E09470;
+  --musgo:#A3C092; --musgo-fundo:#24301F;
+  --ocre:#DDB063;  --ocre-fundo:#382C17;
+  --lacre:#EE937E; --lacre-fundo:#3A221C;
+  --anil:#A3BCDB;  --anil-fundo:#1F2A36;
+  --acao:#EEE7DA; --sobre-acao:#171512;
+  --snack-acao:#A44D29;
+  --sombra:0 1px 0 rgba(0,0,0,.35),0 14px 34px -10px rgba(0,0,0,.7);
+  --c1:#5584D0; --c2:#D06A30; --c3:#20A898; --c4:#8E4A8A; --c5:#B98A14; --c6:#CC6487;
+  --parede:linear-gradient(165deg,#1B211B 0%,#13120F 55%,#211913 100%);
+  --wg-fundo:rgba(32,29,25,.94);
+  --s0:#2B231E; --s1:#4E3324; --s2:#7E4A2E; --s3:#B66C44; --s4:#E6A27C;
+}
+@media (prefers-color-scheme: dark){
+  :root:not([data-theme="light"]){
+    color-scheme:dark;
+    --papel:#171512; --folha:#201D19; --folha-2:#2A2621;
+    --fio:#36312A; --fio-forte:#7C7262;
+    --tinta:#EEE7DA; --tinta-2:#BDB3A3; --tinta-3:#988E7F;
+    --argila:#E09470;
+    --musgo:#A3C092; --musgo-fundo:#24301F;
+    --ocre:#DDB063;  --ocre-fundo:#382C17;
+    --lacre:#EE937E; --lacre-fundo:#3A221C;
+    --anil:#A3BCDB;  --anil-fundo:#1F2A36;
+    --acao:#EEE7DA; --sobre-acao:#171512;
+    --snack-acao:#A44D29;
+    --sombra:0 1px 0 rgba(0,0,0,.35),0 14px 34px -10px rgba(0,0,0,.7);
+    --c1:#5584D0; --c2:#D06A30; --c3:#20A898; --c4:#8E4A8A; --c5:#B98A14; --c6:#CC6487;
+    --parede:linear-gradient(165deg,#1B211B 0%,#13120F 55%,#211913 100%);
+    --wg-fundo:rgba(32,29,25,.94);
+    --s0:#2B231E; --s1:#4E3324; --s2:#7E4A2E; --s3:#B66C44; --s4:#E6A27C;
+  }
+}
+
+/* ===== PAGE ===== */
+*{box-sizing:border-box;margin:0;padding:0}
+body{background:var(--papel);color:var(--tinta);font:400 17px/1.6 'Source Sans 3',system-ui,sans-serif;overflow-x:hidden}
+h1,h2,h3,.serif{font-family:'Newsreader',Georgia,serif;font-weight:400}
+.num{font-variant-numeric:lining-nums tabular-nums}
+.wrap{max-width:1180px;margin:0 auto;padding:0 16px 96px}
+@media (min-width:720px){.wrap{padding:0 40px 120px}}
+header.cover{padding:48px 0 40px;border-bottom:2px solid var(--tinta)}
+.kick{font:600 12px/1.3 'Source Sans 3';letter-spacing:.14em;text-transform:uppercase;color:var(--argila)}
+h1{font:italic 400 clamp(44px,8vw,96px)/.95 'Newsreader';letter-spacing:-.03em;margin:14px 0 18px}
+.lede{font:300 clamp(19px,2.4vw,24px)/1.45 'Newsreader';color:var(--tinta-2);max-width:40em}
+.lede em{color:var(--tinta)}
+section{padding:64px 0 24px;border-bottom:1px solid var(--fio)}
+h2{font:400 clamp(30px,4.4vw,46px)/1.05 'Newsreader';letter-spacing:-.015em;margin:8px 0 18px;max-width:20em}
+h2 em{color:var(--argila)}
+h3{font:500 22px/1.25 'Newsreader';margin:36px 0 10px}
+p{max-width:44em;margin-bottom:14px}
+.muted{color:var(--tinta-2)}
+.small{font-size:15px}
+a{color:var(--anil)}
+.grid2{display:grid;grid-template-columns:repeat(auto-fit,minmax(min(100%,320px),1fr));gap:20px 28px}
+.card{background:var(--folha);border:1px solid var(--fio);border-radius:8px;padding:20px 22px}
+.card h3{margin:0 0 8px;font-size:20px}
+.card .n{font:italic 300 40px/1 'Newsreader';color:var(--argila);float:left;margin:0 14px 4px 0}
+.card p{font-size:15.5px;line-height:1.5;margin-bottom:8px;color:var(--tinta-2)}
+.card p b{color:var(--tinta)}
+.tblw{overflow-x:auto;margin:12px 0 20px}
+table{width:100%;border-collapse:collapse;font-size:15px;line-height:1.45}
+th{font:600 11px/1.3 'Source Sans 3';letter-spacing:.12em;text-transform:uppercase;text-align:left;padding:10px 14px 10px 0;border-top:2px solid var(--tinta);border-bottom:1px solid var(--tinta);white-space:nowrap}
+td{padding:10px 14px 10px 0;border-bottom:1px solid var(--fio);vertical-align:top}
+td.t{font:500 17px/1.3 'Newsreader';white-space:nowrap}
+td .x{color:var(--tinta-3);text-decoration:line-through}
+.pill{display:inline-block;font:600 11px/1.2 'Source Sans 3';letter-spacing:.06em;text-transform:uppercase;padding:3px 7px;border-radius:3px;white-space:nowrap}
+.p-keep{background:var(--musgo-fundo);color:var(--musgo)}
+.p-ren{background:var(--anil-fundo);color:var(--anil)}
+.p-hide{background:var(--ocre-fundo);color:var(--ocre)}
+.p-cut{background:var(--lacre-fundo);color:var(--lacre)}
+.ia{display:grid;grid-template-columns:repeat(auto-fit,minmax(min(100%,250px),1fr));gap:16px}
+.ia .col{border-top:3px solid var(--tinta);padding-top:12px}
+.ia .col.c2{border-color:var(--anil)}.ia .col.c3{border-color:var(--ocre)}.ia .col.c4{border-color:var(--lacre)}
+.ia .col h4{font:600 12px/1.3 'Source Sans 3';letter-spacing:.12em;text-transform:uppercase;margin-bottom:8px}
+.ia ul{list-style:none;font-size:15px;line-height:1.45}
+.ia li{padding:7px 0;border-bottom:1px solid var(--fio)}
+.ia li small{display:block;color:var(--tinta-3);font-size:13px}
+.tabs-map{display:grid;grid-template-columns:repeat(auto-fit,minmax(min(100%,300px),1fr));gap:20px;margin:20px 0}
+.tabs-map .box{border:1px solid var(--fio);border-radius:8px;padding:16px 18px;background:var(--folha)}
+.tabs-map .row{display:flex;gap:6px;flex-wrap:wrap;margin:8px 0}
+.tab{font:600 13px 'Source Sans 3';padding:6px 10px;border-radius:4px;border:1px solid var(--fio-forte)}
+.tab.gone{border-style:dashed;color:var(--tinta-3);text-decoration:line-through}
+.tab.new{background:var(--tinta);color:var(--papel);border-color:var(--tinta)}
+.arrow{font:italic 15px 'Newsreader';color:var(--tinta-2)}
+ul.plain{padding-left:20px;max-width:46em}
+ul.plain li{margin-bottom:10px}
+ul.plain li b{font-weight:600}
+#tema{position:fixed;bottom:16px;right:16px;z-index:20;min-height:44px;padding:0 16px;border-radius:4px;border:1px solid var(--fio-forte);background:var(--folha);color:var(--tinta);font:600 13px 'Source Sans 3';letter-spacing:.06em;text-transform:uppercase;cursor:pointer}
+
+/* ===== PHONE ===== */
+.shots{display:flex;flex-wrap:wrap;gap:40px 32px;align-items:flex-start;margin:24px 0}
+.shot{margin:0;max-width:380px;width:100%}
+.shot figcaption{margin-top:12px;font:italic 15px/1.45 'Newsreader';color:var(--tinta-2)}
+.shot figcaption b{display:block;font:600 11px 'Source Sans 3';letter-spacing:.12em;text-transform:uppercase;color:var(--tinta);font-style:normal;margin-bottom:3px}
+.ph{width:100%;max-width:380px;padding:10px;border-radius:48px;background:#0D0C0A;box-shadow:0 0 0 1px #3a352e,0 40px 70px -40px rgba(20,16,10,.55)}
+.scr{width:100%;height:800px;border-radius:38px;overflow:hidden;position:relative;background:var(--papel);color:var(--tinta);font:400 15px/1.45 'Source Sans 3';display:flex;flex-direction:column}
+.sbar{height:34px;padding:4px 26px 0;display:flex;justify-content:space-between;align-items:center;font:600 13px 'Source Sans 3';flex:none}
+.tb{height:56px;display:flex;align-items:center;padding:0 8px 0 20px;flex:none;gap:4px}
+.tb .t{font:500 21px 'Newsreader';flex:1}
+.tb .wm{font:italic 500 24px 'Newsreader';letter-spacing:-.02em;flex:1}
+.tb .back{width:40px;height:40px;display:grid;place-items:center;margin-left:-14px}
+.ib{width:44px;height:44px;display:grid;place-items:center;color:var(--tinta-2)}
+.ico{width:22px;height:22px;fill:none;stroke:currentColor;stroke-width:1.6;stroke-linecap:round;stroke-linejoin:round}
+.bd{flex:1;overflow:hidden;padding:0 20px;position:relative}
+.navb{height:68px;display:grid;grid-template-columns:repeat(4,1fr);border-top:1px solid var(--fio);background:var(--papel);flex:none}
+.navb a{display:flex;flex-direction:column;align-items:center;justify-content:center;gap:2px;font:500 12px 'Source Sans 3';color:var(--tinta-3);position:relative;text-decoration:none}
+.navb a.on{color:var(--tinta);font-weight:700}
+.navb a.on::before{content:"";position:absolute;top:-1px;left:28%;right:28%;height:2px;background:var(--tinta)}
+.bdg{position:absolute;top:8px;left:calc(50% + 8px);min-width:18px;height:18px;border-radius:9px;background:var(--argila);color:var(--folha);font:700 11px/18px 'Source Sans 3';text-align:center;padding:0 5px}
+.gbar{height:20px;flex:none;display:grid;place-items:center}
+.gbar::after{content:"";width:108px;height:4px;border-radius:2px;background:var(--tinta);opacity:.35}
+
+/* home */
+.over{font:600 11px/1.3 'Source Sans 3';letter-spacing:.12em;text-transform:uppercase;color:var(--tinta-3)}
+.hero{font:400 60px/1 'Newsreader';letter-spacing:-.025em;margin:10px 0 4px;font-variant-numeric:lining-nums tabular-nums}
+.hero .cur{font:500 .34em 'Source Sans 3';color:var(--tinta-2);vertical-align:.9em;margin-right:.12em;letter-spacing:0}
+.hero .ct{font-size:.45em;color:var(--tinta-2)}
+.herosub{font:17px/1.35 'Source Sans 3';color:var(--tinta-2)}
+.alert{display:flex;gap:8px;align-items:center;margin-top:12px;font:600 14px/1.3 'Source Sans 3';color:var(--lacre)}
+.dot{width:8px;height:8px;border-radius:50%;background:currentColor;flex:none}
+.strip{display:flex;align-items:center;gap:10px;margin:18px 0 6px;padding:12px 8px 12px 16px;background:var(--folha-2);border-radius:6px;position:relative;font:600 15px 'Source Sans 3'}
+.strip::before{content:"";position:absolute;left:6px;top:11px;bottom:11px;width:4px;border-left:1px solid var(--argila);border-right:1px solid var(--argila)}
+.strip span{flex:1;padding-left:4px}
+.strip small{display:block;font-weight:400;font-size:13px;color:var(--tinta-3)}
+.secl{display:flex;justify-content:space-between;align-items:baseline;margin-top:20px;padding-bottom:4px;border-bottom:1px solid var(--tinta);font:600 11px 'Source Sans 3';letter-spacing:.12em;text-transform:uppercase}
+.secl i{font:400 13px 'Source Sans 3';letter-spacing:0;text-transform:none;color:var(--tinta-3);font-style:normal}
+.vr{padding:11px 0 10px;border-bottom:1px solid var(--fio)}
+.vr .l1{display:flex;justify-content:space-between;align-items:baseline;gap:10px}
+.vr .nm{font:500 18px/1.2 'Newsreader'}
+.vr .v{font:500 18px/1.2 'Newsreader';font-variant-numeric:lining-nums tabular-nums;white-space:nowrap}
+.vr .v small{font:400 12.5px 'Source Sans 3';color:var(--tinta-3);margin-left:3px}
+.fuel{height:6px;border-radius:3px;background:var(--fio);margin:8px 0 0;overflow:hidden}
+.fuel b{display:block;height:100%;background:var(--tinta-2);border-radius:3px}
+.fuel.over{background:transparent;border:1.5px solid var(--lacre);height:7px}
+.st{font:600 12.5px/1.2 'Source Sans 3';margin-top:6px;display:flex;gap:6px;align-items:center}
+.st.ocre{color:var(--ocre)}.st.lacre{color:var(--lacre)}
+.vr .v.neg{color:var(--lacre)}
+
+/* triage */
+.bulk{display:flex;align-items:center;gap:10px;padding:10px 10px 10px 14px;border:1px solid var(--fio);border-radius:8px;background:var(--folha);margin:6px 0 12px;font:14px/1.3 'Source Sans 3';color:var(--tinta-2)}
+.bulk span{flex:1}
+.bulk b{color:var(--tinta)}
+.rec{background:var(--folha);border:1px solid var(--fio);border-radius:8px;padding:12px 14px 10px;margin-bottom:10px;position:relative}
+.rec.novo{padding-left:22px}
+.rec.novo::before{content:"";position:absolute;left:8px;top:14px;bottom:14px;width:4px;border-left:1px solid var(--argila);border-right:1px solid var(--argila)}
+.rec .top{display:flex;justify-content:space-between;align-items:baseline;gap:10px}
+.rec .mer{font:500 18px/1.2 'Newsreader'}
+.rec .amt{font:500 18px/1.2 'Newsreader';font-variant-numeric:lining-nums tabular-nums;white-space:nowrap}
+.rec .src{font:12.5px 'Source Sans 3';color:var(--tinta-3);margin-top:1px}
+.sug{margin-top:8px;font:14px/1.35 'Source Sans 3';color:var(--tinta-2)}
+.sug b{color:var(--tinta);font-weight:600}
+.sug .w{display:block;color:var(--lacre);font-size:13px;font-weight:600}
+.band{margin-top:8px;padding:7px 10px;border-radius:4px;background:var(--anil-fundo);color:var(--anil);font:600 13.5px/1.35 'Source Sans 3'}
+.band small{display:block;font-weight:400;color:var(--tinta-2)}
+.band.ocre{background:var(--ocre-fundo);color:var(--ocre)}
+.acts{display:flex;justify-content:flex-end;gap:6px;margin-top:10px;align-items:center}
+.btn{display:inline-flex;align-items:center;justify-content:center;min-height:40px;padding:0 14px;border-radius:4px;font:600 14px 'Source Sans 3';border:1px solid transparent;white-space:nowrap}
+.btn.pri{background:var(--acao);color:var(--sobre-acao)}
+.btn.sec{border-color:var(--fio-forte);color:var(--tinta)}
+.btn.txt{color:var(--tinta-2);padding:0 8px}
+.btn.big{min-height:52px;font-size:16px;flex:1}
+.snack{position:absolute;left:12px;right:12px;bottom:12px;display:flex;align-items:center;gap:8px;background:var(--tinta);color:var(--papel);border-radius:6px;padding:4px 4px 4px 14px;min-height:50px;font:14px/1.3 'Source Sans 3';box-shadow:var(--sombra)}
+.snack span{flex:1}
+.snack b{color:var(--snack-acao);font-weight:700;letter-spacing:.04em;padding:0 12px}
+
+/* form */
+.quote{background:var(--folha-2);border-radius:6px;padding:9px 12px;font:italic 14px/1.4 'Newsreader';color:var(--tinta-2);margin-bottom:12px}
+.quote b{display:block;font:600 10.5px 'Source Sans 3';letter-spacing:.1em;text-transform:uppercase;font-style:normal;color:var(--tinta-3);margin-bottom:2px}
+.money{font:400 44px/1 'Newsreader';font-variant-numeric:lining-nums tabular-nums;border-bottom:1.5px solid var(--tinta);padding:4px 0 8px;display:flex;align-items:baseline;gap:6px}
+.money .cur{font:500 16px 'Source Sans 3';color:var(--tinta-2)}
+.money .dt{margin-left:auto;font:500 13px 'Source Sans 3';color:var(--tinta-2);border:1px solid var(--fio-forte);border-radius:16px;padding:4px 10px;align-self:center}
+.lbl{font:600 11px 'Source Sans 3';letter-spacing:.1em;text-transform:uppercase;color:var(--tinta-3);margin:14px 0 6px}
+.fld{border:1px solid var(--fio-forte);border-radius:4px;padding:9px 12px;font:500 17px 'Newsreader';background:var(--folha)}
+.hint{font:12.5px 'Source Sans 3';color:var(--tinta-3);margin-top:4px}
+.vgrid{display:grid;grid-template-columns:1fr 1fr;gap:6px}
+.vchip{border:1px solid var(--fio);border-radius:6px;padding:7px 10px;background:var(--folha);font:600 14px/1.2 'Source Sans 3'}
+.vchip small{display:block;font:400 12.5px 'Source Sans 3';color:var(--tinta-3);font-variant-numeric:tabular-nums}
+.vchip.on{border:2px solid var(--tinta);padding:6px 9px}
+.vchip.on small{color:var(--tinta-2)}
+.vchip.neg small{color:var(--lacre)}
+.chips{display:flex;gap:6px;flex-wrap:wrap;align-items:center}
+.chip{display:inline-flex;align-items:center;gap:6px;height:32px;padding:0 10px 0 12px;border-radius:16px;background:var(--tinta);color:var(--papel);font:500 14px 'Source Sans 3'}
+.chip.add{background:transparent;color:var(--tinta-3);border:1px dashed var(--fio-forte);font-weight:400}
+.more{display:flex;justify-content:space-between;align-items:center;margin-top:14px;padding:10px 0;border-top:1px solid var(--fio);border-bottom:1px solid var(--fio);font:600 14px 'Source Sans 3'}
+.more small{display:block;font:400 12.5px 'Source Sans 3';color:var(--tinta-3)}
+.prev{margin-top:12px;font:14px/1.4 'Source Sans 3';color:var(--tinta-2)}
+.prev b{color:var(--tinta)}
+.dock{position:absolute;left:0;right:0;bottom:0;padding:12px 20px;background:var(--papel);border-top:1px solid var(--fio);display:flex;gap:10px}
+
+/* detail + gastos */
+.math{margin:12px 0 4px;border:1px solid var(--fio);border-radius:6px;padding:8px 12px;background:var(--folha);font:14px/1.4 'Source Sans 3'}
+.math .r{display:flex;justify-content:space-between;padding:3px 0;font-variant-numeric:tabular-nums;color:var(--tinta-2)}
+.math .r.tot{border-top:1px solid var(--tinta);margin-top:4px;padding-top:6px;color:var(--tinta);font-weight:600}
+.lrow{display:flex;justify-content:space-between;align-items:baseline;gap:10px;padding:9px 0;border-bottom:1px solid var(--fio)}
+.lrow .n{font:500 16.5px/1.2 'Newsreader'}
+.lrow .w{display:block;font:12.5px 'Source Sans 3';color:var(--tinta-3);margin-top:2px}
+.lrow .w.anil{color:var(--anil);font-weight:600}
+.lrow .a{font:500 16px 'Newsreader';font-variant-numeric:lining-nums tabular-nums;white-space:nowrap}
+.lrow .a.res{color:var(--tinta-3)}
+.mbars{display:flex;gap:8px;align-items:flex-end;height:66px;margin-top:10px}
+.mbars div{flex:1;display:flex;flex-direction:column;align-items:center;gap:3px;font:11px 'Source Sans 3';color:var(--tinta-3)}
+.mbars i{display:block;width:100%;background:var(--tinta-2);border-radius:2px 2px 0 0}
+.mbars i.o{background:var(--lacre)}
+.mbars i.p{background:var(--fio-forte);opacity:.6}
+.seg{display:flex;border:1px solid var(--fio-forte);border-radius:6px;overflow:hidden;margin:14px 0 8px}
+.seg span{flex:1;text-align:center;padding:7px 0;font:600 13px 'Source Sans 3';color:var(--tinta-2)}
+.seg span.on{background:var(--tinta);color:var(--papel)}
+.rk{display:grid;grid-template-columns:86px 1fr auto;gap:8px;align-items:center;padding:5px 0;font:14px 'Source Sans 3'}
+.rk i{display:block;height:12px;border-radius:2px}
+.rk .a{font-variant-numeric:tabular-nums;text-align:right;color:var(--tinta-2)}
+.monthsel{display:flex;align-items:center;justify-content:space-between;font:500 17px 'Newsreader'}
+.monthsel span{color:var(--tinta-3);font:20px 'Source Sans 3'}
+.dayh{display:flex;align-items:center;gap:8px;margin:14px 0 2px;font:600 11px 'Source Sans 3';letter-spacing:.12em;text-transform:uppercase;color:var(--tinta-3)}
+.dayh::after{content:"";flex:1;height:1px;background:var(--fio)}
+.fold{display:flex;justify-content:space-between;align-items:center;padding:11px 0;border-top:1px solid var(--tinta);border-bottom:1px solid var(--fio);margin-top:14px;font:600 14px 'Source Sans 3'}
+.fold small{display:block;font:400 12.5px 'Source Sans 3';color:var(--tinta-3)}
+.set{padding:13px 0;border-bottom:1px solid var(--fio);display:flex;justify-content:space-between;align-items:center;gap:10px}
+.set b{font:500 17px 'Newsreader';font-weight:500}
+.set small{display:block;font:13px 'Source Sans 3';color:var(--tinta-3)}
+.set .v{font:14px 'Source Sans 3';color:var(--tinta-2);white-space:nowrap}
+.wall{max-width:380px;width:100%;border-radius:32px;padding:20px 16px;background:var(--parede);box-shadow:0 0 0 1px var(--fio)}
+.wg{background:var(--wg-fundo);border-radius:22px;padding:14px 16px;box-shadow:var(--sombra);color:var(--tinta)}
+.wg .h{font:600 10.5px 'Source Sans 3';letter-spacing:.12em;text-transform:uppercase;color:var(--tinta-3)}
+.wg .big{font:400 34px/1.1 'Newsreader';font-variant-numeric:lining-nums tabular-nums}
+.wg .r{display:flex;justify-content:space-between;font:14px 'Source Sans 3';padding:3px 0;font-variant-numeric:tabular-nums}
+
+/* leitura */
+.say{font:400 21px/1.25 'Newsreader';letter-spacing:-.005em;margin:4px 0 8px;font-variant-numeric:lining-nums tabular-nums}
+.say b{font-weight:500}
+.say .sub{display:block;font:14.5px/1.4 'Source Sans 3';color:var(--tinta-2);margin-top:4px;letter-spacing:0}
+.say.s{font-size:18px}
+.mk{display:flex;justify-content:space-between;gap:10px;padding:5px 0;border-bottom:1px solid var(--fio);font:14.5px 'Source Sans 3'}
+.mk .c{color:var(--tinta-3)}
+.mk .a{font-variant-numeric:tabular-nums;color:var(--tinta-2)}
+.see{font:600 13.5px 'Source Sans 3';color:var(--anil);padding:7px 0 0}
+.drill{display:flex;justify-content:space-between;align-items:center;gap:8px;padding:7px 0;border-bottom:1px solid var(--fio)}
+.drill.first{border-top:1px solid var(--tinta);margin-top:10px}
+.drill span{flex:1}
+.drill b{display:block;font:600 14px/1.3 'Source Sans 3'}
+.drill i{display:block;font:italic 16px/1.3 'Newsreader';color:var(--tinta-2)}
+.drill i.lacre{color:var(--lacre)}
+.pick{font:500 13px 'Source Sans 3';color:var(--tinta-2);border:1px solid var(--fio-forte);border-radius:16px;padding:4px 10px;margin-right:8px;white-space:nowrap}
+.chart{display:block;width:100%;height:auto;margin:6px 0 2px;overflow:visible}
+.legend{list-style:none;margin:6px 0 0;padding:8px 0 0;border-top:1px solid var(--fio);font:13px/1.4 'Source Sans 3';color:var(--tinta-2)}
+.legend li{display:flex;gap:8px;align-items:center;padding:2px 0}
+.legend svg{flex:none;width:24px;height:12px}
+.legend .sw{flex:none;width:12px;height:12px;border-radius:2px}
+.steps{display:flex;gap:2px}
+.steps i{width:14px;height:14px;display:block}
+.leit .rk{padding:3px 0}
+.leit .seg{margin:10px 0 6px}
+/* busca */
+.sbox{display:flex;align-items:center;gap:8px;min-height:44px;padding:0 12px;border:1px solid var(--fio-forte);border-radius:6px;background:var(--folha);font:15px 'Source Sans 3';color:var(--tinta-3)}
+.sbox .ico{width:18px;height:18px;flex:none}
+.sbox.on{border:2px solid var(--tinta);padding:0 11px;color:var(--tinta)}
+.sbox.on .q{font-weight:600}
+.sbox.on .q::after{content:"";display:inline-block;width:1.5px;height:17px;background:var(--argila);vertical-align:-3px;margin-left:1px}
+.sbox .x{margin-left:auto;color:var(--tinta-3)}
+.fcs{display:flex;gap:6px;margin:10px 0 4px;overflow:hidden;white-space:nowrap}
+.fc{flex:none;display:inline-flex;align-items:center;height:30px;padding:0 11px;border-radius:15px;border:1px solid var(--fio-forte);font:600 13px 'Source Sans 3';color:var(--tinta-2)}
+.fc.on{background:var(--tinta);border-color:var(--tinta);color:var(--papel)}
+.fc small{font-weight:400;margin-left:4px;opacity:.8}
+.typ{font:600 10.5px 'Source Sans 3';letter-spacing:.1em;text-transform:uppercase;color:var(--tinta-3)}
+.kpis{display:grid;grid-template-columns:1fr 1fr;gap:0 14px;margin-top:6px}
+.kpi{padding:7px 0 6px;border-top:1px solid var(--fio)}
+.kpi .typ{display:block}
+.kpi b{display:block;font:500 20px/1.15 'Newsreader';font-variant-numeric:lining-nums tabular-nums}
+.kpi small{display:block;font:12.5px/1.3 'Source Sans 3';color:var(--tinta-3)}
+.mbars.s{height:54px;margin-top:6px}
+.mbars.s div{font-size:10.5px}
+.mbars.s i.lim{background:var(--lacre)}
+.stack{display:flex;height:12px;border-radius:2px;overflow:hidden;margin:8px 0 4px}
+.stack i{display:block;height:100%}
+.ent .secl{margin-top:12px}
+.ent .mk{padding:4px 0}
+.ent .say{font-size:19px}
+.ent .seg{margin:8px 0 4px}
+.ent .seg span{padding:5px 0}
+.alts .card h3{margin-top:0}
+/* ===== DIREÇÃO 2: história ===== */
+.spill{display:inline-flex;align-items:center;gap:6px;height:36px;padding:0 14px 0 10px;margin-right:10px;border:1px solid var(--fio-forte);border-radius:18px;font:500 14px 'Source Sans 3';color:var(--tinta-2)}
+.spill .ico{width:17px;height:17px}
+.tb .sbox{flex:1;margin-right:12px;min-height:40px}
+.sbox .pht{color:var(--tinta-3);font-weight:400;margin-left:4px}
+.out{display:flex;align-items:center;gap:6px;font:600 13px/1.3 'Source Sans 3';color:var(--anil);margin-top:3px}
+.out .dot{width:6px;height:6px;background:var(--argila)}
+.story{margin-top:6px}
+.door{display:flex;align-items:center;gap:8px;padding:8px 0;border-bottom:1px solid var(--fio);color:var(--tinta);text-decoration:none}
+.door.first{border-top:1px solid var(--tinta)}
+.door .tx{flex:1;font:400 18px/1.27 'Newsreader';letter-spacing:-.003em;font-variant-numeric:lining-nums tabular-nums}
+.door .tx b{font-weight:600}
+.door .tx small{display:block;font:13.5px/1.35 'Source Sans 3';color:var(--tinta-2);margin-top:2px;letter-spacing:0}
+.door>.ico{width:18px;height:18px;color:var(--tinta-3);flex:none}
+.lacre{color:var(--lacre)}.ocre{color:var(--ocre)}.argila{color:var(--argila)}
+.door.mute .tx{font-style:italic;color:var(--tinta-2);font-size:16px}
+.door.rel .tx,.door.res .tx{font-size:16px;line-height:1.3}
+.door.res{padding:7px 0}
+.minibar{display:flex;height:6px;border-radius:3px;overflow:hidden;margin-top:6px;gap:1.5px}
+.minibar i{display:block;height:100%}
+.idx{margin-top:10px;font:13.5px/1.55 'Source Sans 3';color:var(--tinta-3)}
+.idx a{color:var(--anil);font-weight:600;text-decoration:none}
+.facts{margin-top:6px;border-top:1px solid var(--tinta)}
+.fact{display:flex;align-items:center;gap:8px;padding:6px 0;border-bottom:1px solid var(--fio);font:14.5px/1.36 'Source Sans 3';color:var(--tinta-2)}
+.fact span.t{flex:1}
+.fact b{color:var(--tinta);font-weight:600}
+.fact>.ico{width:16px;height:16px;color:var(--tinta-3);flex:none}
+.fact .sw{flex:none;width:10px;height:10px;border-radius:2px}
+.fact.note span.t{font:italic 15px/1.35 'Newsreader';color:var(--tinta-2)}
+.ent .say{font-size:19px;margin:6px 0 4px}
+.ent .secl{margin-top:12px}
+.ent .seg{margin:6px 0 4px}
+.ent .seg span{padding:5px 0}
+.grp{font:400 17px/1.3 'Newsreader';margin:10px 0 2px}
+.grp b{font-weight:600}
+.fcs{flex-wrap:wrap;row-gap:6px}
+.fcs .fc{padding:0 10px}
+.tight .lrow{padding:7px 0;align-items:center}
+.hl{background:var(--ocre-fundo);border-radius:2px;padding:0 1px}
+.lrow .n.s{font-size:15.5px}
+/* doc */
+.doors{display:grid;grid-template-columns:1fr;gap:0;margin:14px 0 8px;border-top:2px solid var(--tinta)}
+.doors .r{display:grid;grid-template-columns:minmax(0,1.3fr) 28px minmax(0,1fr);gap:8px;align-items:center;padding:10px 0;border-bottom:1px solid var(--fio)}
+.doors .s{font:italic 17px/1.35 'Newsreader'}
+.doors .ar{font:20px 'Newsreader';color:var(--argila);text-align:center}
+.doors .d{font:600 14px/1.3 'Source Sans 3'}
+.doors .d small{display:block;font-weight:400;color:var(--tinta-3);font-size:13px}
+.tpl{font:italic 16px/1.4 'Newsreader';color:var(--tinta)}
+.tpl .v{font-style:normal;font:600 13.5px 'Source Sans 3';color:var(--argila)}
+td.rule{font-size:14px;color:var(--tinta-2)}
+.rec-b{display:inline-block;font:600 11px/1.2 'Source Sans 3';letter-spacing:.06em;text-transform:uppercase;padding:3px 7px;border-radius:3px;background:var(--musgo-fundo);color:var(--musgo);margin-right:6px}
+ol.dec{padding-left:22px;max-width:48em}
+ol.dec li{margin-bottom:14px}
+ol.dec li b{font-weight:600}
+</style>
+</head>
+<body>
+<button id="tema" type="button" aria-label="Alternar tema claro e escuro">Tema</button>
+<div class="wrap">
+
+<header class="cover">
+  <div class="kick">Análise do Margem · Direção 2</div>
+  <h1>O mês em frases.</h1>
+  <p class="lede">A Análise abre contando o mês em <em>seis ou sete frases curtas</em>, sempre na mesma ordem. Cada frase é uma porta: "Mercado está gastando rápido ›" abre o ritmo do Mercado; "O maior gasto foi no Pão de Açúcar ›" abre o Pão de Açúcar. Todas as telas que se abrem dali seguem uma gramática só: <em>uma frase, um gráfico, três fatos, o que anda junto</em>. A busca fica recolhida no topo e responde também em frases.</p>
+</header>
+
+<!-- ================= 1 ================= -->
+<section id="confusao">
+  <div class="kick">1 · Diagnóstico</div>
+  <h2>O que confunde na Análise de <em>redesign-ab</em></h2>
+  <p class="muted">Olhando só a aba Análise e a busca da alternativa 1, em novembro, dia 4.</p>
+  <div class="grid2">
+    <div class="card"><span class="n">1</span><h3>Mostra antes de dizer</h3>
+      <p>Antes do primeiro toque, a tela tem uns vinte números: o total, outubro, cinco barras com valor, três marcadores com contagem e valor, mais os das linhas de baixo. A frase "Mercado e Delivery levam 84%" já é a conclusão, e as barras logo abaixo repetem a mesma coisa. <b>Quem não sabe o que procura lê tudo para achar a frase.</b></p></div>
+    <div class="card"><span class="n">2</span><h3>As linhas têm nome de ferramenta</h3>
+      <p>Em negrito vem o nome do gráfico ("Ritmo do mês", "Mês a mês", "Dias que mais pesam"), e a conclusão fica embaixo, menor. Em "Ritmo do mês" a conclusão é "Delivery passou R$ 12,00 do limite", que é um fato do limite e não do ritmo. <b>A pessoa precisa saber o que é cada gráfico antes de saber se ele importa.</b></p></div>
+    <div class="card"><span class="n">3</span><h3>Uma verba escolhida em silêncio</h3>
+      <p>Duas das três linhas falam de Delivery porque é a verba "mais em risco". A tela não diz isso. Trocar a verba dentro de um gráfico muda o outro também, e ninguém vê essa ligação. <b>Fica a pergunta "por que Delivery?" sem resposta à vista.</b></p></div>
+    <div class="card"><span class="n">4</span><h3>Dois períodos e quatro jeitos de mostrar</h3>
+      <p>A busca respeita o mês do topo, mas a análise da coisa abre em 6 meses. Quem toca em "feira · R$ 98,00" cai numa tela que diz R$ 1.096,00, e o 98 não aparece nela. Os quatro quadrinhos mudam de sentido conforme o tipo (Vezes, Média, Maior, Dia; ou Viraram gasto, Descartados, A confirmar, Das fontes), e "Parecidos" quer dizer uma coisa para marcador e outra para gasto. <b>Cada tela pede uma leitura nova.</b></p></div>
+    <div class="card"><span class="n">5</span><h3>No dia 4, fala como se fosse dia 30</h3>
+      <p>A projeção diz que Delivery "fecha em R$ 1.965" com quatro dias de dados. "Nenhum dia da semana pesa ainda" ocupa uma linha inteira para não dizer nada. O ranking começa com "mercado · 1", um marcador com um gasto só. <b>Pouco dado aparece com a mesma certeza de muito dado.</b></p></div>
+  </div>
+</section>
+
+<!-- ================= 2 ================= -->
+<section id="ia">
+  <div class="kick">2 · Arquitetura de informação</div>
+  <h2>Uma história em cima, <em>portas</em> embaixo</h2>
+  <ul class="plain">
+    <li><b>Topo</b>: título "Análise" com a busca recolhida à direita ("⌕ Buscar"). Um toque abre a busca na tela inteira.</li>
+    <li><b>Seletor de mês</b>: vale para a história e para os gráficos. Logo abaixo, só quando houver avisos a confirmar: "Fora destas contas: 5 avisos a confirmar". Assim os números ficam honestos sem precisar de explicação.</li>
+    <li><b>A história</b>: de 3 a 7 frases, numa ordem fixa (quanto, para onde, o que passou, o que corre, o que se repete, o que destoa, como costuma ser). Uma frase só aparece quando tem algo a dizer, e nenhuma serve para dizer que não há nada. Cada frase leva a um gráfico ou à análise de uma coisa.</li>
+    <li><b>Todos os gráficos</b>: uma linha de links no pé. É por ela que se chega a um gráfico sem frase naquele mês (por exemplo Dias que mais pesam, no dia 4).</li>
+    <li><b>Telas de um toque</b>: os quatro gráficos (Para onde foi, que agora inclui o ranking de marcadores e lugares; Ritmo do mês; Mês a mês; Dias que mais pesam) e as quatro análises (verba, marcador, lugar, avisos de um app). Todas usam a mesma gramática: <i>frase, gráfico, três fatos, junto com</i>.</li>
+  </ul>
+
+  <h3>As portas da história de novembro, dia 4</h3>
+  <div class="doors">
+    <div class="r"><span class="s">Em 4 dias, R$ 804,10 gastos.</span><span class="ar">→</span><span class="d">Para onde foi<small>gráfico · barras por verba e ranking</small></span></div>
+    <div class="r"><span class="s">Mercado e Delivery levam 84%.</span><span class="ar">→</span><span class="d">Para onde foi<small>a mesma tela; a frase 1 e a 2 são um par</small></span></div>
+    <div class="r"><span class="s">Delivery já passou R$ 12,00 do limite.</span><span class="ar">→</span><span class="d">Ritmo do mês · Delivery<small>gráfico, com a verba já escolhida</small></span></div>
+    <div class="r"><span class="s">Mercado está gastando rápido.</span><span class="ar">→</span><span class="d">Ritmo do mês · Mercado<small>gráfico, com a verba já escolhida</small></span></div>
+    <div class="r"><span class="s">padaria apareceu 5 vezes em 4 dias.</span><span class="ar">→</span><span class="d">Marcador padaria<small>análise</small></span></div>
+    <div class="r"><span class="s">O maior gasto foi no Pão de Açúcar.</span><span class="ar">→</span><span class="d">Lugar Pão de Açúcar<small>análise, com este gasto em destaque</small></span></div>
+    <div class="r"><span class="s">Delivery passou do limite em 3 dos últimos 6 meses.</span><span class="ar">→</span><span class="d">Mês a mês · Delivery<small>gráfico</small></span></div>
+    <div class="r"><span class="s">Fora destas contas: 5 avisos a confirmar.</span><span class="ar">→</span><span class="d">Aba A confirmar<small>sai da Análise</small></span></div>
+  </div>
+  <p class="small muted">A frase escolhe a verba, e a verba vai junto para o gráfico. Isso resolve o "por que Delivery?" (diagnóstico 3): o gráfico abre na verba que a frase citou. Pela linha "Todos os gráficos", o padrão continua sendo a verba mais em risco.</p>
+
+  <h3>Mapa dos conceitos</h3>
+  <div class="ia">
+    <div class="col"><h4>Sempre à vista</h4><ul>
+      <li>Mês do topo<small>"Novembro, até dia 4"</small></li>
+      <li>Total do mês e comparação com o mês anterior no mesmo dia<small>frase 1</small></li>
+      <li>Quem leva mais<small>frase 2 e uma barra fina, sem números</small></li>
+      <li>O que passou do limite e o que está gastando rápido<small>as mesmas palavras do Início</small></li>
+      <li>Um marcador que se repete, o maior gasto, o histórico de uma verba<small>só quando cumprem a regra</small></li>
+      <li>Avisos a confirmar fora das contas</li>
+      <li>Busca recolhida</li>
+    </ul></div>
+    <div class="col c2"><h4>A um toque</h4><ul>
+      <li>Para onde foi<small>barras por verba, com o ranking de marcadores e lugares</small></li>
+      <li>Ritmo do mês<small>"esperado" e "se continuar assim" ficam só aqui</small></li>
+      <li>Mês a mês<small>6 meses contra o limite</small></li>
+      <li>Dias que mais pesam<small>calendário de calor</small></li>
+      <li>Análise de verba, marcador, lugar e avisos de um app</li>
+      <li>Resultados da busca, agrupados e em frases</li>
+    </ul></div>
+    <div class="col c3"><h4>Escondido (dois toques ou mais)</h4><ul>
+      <li>Escolher outra verba no gráfico<small>"Mercado ▾"</small></li>
+      <li>Ver todos os marcadores ou lugares<small>"Ver todos (8)"</small></li>
+      <li>Período Tudo<small>o padrão é 6 meses</small></li>
+      <li>Buscar pelo valor<small>"238,40" acha o gasto</small></li>
+      <li>Listas completas por tipo<small>na busca vazia: "6 verbas ›"</small></li>
+    </ul></div>
+    <div class="col c4"><h4>Removido</h4><ul>
+      <li>Barras e ranking na primeira camada<small>viram a frase 2, uma barra fina e uma porta</small></li>
+      <li>Linhas com o nome do gráfico em negrito<small>a conclusão passa a ser o texto principal</small></li>
+      <li>Frases que dizem que não há nada<small>"Nenhum dia pesa ainda" sai da história</small></li>
+      <li>Os quatro quadrinhos de número<small>viram três fatos escritos, iguais para todos os tipos</small></li>
+      <li>Legendas em lista nos gráficos<small>o rótulo fica no próprio traço</small></li>
+      <li>Projeção na história antes do dia 8</li>
+      <li>Chip "Gastos" da busca<small>vira "Lugares"; o gasto achado abre o lugar dele</small></li>
+    </ul></div>
+  </div>
+</section>
+
+<!-- ================= 3 ================= -->
+<section id="telas">
+  <div class="kick">3 · Telas</div>
+  <h2>Os mocks, em <em>novembro, dia 4</em></h2>
+  <p class="muted">São os mesmos dados de redesign-ab: R$ 804,10 gastos até o dia 4 (Mercado 412,30, Delivery 262,00, Lazer 48,00, Transporte 41,80, Casa 40,00); Delivery R$ 12,00 além do limite de R$ 250; 5 avisos a confirmar. Use o botão Tema para ver tudo no escuro; as duas primeiras telas já vêm uma em cada tema.</p>
+
+  <h3>A história do mês</h3>
+  <div class="shots">
+  <figure class="shot">
+    <div class="ph"><div class="scr t-light">
+      <div class="sbar"><span>9:41</span><span>●●● ▮</span></div>
+      <div class="tb"><span class="t">Análise</span><span class="spill"><svg class="ico" viewBox="0 0 24 24"><circle cx="11" cy="11" r="6"/><path d="m20 20-4.5-4.5"/></svg>Buscar</span></div>
+      <div class="bd">
+        <div class="monthsel"><span>‹</span>Novembro, até dia 4<span style="opacity:.3">›</span></div>
+        <div class="out"><span class="dot"></span>Fora destas contas: 5 avisos a confirmar ›</div>
+        <div class="over" style="margin-top:10px">O mês até aqui</div>
+        <div class="story">
+          <a class="door first"><span class="tx">Em 4 dias, <b>R$ 804,10</b> gastos.<small>Em outubro, até o dia 4, eram R$ 690,40.</small></span><svg class="ico" viewBox="0 0 24 24"><path d="m9 6 6 6-6 6"/></svg></a>
+          <a class="door"><span class="tx"><b>Mercado</b> e <b>Delivery</b> levam 84%.<span class="minibar"><i style="width:51.3%;background:var(--c2)"></i><i style="width:32.6%;background:var(--c6)"></i><i style="width:6%;background:var(--c4)"></i><i style="width:5.2%;background:var(--c5)"></i><i style="width:4.9%;background:var(--c1)"></i></span></span><svg class="ico" viewBox="0 0 24 24"><path d="m9 6 6 6-6 6"/></svg></a>
+          <a class="door"><span class="tx"><b>Delivery</b> já <span class="lacre">passou R$ 12,00</span> do limite.</span><svg class="ico" viewBox="0 0 24 24"><path d="m9 6 6 6-6 6"/></svg></a>
+          <a class="door"><span class="tx"><b>Mercado</b> está <span class="ocre">gastando rápido</span>: um terço do limite em 4 dias.</span><svg class="ico" viewBox="0 0 24 24"><path d="m9 6 6 6-6 6"/></svg></a>
+          <a class="door"><span class="tx"><b>padaria</b> apareceu 5 vezes em 4 dias.</span><svg class="ico" viewBox="0 0 24 24"><path d="m9 6 6 6-6 6"/></svg></a>
+          <a class="door"><span class="tx">O maior gasto foi no <b>Pão de Açúcar</b>: R$ 238,40.</span><svg class="ico" viewBox="0 0 24 24"><path d="m9 6 6 6-6 6"/></svg></a>
+          <a class="door"><span class="tx"><b>Delivery</b> passou do limite em 3 dos últimos 6 meses.</span><svg class="ico" viewBox="0 0 24 24"><path d="m9 6 6 6-6 6"/></svg></a>
+        </div>
+        <div class="idx">Todos os gráficos: <a>Para onde foi</a> · <a>Ritmo do mês</a> · <a>Mês a mês</a> · <a>Dias que mais pesam</a></div>
+      </div>
+      <nav class="navb"><a>Início</a><a>A confirmar<span class="bdg">5</span></a><a>Gastos</a><a class="on">Análise</a></nav>
+      <div class="gbar"></div>
+    </div></div>
+    <figcaption><b>A história · claro</b>Sete frases na ordem fixa: quanto, para onde, o que passou, o que está rápido, o que se repete, o que destoa, como costuma ser. Cada uma leva a uma tela pela seta. A única imagem é a barra fina da frase 2, sem números. O alerta usa as palavras e as cores do Início (lacre para "passou", ocre para "gastando rápido"). A linha argila abaixo do mês avisa que 5 avisos ainda estão fora das contas. "Dias que mais pesam" não tem frase no dia 4, então fica só em "Todos os gráficos". TalkBack lê cada frase como um botão: "Delivery já passou R$ 12,00 do limite. Abre o ritmo do mês."</figcaption>
+  </figure>
+  <figure class="shot">
+    <div class="ph"><div class="scr t-dark">
+      <div class="sbar"><span>9:41</span><span>●●● ▮</span></div>
+      <div class="tb"><span class="t">Análise</span><span class="spill"><svg class="ico" viewBox="0 0 24 24"><circle cx="11" cy="11" r="6"/><path d="m20 20-4.5-4.5"/></svg>Buscar</span></div>
+      <div class="bd">
+        <div class="monthsel"><span>‹</span>Novembro, até dia 4<span style="opacity:.3">›</span></div>
+        <div class="out"><span class="dot"></span>Fora destas contas: 5 avisos a confirmar ›</div>
+        <div class="over" style="margin-top:10px">O mês até aqui</div>
+        <div class="story">
+          <a class="door first"><span class="tx">Em 4 dias, <b>R$ 804,10</b> gastos.<small>Em outubro, até o dia 4, eram R$ 690,40.</small></span><svg class="ico" viewBox="0 0 24 24"><path d="m9 6 6 6-6 6"/></svg></a>
+          <a class="door"><span class="tx"><b>Mercado</b> e <b>Delivery</b> levam 84%.<span class="minibar"><i style="width:51.3%;background:var(--c2)"></i><i style="width:32.6%;background:var(--c6)"></i><i style="width:6%;background:var(--c4)"></i><i style="width:5.2%;background:var(--c5)"></i><i style="width:4.9%;background:var(--c1)"></i></span></span><svg class="ico" viewBox="0 0 24 24"><path d="m9 6 6 6-6 6"/></svg></a>
+          <a class="door"><span class="tx"><b>Delivery</b> já <span class="lacre">passou R$ 12,00</span> do limite.</span><svg class="ico" viewBox="0 0 24 24"><path d="m9 6 6 6-6 6"/></svg></a>
+          <a class="door"><span class="tx"><b>Mercado</b> está <span class="ocre">gastando rápido</span>: um terço do limite em 4 dias.</span><svg class="ico" viewBox="0 0 24 24"><path d="m9 6 6 6-6 6"/></svg></a>
+          <a class="door"><span class="tx"><b>padaria</b> apareceu 5 vezes em 4 dias.</span><svg class="ico" viewBox="0 0 24 24"><path d="m9 6 6 6-6 6"/></svg></a>
+          <a class="door"><span class="tx">O maior gasto foi no <b>Pão de Açúcar</b>: R$ 238,40.</span><svg class="ico" viewBox="0 0 24 24"><path d="m9 6 6 6-6 6"/></svg></a>
+          <a class="door"><span class="tx"><b>Delivery</b> passou do limite em 3 dos últimos 6 meses.</span><svg class="ico" viewBox="0 0 24 24"><path d="m9 6 6 6-6 6"/></svg></a>
+        </div>
+        <div class="idx">Todos os gráficos: <a>Para onde foi</a> · <a>Ritmo do mês</a> · <a>Mês a mês</a> · <a>Dias que mais pesam</a></div>
+      </div>
+      <nav class="navb"><a>Início</a><a>A confirmar<span class="bdg">5</span></a><a>Gastos</a><a class="on">Análise</a></nav>
+      <div class="gbar"></div>
+    </div></div>
+    <figcaption><b>A história · escuro</b>Os mesmos tokens de redesign-ab no escuro. Frase e seta continuam em tinta, e a cor fica para estado (lacre, ocre), para o aviso pendente (argila) e para a barra das verbas (c1–c6). Fora isso, a página é papel e tinta.</figcaption>
+  </figure>
+  <figure class="shot">
+    <div class="ph"><div class="scr">
+      <div class="sbar"><span>21:40</span><span>●●● ▮</span></div>
+      <div class="tb"><span class="t">Análise</span><span class="spill"><svg class="ico" viewBox="0 0 24 24"><circle cx="11" cy="11" r="6"/><path d="m20 20-4.5-4.5"/></svg>Buscar</span></div>
+      <div class="bd">
+        <div class="monthsel"><span>‹</span>Novembro, até dia 1<span style="opacity:.3">›</span></div>
+        <div class="out"><span class="dot"></span>Fora destas contas: 2 avisos a confirmar ›</div>
+        <div class="over" style="margin-top:10px">O mês até aqui</div>
+        <div class="story">
+          <a class="door first"><span class="tx">No primeiro dia, <b>R$ 150,60</b> em 3 gastos.<small>Em outubro, no dia 1, foram R$ 97,30.</small></span><svg class="ico" viewBox="0 0 24 24"><path d="m9 6 6 6-6 6"/></svg></a>
+          <a class="door"><span class="tx"><b>Delivery</b> leva mais da metade: um iFood de R$ 89,20.<span class="minibar"><i style="width:59.2%;background:var(--c6)"></i><i style="width:40.8%;background:var(--c2)"></i></span></span><svg class="ico" viewBox="0 0 24 24"><path d="m9 6 6 6-6 6"/></svg></a>
+          <a class="door"><span class="tx"><b>Delivery</b> está <span class="ocre">gastando rápido</span>: mais de um terço do limite no primeiro dia.</span><svg class="ico" viewBox="0 0 24 24"><path d="m9 6 6 6-6 6"/></svg></a>
+          <div class="door mute"><span class="tx">Com um dia só, ainda não dá para falar de ritmo nem de que dia pesa. A história cresce com o mês.</span></div>
+          <a class="door"><span class="tx"><b>Delivery</b> passou do limite em 2 dos últimos 6 meses.</span><svg class="ico" viewBox="0 0 24 24"><path d="m9 6 6 6-6 6"/></svg></a>
+          <a class="door"><span class="tx"><b>Outubro</b> fechou em R$ 4.611,80, com Delivery dentro do limite.</span><svg class="ico" viewBox="0 0 24 24"><path d="m9 6 6 6-6 6"/></svg></a>
+        </div>
+        <div class="idx">Todos os gráficos: <a>Para onde foi</a> · <a>Ritmo do mês</a> · <a>Mês a mês</a> · <a>Dias que mais pesam</a></div>
+      </div>
+      <nav class="navb"><a>Início</a><a>A confirmar<span class="bdg">5</span></a><a>Gastos</a><a class="on">Análise</a></nav>
+      <div class="gbar"></div>
+    </div></div>
+    <figcaption><b>A história no começo do mês</b>Dia 1, à noite, três gastos. As frases dizem só o que já é fato. "Gastando rápido" aparece porque o Início também diz isso, e as duas telas não podem discordar. No lugar do ritmo, da projeção e do dia que pesa entra <i>uma</i> frase de ressalva, sem porta. Com pouco mês, a história usa o passado: o histórico da verba e "Outubro fechou em…", que abre outubro em frases. A frase do mês anterior só aparece na primeira semana.</figcaption>
+  </figure>
+  </div>
+
+  <h3>Busca: recolhida, aberta, filtrada, vazia</h3>
+  <div class="shots">
+  <figure class="shot">
+    <div class="ph"><div class="scr">
+      <div class="sbar"><span>9:41</span><span>●●● ▮</span></div>
+      <div class="tb"><span class="back"><svg class="ico" viewBox="0 0 24 24"><path d="m15 6-6 6 6 6"/></svg></span><div class="sbox on"><svg class="ico" viewBox="0 0 24 24"><circle cx="11" cy="11" r="6"/><path d="m20 20-4.5-4.5"/></svg><span class="q"></span><span class="pht">verba, marcador, lugar ou aviso</span></div></div>
+      <div class="bd">
+        <div class="hint" style="margin-top:2px">Busca em todos os meses. As frases falam de novembro.</div>
+        <div class="secl">Comece por um destes</div>
+        <a class="door res"><span class="tx"><b>6 verbas</b>; Mercado leva mais este mês.</span><svg class="ico" viewBox="0 0 24 24"><path d="m9 6 6 6-6 6"/></svg></a>
+        <a class="door res"><span class="tx"><b>8 marcadores</b>; padaria é o que mais se repete.</span><svg class="ico" viewBox="0 0 24 24"><path d="m9 6 6 6-6 6"/></svg></a>
+        <a class="door res"><span class="tx"><b>8 lugares</b>; o Pão de Açúcar leva mais.</span><svg class="ico" viewBox="0 0 24 24"><path d="m9 6 6 6-6 6"/></svg></a>
+        <a class="door res"><span class="tx"><b>24 avisos</b> chegaram; 5 esperam você.</span><svg class="ico" viewBox="0 0 24 24"><path d="m9 6 6 6-6 6"/></svg></a>
+        <div class="secl">Buscados há pouco</div>
+        <a class="door res"><span class="tx"><b>feira</b>, um marcador</span><svg class="ico" viewBox="0 0 24 24"><path d="m9 6 6 6-6 6"/></svg></a>
+        <a class="door res"><span class="tx"><b>Uber</b>, um lugar</span><svg class="ico" viewBox="0 0 24 24"><path d="m9 6 6 6-6 6"/></svg></a>
+      </div>
+      <nav class="navb"><a>Início</a><a>A confirmar<span class="bdg">5</span></a><a>Gastos</a><a class="on">Análise</a></nav>
+      <div class="gbar"></div>
+    </div></div>
+    <figcaption><b>Busca aberta, ainda vazia</b>O toque em "⌕ Buscar" abre a busca na tela inteira, com o teclado (fora do mock). Sem nada digitado, ela mostra as quatro listas da alternativa 3 escritas como frases, e as últimas buscas. Cada lista abre tudo daquele tipo, do que mais soma para o que menos soma.</figcaption>
+  </figure>
+
+  <figure class="shot">
+    <div class="ph"><div class="scr">
+      <div class="sbar"><span>9:41</span><span>●●● ▮</span></div>
+      <div class="tb"><span class="back"><svg class="ico" viewBox="0 0 24 24"><path d="m15 6-6 6 6 6"/></svg></span><div class="sbox on"><svg class="ico" viewBox="0 0 24 24"><circle cx="11" cy="11" r="6"/><path d="m20 20-4.5-4.5"/></svg><span class="q">mercado</span><span class="x">✕</span></div></div>
+      <div class="bd">
+        <div class="fcs" style="margin-top:2px"><span class="fc on">Tudo<small>4</small></span><span class="fc">Verbas<small>1</small></span><span class="fc">Marcadores<small>1</small></span><span class="fc">Lugares<small>1</small></span><span class="fc">Avisos<small>1</small></span></div>
+        <div class="hint">Em todos os meses. As frases falam de novembro.</div>
+        <div class="secl">Verbas</div>
+        <a class="door res"><span class="tx"><b><span class="hl">Mercado</span></b> levou R$ 412,30 em 8 gastos este mês, <span class="ocre">gastando rápido</span>.</span><svg class="ico" viewBox="0 0 24 24"><path d="m9 6 6 6-6 6"/></svg></a>
+        <div class="secl">Marcadores</div>
+        <a class="door res"><span class="tx"><b><span class="hl">mercado</span></b> marcou 1 gasto este mês: Pão de Açúcar, R$ 238,40.</span><svg class="ico" viewBox="0 0 24 24"><path d="m9 6 6 6-6 6"/></svg></a>
+        <div class="secl">Lugares</div>
+        <a class="door res"><span class="tx"><b><span class="hl">Mercado</span>zinho São Jorge</b>: nada este mês. Foram 4 vezes, a última em 23 ago.</span><svg class="ico" viewBox="0 0 24 24"><path d="m9 6 6 6-6 6"/></svg></a>
+        <div class="secl">Avisos</div>
+        <a class="door res"><span class="tx"><b>"Oferta <span class="hl">MERCADO</span> LIVRE…"</b> chegou do Cartão Ipê dia 2 e foi descartado: não parece compra.</span><svg class="ico" viewBox="0 0 24 24"><path d="m9 6 6 6-6 6"/></svg></a>
+      </div>
+      <nav class="navb"><a>Início</a><a>A confirmar<span class="bdg">5</span></a><a>Gastos</a><a class="on">Análise</a></nav>
+      <div class="gbar"></div>
+    </div></div>
+    <figcaption><b>Busca com resultados agrupados</b>A alternativa 1 escolhida pelo dono, com cada resultado escrito como frase: o nome, o que aconteceu este mês e, quando não houve nada, a última vez. A ordem é sempre Verbas, Marcadores, Lugares, Avisos. O trecho que bateu ganha um fundo ocre leve. A busca olha todos os meses, para "Mercadinho São Jorge" aparecer mesmo sem gasto em novembro.</figcaption>
+  </figure>
+
+  <figure class="shot">
+    <div class="ph"><div class="scr">
+      <div class="sbar"><span>9:41</span><span>●●● ▮</span></div>
+      <div class="tb"><span class="back"><svg class="ico" viewBox="0 0 24 24"><path d="m15 6-6 6 6 6"/></svg></span><div class="sbox on"><svg class="ico" viewBox="0 0 24 24"><circle cx="11" cy="11" r="6"/><path d="m20 20-4.5-4.5"/></svg><span class="q">padaria</span><span class="x">✕</span></div></div>
+      <div class="bd tight">
+        <div class="fcs" style="margin-top:2px"><span class="fc">Tudo<small>41</small></span><span class="fc">Marcadores<small>1</small></span><span class="fc">Lugares<small>1</small></span><span class="fc on">Avisos<small>39</small></span></div>
+        <div class="grp">39 avisos com "padaria", todos do Cartão Ipê. <b>38 viraram gasto</b>; 1 espera você.</div>
+        <div class="dayh">Novembro · 6</div>
+        <div class="lrow"><span><span class="n s">R$ 14,50 <span class="argila">espera você</span></span><span class="w">Padaria do Zé · hoje, 08:12</span></span><svg class="ico" viewBox="0 0 24 24"><path d="m9 6 6 6-6 6"/></svg></div>
+        <div class="lrow"><span><span class="n s">R$ 15,40 virou gasto em Mercado</span><span class="w">Padaria do Zé · 3 nov, 17:50</span></span><svg class="ico" viewBox="0 0 24 24"><path d="m9 6 6 6-6 6"/></svg></div>
+        <div class="lrow"><span><span class="n s">R$ 15,20 virou gasto em Mercado</span><span class="w">Padaria do Zé · 3 nov, 07:58</span></span><svg class="ico" viewBox="0 0 24 24"><path d="m9 6 6 6-6 6"/></svg></div>
+        <div class="lrow"><span><span class="n s">R$ 15,10 virou gasto em Mercado</span><span class="w">Padaria do Zé · 2 nov, 18:21</span></span><svg class="ico" viewBox="0 0 24 24"><path d="m9 6 6 6-6 6"/></svg></div>
+        <div class="lrow"><span><span class="n s">R$ 14,80 virou gasto em Mercado</span><span class="w">Padaria do Zé · 2 nov, 08:04</span></span><svg class="ico" viewBox="0 0 24 24"><path d="m9 6 6 6-6 6"/></svg></div>
+        <div class="lrow"><span><span class="n s">R$ 15,40 virou gasto em Mercado</span><span class="w">Padaria do Zé · 1 nov, 08:30</span></span><svg class="ico" viewBox="0 0 24 24"><path d="m9 6 6 6-6 6"/></svg></div>
+        <div class="fold" style="margin-top:8px"><span>Outubro e mais 4 meses<small>33 avisos, todos viraram gasto</small></span><svg class="ico" viewBox="0 0 24 24"><path d="m9 6 6 6-6 6"/></svg></div>
+      </div>
+      <nav class="navb"><a>Início</a><a>A confirmar<span class="bdg">5</span></a><a>Gastos</a><a class="on">Análise</a></nav>
+      <div class="gbar"></div>
+    </div></div>
+    <figcaption><b>Filtro aplicado: só Avisos</b>Com o chip, o grupo vira uma frase-resumo em cima ("39 avisos…, 38 viraram gasto") e a lista mostra o desfecho de cada aviso. O mês atual vem aberto e os outros recolhidos. Chips com zero (Verbas) não aparecem. Tocar num aviso abre a análise do app que o mandou, com aquele aviso no topo.</figcaption>
+  </figure>
+
+  <figure class="shot">
+    <div class="ph"><div class="scr">
+      <div class="sbar"><span>9:41</span><span>●●● ▮</span></div>
+      <div class="tb"><span class="back"><svg class="ico" viewBox="0 0 24 24"><path d="m15 6-6 6 6 6"/></svg></span><div class="sbox on"><svg class="ico" viewBox="0 0 24 24"><circle cx="11" cy="11" r="6"/><path d="m20 20-4.5-4.5"/></svg><span class="q">farmácia</span><span class="x">✕</span></div></div>
+      <div class="bd">
+        <div class="say" style="margin-top:14px">Nada com "farmácia", em nenhum mês.<span class="sub">A busca olha o nome das verbas, dos marcadores e dos lugares, e o texto dos avisos, até os descartados.</span></div>
+        <div class="fact" style="border-top:1px solid var(--tinta);margin-top:10px"><span class="t">Tente o nome como vem do banco, por exemplo <b>RAIA</b> ou <b>DROGASIL</b>.</span></div>
+        <div class="fact"><span class="t">Ou o valor, se lembrar: <b>32,90</b>.</span></div>
+        <div class="secl">Ou comece por um destes</div>
+        <a class="door res"><span class="tx"><b>6 verbas</b>; Mercado leva mais este mês.</span><svg class="ico" viewBox="0 0 24 24"><path d="m9 6 6 6-6 6"/></svg></a>
+        <a class="door res"><span class="tx"><b>8 marcadores</b>; padaria é o que mais se repete.</span><svg class="ico" viewBox="0 0 24 24"><path d="m9 6 6 6-6 6"/></svg></a>
+        <a class="door res"><span class="tx"><b>8 lugares</b>; o Pão de Açúcar leva mais.</span><svg class="ico" viewBox="0 0 24 24"><path d="m9 6 6 6-6 6"/></svg></a>
+        <a class="door res"><span class="tx"><b>24 avisos</b> chegaram; 5 esperam você.</span><svg class="ico" viewBox="0 0 24 24"><path d="m9 6 6 6-6 6"/></svg></a>
+      </div>
+      <nav class="navb"><a>Início</a><a>A confirmar<span class="bdg">5</span></a><a>Gastos</a><a class="on">Análise</a></nav>
+      <div class="gbar"></div>
+    </div></div>
+    <figcaption><b>Sem resultado</b>Uma frase diz o que foi procurado e onde, para a pessoa saber que não é falha da busca. Duas dicas práticas (o nome como vem do banco, o valor) e, embaixo, as mesmas portas da busca vazia. A tela não adivinha sinônimos: sugerir "Saúde" para "farmácia" pediria um dicionário e erraria às vezes.</figcaption>
+  </figure>
+  </div>
+
+  <h3>A análise de cada tipo: frase, gráfico, três fatos, junto com</h3>
+  <div class="shots">
+  <!-- VERBA -->
+  <figure class="shot">
+    <div class="ph"><div class="scr">
+      <div class="sbar"><span>9:41</span><span>●●● ▮</span></div>
+      <div class="tb"><span class="back"><svg class="ico" viewBox="0 0 24 24"><path d="m15 6-6 6 6 6"/></svg></span><span class="t">Mercado</span></div>
+      <div class="bd ent">
+        <div class="typ">Verba</div>
+        <div class="seg"><span>Novembro</span><span class="on">6 meses</span><span>Tudo</span></div>
+        <div class="say">Mercado passou do limite <b>uma vez</b> em 6 meses, em julho.</div>
+        <svg class="chart" viewBox="0 0 320 136" role="img" aria-label="Mercado nos últimos 6 meses, limite de R$ 1.200. Junho R$ 1.124,60. Julho R$ 1.268,40, passou R$ 68,40. Agosto R$ 1.098,20. Setembro R$ 1.186,50. Outubro R$ 1.072,30. Novembro, até o dia 4, R$ 412,30.">
+          <line x1="0" y1="112" x2="320" y2="112" stroke="var(--fio-forte)"/>
+          <rect x="12" y="32.4" width="36" height="79.6" fill="var(--tinta-2)"/>
+          <rect x="64" y="27.1" width="36" height="84.9" fill="var(--tinta-2)"/><rect x="64" y="22.3" width="36" height="4.8" fill="var(--lacre)"/>
+          <text x="82" y="16" text-anchor="middle" font-family="Source Sans 3" font-size="11.5" font-weight="700" fill="var(--lacre)">+68</text>
+          <rect x="116" y="34.3" width="36" height="77.7" fill="var(--tinta-2)"/>
+          <rect x="168" y="28" width="36" height="84" fill="var(--tinta-2)"/>
+          <rect x="220" y="36.1" width="36" height="75.9" fill="var(--tinta-2)"/>
+          <rect x="272" y="82.8" width="36" height="29.2" fill="var(--ocre)"/>
+          <line x1="0" y1="27.1" x2="320" y2="27.1" stroke="var(--tinta)" stroke-dasharray="4 3"/>
+          <text x="318" y="21" text-anchor="end" font-family="Source Sans 3" font-size="11" font-weight="600" fill="var(--tinta-2)">limite R$ 1.200</text>
+          <g font-family="Source Sans 3" font-size="11.5" fill="var(--tinta-3)" text-anchor="middle"><text x="30" y="128">jun</text><text x="82" y="128">jul</text><text x="134" y="128">ago</text><text x="186" y="128">set</text><text x="238" y="128">out</text><text x="290" y="128" font-weight="700" fill="var(--tinta)">nov</text></g>
+        </svg>
+        <div class="facts">
+          <div class="fact"><span class="t">Em novembro: <b>R$ 412,30</b> em 4 dias, <span class="ocre">gastando rápido</span>.</span><svg class="ico" viewBox="0 0 24 24"><path d="m9 6 6 6-6 6"/></svg></div>
+          <div class="fact"><span class="t">Fecha, em média, em <b>R$ 1.150</b> por mês.</span></div>
+          <div class="fact"><span class="t"><b>139 gastos</b>, R$ 44,33 por vez.</span></div>
+        </div>
+        <div class="secl">Junto com</div>
+        <a class="door rel"><span class="tx"><b>Pão de Açúcar</b> é onde mais vai: R$ 2.310,40.</span><svg class="ico" viewBox="0 0 24 24"><path d="m9 6 6 6-6 6"/></svg></a>
+        <a class="door rel"><span class="tx"><b>padaria</b> é o que mais se repete: 71 vezes.</span><svg class="ico" viewBox="0 0 24 24"><path d="m9 6 6 6-6 6"/></svg></a>
+        <a class="door rel"><span class="tx"><b>feira</b> vem quase todo domingo.</span><svg class="ico" viewBox="0 0 24 24"><path d="m9 6 6 6-6 6"/></svg></a>
+      </div>
+      <nav class="navb"><a>Início</a><a>A confirmar<span class="bdg">5</span></a><a>Gastos</a><a class="on">Análise</a></nav>
+      <div class="gbar"></div>
+    </div></div>
+    <figcaption><b>Verba · Mercado</b>A frase fala do limite, porque é isso que uma verba tem de próprio, e o gráfico é o que prova a frase: 6 meses contra o limite, com julho em lacre. Novembro vem em ocre porque está gastando rápido, a mesma cor do Início. O primeiro fato é sempre o mês do topo e leva ao Ritmo do mês: é assim que o número que a pessoa viu na história aparece aqui também.</figcaption>
+  </figure>
+
+  <!-- MARCADOR -->
+  <figure class="shot">
+    <div class="ph"><div class="scr">
+      <div class="sbar"><span>9:41</span><span>●●● ▮</span></div>
+      <div class="tb"><span class="back"><svg class="ico" viewBox="0 0 24 24"><path d="m15 6-6 6 6 6"/></svg></span><span class="t">feira</span></div>
+      <div class="bd ent">
+        <div class="typ">Marcador</div>
+        <div class="seg"><span>Novembro</span><span class="on">6 meses</span><span>Tudo</span></div>
+        <div class="say">feira aparece <b>uma vez por semana</b>, quase sempre no domingo.</div>
+        <svg class="chart" viewBox="0 0 320 118" role="img" aria-label="feira por dia da semana em 6 meses: domingo 17 vezes, segunda 1, terça 0, quarta 1, quinta 0, sexta 1, sábado 2.">
+          <line x1="0" y1="96" x2="320" y2="96" stroke="var(--fio-forte)"/>
+          <rect x="14" y="26" width="32" height="70" fill="var(--tinta)"/>
+          <text x="30" y="19" text-anchor="middle" font-family="Source Sans 3" font-size="12" font-weight="700" fill="var(--tinta)">17 vezes</text>
+          <rect x="58" y="91.9" width="32" height="4.1" fill="var(--fio-forte)"/>
+          <rect x="102" y="94.5" width="32" height="1.5" fill="var(--fio-forte)"/>
+          <rect x="146" y="91.9" width="32" height="4.1" fill="var(--fio-forte)"/>
+          <rect x="190" y="94.5" width="32" height="1.5" fill="var(--fio-forte)"/>
+          <rect x="234" y="91.9" width="32" height="4.1" fill="var(--fio-forte)"/>
+          <rect x="278" y="87.8" width="32" height="8.2" fill="var(--fio-forte)"/>
+          <g font-family="Source Sans 3" font-size="11.5" font-weight="600" fill="var(--tinta-3)" text-anchor="middle"><text x="30" y="112" fill="var(--tinta)" font-weight="700">D</text><text x="74" y="112">S</text><text x="118" y="112">T</text><text x="162" y="112">Q</text><text x="206" y="112">Q</text><text x="250" y="112">S</text><text x="294" y="112">S</text></g>
+        </svg>
+        <div class="facts">
+          <div class="fact"><span class="t">Em novembro: <b>2 vezes</b>, R$ 98,00.</span></div>
+          <div class="fact"><span class="t"><b>22 vezes</b> em 6 meses, R$ 1.096,00.</span></div>
+          <div class="fact"><span class="t"><b>R$ 49,82</b> por vez; a maior, R$ 86,00, em 12 jul.</span></div>
+        </div>
+        <div class="secl">Junto com</div>
+        <a class="door rel"><span class="tx">Quase toda na <b>Feira do José</b>: 16 das 22.</span><svg class="ico" viewBox="0 0 24 24"><path d="m9 6 6 6-6 6"/></svg></a>
+        <a class="door rel"><span class="tx">Sempre na verba <b>Mercado</b>.</span><svg class="ico" viewBox="0 0 24 24"><path d="m9 6 6 6-6 6"/></svg></a>
+        <a class="door rel"><span class="tx">Costuma vir com <b>hortifruti</b>.</span><svg class="ico" viewBox="0 0 24 24"><path d="m9 6 6 6-6 6"/></svg></a>
+      </div>
+      <nav class="navb"><a>Início</a><a>A confirmar<span class="bdg">5</span></a><a>Gastos</a><a class="on">Análise</a></nav>
+      <div class="gbar"></div>
+    </div></div>
+    <figcaption><b>Marcador · feira</b>Para um marcador, a frase fala de frequência e, quando um dia da semana tem mais da metade das vezes, cita esse dia. Por isso o gráfico aqui é por dia da semana, e não por mês: ele prova o "quase sempre no domingo". Os três fatos têm a mesma forma em todo tipo: o mês do topo, o período inteiro, a média e o maior.</figcaption>
+  </figure>
+
+  <!-- LUGAR -->
+  <figure class="shot">
+    <div class="ph"><div class="scr">
+      <div class="sbar"><span>9:41</span><span>●●● ▮</span></div>
+      <div class="tb"><span class="back"><svg class="ico" viewBox="0 0 24 24"><path d="m15 6-6 6 6 6"/></svg></span><span class="t">Pão de Açúcar</span></div>
+      <div class="bd ent">
+        <div class="typ">Lugar · os gastos com este nome</div>
+        <div class="seg"><span>Novembro</span><span class="on">6 meses</span><span>Tudo</span></div>
+        <div class="say">É a compra grande: <b>uma a cada duas semanas</b>, uns R$ 210.</div>
+        <svg class="chart" viewBox="0 0 320 118" role="img" aria-label="Pão de Açúcar de junho a novembro, 11 compras. A maior, R$ 312,80, em 6 de julho. Em novembro, R$ 238,40 no dia 3.">
+          <rect x="267.1" y="8" width="45" height="92" fill="var(--folha-2)"/>
+          <line x1="6" y1="100" x2="314" y2="100" stroke="var(--fio-forte)"/>
+          <g stroke="var(--tinta-2)" stroke-width="2">
+            <line x1="13.3" y1="100" x2="13.3" y2="50.4"/><line x1="36.4" y1="100" x2="36.4" y2="44.7"/><line x1="67.7" y1="100" x2="67.7" y2="21.8"/><line x1="90.8" y1="100" x2="90.8" y2="53.2"/><line x1="113.8" y1="100" x2="113.8" y2="48.6"/><line x1="140.2" y1="100" x2="140.2" y2="55.8"/><line x1="163.3" y1="100" x2="163.3" y2="46.4"/><line x1="189.7" y1="100" x2="189.7" y2="50.5"/><line x1="217.7" y1="100" x2="217.7" y2="42.1"/><line x1="240.8" y1="100" x2="240.8" y2="68.6"/>
+          </g>
+          <g fill="var(--tinta-2)"><circle cx="13.3" cy="50.4" r="3.5"/><circle cx="36.4" cy="44.7" r="3.5"/><circle cx="67.7" cy="21.8" r="3.5"/><circle cx="90.8" cy="53.2" r="3.5"/><circle cx="113.8" cy="48.6" r="3.5"/><circle cx="140.2" cy="55.8" r="3.5"/><circle cx="163.3" cy="46.4" r="3.5"/><circle cx="189.7" cy="50.5" r="3.5"/><circle cx="217.7" cy="42.1" r="3.5"/><circle cx="240.8" cy="68.6" r="3.5"/></g>
+          <line x1="265.5" y1="100" x2="265.5" y2="40.4" stroke="var(--argila)" stroke-width="2.5"/>
+          <circle cx="265.5" cy="40.4" r="5" fill="var(--argila)" stroke="var(--papel)" stroke-width="1.5"/>
+          <text x="75" y="18" font-family="Source Sans 3" font-size="11" font-weight="600" fill="var(--tinta-2)">R$ 312,80</text>
+          <text x="258" y="30" text-anchor="end" font-family="Source Sans 3" font-size="11.5" font-weight="700" fill="var(--argila)">3 nov · R$ 238,40</text>
+          <g font-family="Source Sans 3" font-size="11" fill="var(--tinta-3)"><text x="10" y="114">jun</text><text x="59.5" y="114">jul</text><text x="110.6" y="114">ago</text><text x="161.7" y="114">set</text><text x="211.1" y="114">out</text><text x="262.2" y="114" font-weight="700" fill="var(--tinta)">nov</text></g>
+        </svg>
+        <div class="facts">
+          <div class="fact"><span class="t">Em novembro: <b>R$ 238,40</b>, dia 3, o maior gasto do mês.</span></div>
+          <div class="fact"><span class="t"><b>11 vezes</b> em 6 meses, R$ 2.310,40.</span></div>
+          <div class="fact"><span class="t"><b>R$ 210,04</b> por vez; a maior, R$ 312,80, em 6 jul.</span></div>
+        </div>
+        <div class="secl">Junto com</div>
+        <a class="door rel"><span class="tx">Sempre na verba <b>Mercado</b>, com o marcador <b>mercado</b>.</span><svg class="ico" viewBox="0 0 24 24"><path d="m9 6 6 6-6 6"/></svg></a>
+        <a class="door rel"><span class="tx"><b>Feira do José</b> é o segundo lugar de Mercado.</span><svg class="ico" viewBox="0 0 24 24"><path d="m9 6 6 6-6 6"/></svg></a>
+      </div>
+      <nav class="navb"><a>Início</a><a>A confirmar<span class="bdg">5</span></a><a>Gastos</a><a class="on">Análise</a></nav>
+      <div class="gbar"></div>
+    </div></div>
+    <figcaption><b>Lugar · Pão de Açúcar</b>Antes era "gasto · todos com este nome". Agora é <i>lugar</i>, a palavra que a Análise já usa no ranking. O gráfico é uma linha do tempo, uma haste por compra, e mostra o "uma a cada duas semanas" sem precisar de conta. Veio da frase "O maior gasto foi no Pão de Açúcar", então a compra de 3 nov vem em argila. Um gasto achado na busca pelo valor abre esta mesma tela, com ele em destaque.</figcaption>
+  </figure>
+
+  <!-- AVISOS -->
+  <figure class="shot">
+    <div class="ph"><div class="scr">
+      <div class="sbar"><span>9:41</span><span>●●● ▮</span></div>
+      <div class="tb"><span class="back"><svg class="ico" viewBox="0 0 24 24"><path d="m15 6-6 6 6 6"/></svg></span><span class="t">Cartão Ipê</span></div>
+      <div class="bd ent">
+        <div class="typ">Avisos de um app lido</div>
+        <div class="quote" style="margin:6px 0 4px"><b>Você abriu este aviso · 2 nov, descartado</b>"Oferta MERCADO LIVRE: frete grátis em milhares de produtos."</div>
+        <div class="seg"><span>Novembro</span><span class="on">6 meses</span><span>Tudo</span></div>
+        <div class="say">Do Cartão Ipê chegaram 214 avisos; <b>quase 8 em 10</b> viraram gasto.</div>
+        <div class="stack" style="height:14px;margin:10px 0 6px"><i style="width:78.5%;background:var(--tinta-2)"></i><i style="width:20.1%;background:var(--fio-forte)"></i><i style="width:1.4%;background:var(--argila)"></i></div>
+        <div class="facts">
+          <div class="fact"><span class="sw" style="background:var(--tinta-2)"></span><span class="t"><b>168</b> viraram gasto, R$ 5.420,60.</span></div>
+          <div class="fact"><span class="sw" style="background:var(--fio-forte)"></span><span class="t"><b>43</b> descartados; 31 não pareciam compra, como este.</span></div>
+          <div class="fact"><span class="sw" style="background:var(--argila)"></span><span class="t"><b>3</b> esperam você: iFood, Padaria do Zé e um estorno.</span><svg class="ico" viewBox="0 0 24 24"><path d="m9 6 6 6-6 6"/></svg></div>
+        </div>
+        <div class="secl">Junto com</div>
+        <a class="door rel"><span class="tx"><b>iFood</b> é o que mais chega por aqui: 41 avisos.</span><svg class="ico" viewBox="0 0 24 24"><path d="m9 6 6 6-6 6"/></svg></a>
+        <a class="door rel"><span class="tx">Do <b>Banco Aurora</b> vieram 96; do <b>PagFácil</b>, 41.</span><svg class="ico" viewBox="0 0 24 24"><path d="m9 6 6 6-6 6"/></svg></a>
+      </div>
+      <nav class="navb"><a>Início</a><a>A confirmar<span class="bdg">5</span></a><a>Gastos</a><a class="on">Análise</a></nav>
+      <div class="gbar"></div>
+    </div></div>
+    <figcaption><b>Avisos · Cartão Ipê</b>Para avisos, a análise é do app que manda. A frase diz quanto virou gasto, e a barra empilhada mostra a mesma coisa em três partes; cada parte tem a cor ao lado do seu fato, então a barra dispensa legenda. Aberta pela busca, a tela mostra no topo o aviso que a pessoa tocou. "3 esperam você" leva para A confirmar.</figcaption>
+  </figure>
+  </div>
+
+  <h3>Os gráficos, com a mesma gramática</h3>
+  <div class="shots">
+  <!-- RITMO -->
+  <figure class="shot">
+    <div class="ph"><div class="scr">
+      <div class="sbar"><span>9:41</span><span>●●● ▮</span></div>
+      <div class="tb"><span class="back"><svg class="ico" viewBox="0 0 24 24"><path d="m15 6-6 6 6 6"/></svg></span><span class="t">Ritmo do mês</span><span class="pick">Mercado ▾</span></div>
+      <div class="bd ent">
+        <div class="typ">Novembro · até dia 4</div>
+        <div class="say">Mercado está <span class="ocre">gastando rápido</span>: <b>R$ 412,30</b>, quando o esperado era R$ 160,00.</div>
+        <svg class="chart" viewBox="0 0 320 200" role="img" aria-label="Ritmo do mês de Mercado. Gasto até hoje R$ 412,30. Esperado até hoje R$ 160,00. Limite R$ 1.200. Se continuar assim, R$ 3.092 no dia 30.">
+          <rect x="48.5" y="16" width="263.5" height="160" fill="var(--folha-2)"/>
+          <line x1="8" y1="176" x2="312" y2="176" stroke="var(--fio-forte)"/>
+          <line x1="8" y1="76" x2="312" y2="76" stroke="var(--tinta-2)"/>
+          <text x="312" y="71" text-anchor="end" font-family="Source Sans 3" font-size="11.5" font-weight="600" fill="var(--tinta-2)">limite R$ 1.200</text>
+          <line x1="8" y1="176" x2="312" y2="76" stroke="var(--tinta-3)" stroke-width="1.5" stroke-dasharray="5 4"/>
+          <text x="236" y="130" font-family="Newsreader" font-style="italic" font-size="14" fill="var(--tinta-3)">esperado</text>
+          <line x1="48.5" y1="141.6" x2="196.9" y2="16" stroke="var(--ocre)" stroke-width="2" stroke-dasharray="1 4" stroke-linecap="round"/>
+          <path d="M192.6 21.5 L197.4 14.5 L200.2 22.6" fill="none" stroke="var(--ocre)" stroke-width="1.5"/>
+          <text x="206" y="24" font-family="Source Sans 3" font-size="11.5" font-weight="600" fill="var(--ocre)">R$ 3.092 no dia 30</text>
+          <text x="206" y="38" font-family="Newsreader" font-style="italic" font-size="13" fill="var(--ocre)">se continuar assim</text>
+          <polyline points="8,176 18.1,170.9 28.3,164.1 38.4,141.6 48.5,141.6" fill="none" stroke="var(--tinta)" stroke-width="2.25" stroke-linejoin="round"/>
+          <circle cx="48.5" cy="141.6" r="4.5" fill="var(--ocre)" stroke="var(--folha-2)" stroke-width="2"/>
+          <text x="10" y="114" font-family="Source Sans 3" font-size="12" font-weight="700" fill="var(--tinta)">R$ 412,30</text>
+          <text x="10" y="128" font-family="Source Sans 3" font-size="11.5" fill="var(--tinta-2)">hoje</text>
+          <g font-family="Source Sans 3" font-size="11" fill="var(--tinta-3)" text-anchor="middle"><text x="18.1" y="192">1</text><text x="109.3" y="192">10</text><text x="210.7" y="192">20</text><text x="312" y="192">30</text></g>
+        </svg>
+        <div class="facts">
+          <div class="fact"><span class="t">Esperado: <b>R$ 40 por dia</b>, até o limite no dia 30.</span></div>
+          <div class="fact"><span class="t">Se continuar assim: <b>R$ 3.092</b> no dia 30.</span></div>
+          <div class="fact note"><span class="t">Com 4 dias, uma compra só pesa muito: o Pão de Açúcar de R$ 238,40 é mais da metade do mês.</span></div>
+        </div>
+        <div class="secl">Junto com</div>
+        <a class="door rel"><span class="tx"><b>Mercado</b> em 6 meses: passou do limite uma vez.</span><svg class="ico" viewBox="0 0 24 24"><path d="m9 6 6 6-6 6"/></svg></a>
+        <a class="door rel"><span class="tx"><b>Delivery</b> já passou R$ 12,00 do limite.</span><svg class="ico" viewBox="0 0 24 24"><path d="m9 6 6 6-6 6"/></svg></a>
+      </div>
+      <nav class="navb"><a>Início</a><a>A confirmar<span class="bdg">5</span></a><a>Gastos</a><a class="on">Análise</a></nav>
+      <div class="gbar"></div>
+    </div></div>
+    <figcaption><b>Ritmo do mês · aberto pela frase do Mercado</b>Continua sendo o único lugar com o esperado e o "se continuar assim". Os rótulos ficam nos próprios traços, e a lista de legenda sai. Os fatos escrevem as duas linhas do gráfico. Antes do dia 8, a projeção vem com uma ressalva que diz <i>por que</i> ela exagera, usando o dado real: a compra que mais pesa. "Junto com" leva para a outra verba que tem frase na história.</figcaption>
+  </figure>
+
+  <!-- PARA ONDE FOI -->
+  <figure class="shot">
+    <div class="ph"><div class="scr">
+      <div class="sbar"><span>9:41</span><span>●●● ▮</span></div>
+      <div class="tb"><span class="back"><svg class="ico" viewBox="0 0 24 24"><path d="m15 6-6 6 6 6"/></svg></span><span class="t">Para onde foi</span></div>
+      <div class="bd ent leit">
+        <div class="typ">Novembro · até dia 4</div>
+        <div class="say">R$ 804,10 gastos. <b>Mercado</b> e <b>Delivery</b> levam 84%.</div>
+        <div class="rk"><span>Mercado</span><i style="background:var(--c2);width:100%"></i><span class="a">412,30</span></div>
+        <div class="rk"><span>Delivery</span><i style="background:var(--c6);width:63.5%"></i><span class="a">262,00</span></div>
+        <div class="rk"><span>Lazer</span><i style="background:var(--c4);width:11.6%"></i><span class="a">48,00</span></div>
+        <div class="rk"><span>Transporte</span><i style="background:var(--c5);width:10.1%"></i><span class="a">41,80</span></div>
+        <div class="rk"><span>Casa</span><i style="background:var(--c1);width:9.7%"></i><span class="a">40,00</span></div>
+        <div class="rk"><span>Saúde</span><span class="hint" style="margin:0">nada ainda</span><span class="a">—</span></div>
+        <div class="facts">
+          <div class="fact"><span class="t">Em outubro, até o dia 4: <b>R$ 690,40</b>.</span></div>
+        </div>
+        <div class="seg"><span class="on">Marcadores</span><span>Lugares</span></div>
+        <div class="grp" style="margin-top:4px"><b>padaria</b> é o que mais se repete; <b>mercado</b>, o que mais soma.</div>
+        <div class="mk"><span>mercado <span class="c">· 1 vez</span></span><span class="a">R$ 238,40</span></div>
+        <div class="mk"><span>ifood <span class="c">· 3 vezes</span></span><span class="a">R$ 207,40</span></div>
+        <div class="mk"><span>feira <span class="c">· 2 vezes</span></span><span class="a">R$ 98,00</span></div>
+        <div class="mk"><span>padaria <span class="c">· 5 vezes</span></span><span class="a">R$ 75,90</span></div>
+        <div class="mk"><span>bebida <span class="c">· 1 vez</span></span><span class="a">R$ 54,60</span></div>
+        <div class="mk"><span>cinema <span class="c">· 1 vez</span></span><span class="a">R$ 48,00</span></div>
+        <div class="see">Ver todos (8)</div>
+      </div>
+      <nav class="navb"><a>Início</a><a>A confirmar<span class="bdg">5</span></a><a>Gastos</a><a class="on">Análise</a></nav>
+      <div class="gbar"></div>
+    </div></div>
+    <figcaption><b>Para onde foi · aberto pelas frases 1 e 2</b>O que era a primeira camada vira uma tela de um toque, com a mesma gramática: frase, barras por verba (cores c1–c6), um fato (outubro no mesmo dia) e o ranking de marcadores e lugares. A frase do ranking separa os dois sentidos que "puxa a fila" misturava: o que mais se repete e o que mais soma. A contagem ganha a palavra ("1 vez"), em vez de um "· 1" solto. Cada linha abre a análise daquela coisa.</figcaption>
+  </figure>
+  </div>
+</section>
+
+<!-- ================= 4 ================= -->
+<section id="metricas">
+  <div class="kick">4 · Métricas, período e frases</div>
+  <h2>O que cada análise conta, e <em>com que frase</em></h2>
+
+  <h3>Métricas por tipo</h3>
+  <p class="muted">Toda análise tem a mesma forma: uma frase, um gráfico que prova a frase, três fatos sempre na mesma ordem (o mês do topo, o período inteiro, por vez e maior) e de duas a três frases de "Junto com". Fica no máximo um valor em reais por frase.</p>
+  <div class="tblw"><table>
+    <thead><tr><th>Tipo</th><th>Frase</th><th>Gráfico</th><th>Três fatos</th><th>Junto com</th><th>Por quê</th></tr></thead>
+    <tbody>
+    <tr><td class="t">Verba</td><td>quantas vezes passou do limite no período</td><td>6 barras contra o limite; excesso em lacre; mês atual na cor do estado</td><td>mês do topo (abre o Ritmo) · média por mês · gastos e valor por vez</td><td>lugar que mais leva · marcador que mais se repete · marcador com dia da semana forte</td><td>A verba é a única coisa com limite; a pergunta dela é "cabe?".</td></tr>
+    <tr><td class="t">Marcador</td><td>frequência, e o dia da semana quando ele tem mais da metade das vezes</td><td>7 barras por dia da semana (ou 6 meses, se não houver dia forte)</td><td>mês do topo · vezes e soma no período · por vez e o maior</td><td>lugar onde mais aparece · verba · marcador que anda nos mesmos gastos</td><td>Um marcador é um hábito; a pergunta dele é "com que frequência?".</td></tr>
+    <tr><td class="t">Lugar</td><td>frequência e valor típico ("uns R$ 210")</td><td>linha do tempo, uma haste por gasto; o gasto de origem em argila</td><td>mês do topo · vezes e soma · por vez e o maior</td><td>verba e marcador · outro lugar da mesma verba</td><td>Um lugar é uma sequência de compras; ver cada uma mostra o intervalo e o valor que se repete.</td></tr>
+    <tr><td class="t">Avisos (de um app)</td><td>quantos chegaram e que parte virou gasto</td><td>barra empilhada: viraram gasto · descartados · esperam você</td><td>viraram gasto (e a soma) · descartados (e quantos não pareciam compra) · esperam você (abre A confirmar)</td><td>o nome que mais chega · os outros apps lidos</td><td>A pergunta é "dá para confiar na leitura deste app?".</td></tr>
+    </tbody>
+  </table></div>
+
+  <h3>O seletor de período</h3>
+  <ul class="plain">
+    <li><b>Na história e nos gráficos do mês</b>: o seletor de mês do topo, que abre no mês atual. "Mês a mês" mostra os 6 meses até o mês do topo, como hoje.</li>
+    <li><b>Nas análises</b>: <span class="tpl">[Novembro] · 6 meses · Tudo</span>. O primeiro botão leva o <i>nome</i> do mês do topo, não "Mês", para ninguém se perguntar de que mês se trata. <b>Padrão: 6 meses</b>, sempre, venha a pessoa da história ou da busca. Um mês no começo tem pouco ponto para dizer "uma vez por semana", e Tudo mistura hábitos antigos.</li>
+    <li><b>O número da porta não some</b>: em qualquer período, o primeiro fato é sempre o mês do topo ("Em novembro: 2 vezes, R$ 98,00"). Isso resolve o diagnóstico 4 sem ter dois padrões.</li>
+    <li><b>Pouco histórico</b>: se a coisa existe há menos de 6 meses, o botão vira "Desde agosto", e a frase não fala de frequência com menos de 4 ocorrências.</li>
+  </ul>
+
+  <h3>Frases da história, na ordem</h3>
+  <p class="muted">No máximo 7. Cada frase tem uma regra para aparecer; quando a regra não se cumpre, a frase não aparece (nada de "nenhum…"). As variáveis estão em argila.</p>
+  <div class="tblw"><table>
+    <thead><tr><th>#</th><th>Modelo</th><th>Aparece quando</th><th>Abre</th></tr></thead>
+    <tbody>
+    <tr><td class="t">1</td><td class="tpl">Em <span class="v">n</span> dias, <span class="v">R$ gasto</span> gastos. <br>Em <span class="v">mês anterior</span>, até o dia <span class="v">d</span>, eram <span class="v">R$ x</span>.<br><span class="muted small">Mês passado: "<span class="v">Mês</span> fechou em <span class="v">R$ x</span>." · dia 1: "No primeiro dia, …"</span></td><td class="rule">sempre; a segunda linha, se houver mês anterior com verba</td><td>Para onde foi</td></tr>
+    <tr><td class="t">2</td><td class="tpl"><span class="v">V1</span> e <span class="v">V2</span> levam <span class="v">p</span>%. · <span class="v">V1</span> leva mais da metade: <span class="v">maior gasto</span>. · Tudo em <span class="v">V1</span>, até agora.</td><td class="rule">≥ 1 gasto; dupla se as duas somam ≥ 60%; uma, se ela tem ≥ 50%</td><td>Para onde foi</td></tr>
+    <tr><td class="t">3</td><td class="tpl"><span class="v">V</span> já passou <span class="v">R$ x</span> do limite.</td><td class="rule">verba com resta &lt; 0 (a regra do Início); até 2, e depois "e mais <span class="v">n</span>"</td><td>Ritmo · V</td></tr>
+    <tr><td class="t">4</td><td class="tpl"><span class="v">V</span> está gastando rápido: <span class="v">fração</span> do limite em <span class="v">n</span> dias.<br><span class="muted small">do dia 8 em diante: "Se continuar assim, <span class="v">V</span> fecha em <span class="v">R$ x</span>."</span></td><td class="rule">o mesmo estado "gastando rápido" do Início; frações por extenso (metade, um terço) quando arredondam bem</td><td>Ritmo · V</td></tr>
+    <tr><td class="t">5</td><td class="tpl"><span class="v">marcador</span> apareceu <span class="v">n</span> vezes em <span class="v">d</span> dias.</td><td class="rule">o marcador mais repetido, com ≥ 3 vezes no mês</td><td>Marcador</td></tr>
+    <tr><td class="t">6</td><td class="tpl">O maior gasto foi no <span class="v">lugar</span>: <span class="v">R$ x</span>.</td><td class="rule">o maior gasto vale ≥ 3× a média por gasto do mês</td><td>Lugar, com o gasto em destaque</td></tr>
+    <tr><td class="t">7</td><td class="tpl"><span class="v">V</span> passou do limite em <span class="v">k</span> dos últimos 6 meses.<br><span class="muted small">ou: "Os <span class="v">sábados</span> pesam: <span class="v">p</span>% do mês." (regra do §7.5)</span></td><td class="rule">k ≥ 2; se nenhuma verba cumpre, entra o dia que pesa, quando ele cumpre a regra</td><td>Mês a mês · V, ou Dias que mais pesam</td></tr>
+    <tr><td class="t">—</td><td class="tpl">Com <span class="v">n</span> dia(s) só, ainda não dá para falar de ritmo nem de que dia pesa. A história cresce com o mês.</td><td class="rule">dias 1 a 3, no lugar das frases que dependem de ritmo; sem porta</td><td>—</td></tr>
+    <tr><td class="t">—</td><td class="tpl"><span class="v">Mês anterior</span> fechou em <span class="v">R$ x</span>, com <span class="v">V</span> dentro do limite.</td><td class="rule">dias 1 a 7, como última frase</td><td>O mês anterior em frases</td></tr>
+    <tr><td class="t">—</td><td class="tpl">Fora destas contas: <span class="v">n</span> avisos a confirmar.</td><td class="rule">n ≥ 1; fica abaixo do seletor de mês, não conta como frase</td><td>A confirmar</td></tr>
+    </tbody>
+  </table></div>
+
+  <h3>Frases da busca</h3>
+  <div class="tblw"><table>
+    <thead><tr><th>Tipo</th><th>Com algo no mês do topo</th><th>Sem nada no mês</th></tr></thead>
+    <tbody>
+    <tr><td class="t">Verba</td><td class="tpl"><span class="v">V</span> levou <span class="v">R$ x</span> em <span class="v">n</span> gastos este mês<span class="v">, estado</span>.</td><td class="tpl"><span class="v">V</span>: nada este mês; <span class="v">R$ x</span> em <span class="v">mês anterior</span>.</td></tr>
+    <tr><td class="t">Marcador</td><td class="tpl"><span class="v">m</span> marcou <span class="v">n</span> gasto(s) este mês<span class="v">: lugar, R$ x</span> (quando n = 1) / <span class="v">, R$ x</span>.</td><td class="tpl"><span class="v">m</span>: nada este mês. Foram <span class="v">n</span> vezes, a última em <span class="v">data</span>.</td></tr>
+    <tr><td class="t">Lugar</td><td class="tpl"><span class="v">L</span>: <span class="v">n</span> vez(es) este mês, <span class="v">R$ x</span>.</td><td class="tpl"><span class="v">L</span>: nada este mês. Foram <span class="v">n</span> vezes, a última em <span class="v">data</span>.</td></tr>
+    <tr><td class="t">Aviso</td><td colspan="2" class="tpl">"<span class="v">texto</span>…" chegou do <span class="v">app</span> <span class="v">dia</span> e <span class="v">virou gasto em V · foi descartado: não parece compra · espera você</span>.</td></tr>
+    <tr><td class="t">Grupo filtrado</td><td colspan="2" class="tpl"><span class="v">n</span> <span class="v">tipo</span> com "<span class="v">busca</span>"<span class="v">, todos do app</span>. <span class="v">k</span> viraram gasto; <span class="v">j</span> espera(m) você.</td></tr>
+    <tr><td class="t">Sem resultado</td><td colspan="2" class="tpl">Nada com "<span class="v">busca</span>", em nenhum mês.</td></tr>
+    </tbody>
+  </table></div>
+
+  <h3>Frases das análises</h3>
+  <div class="tblw"><table>
+    <thead><tr><th>Tipo</th><th>Modelo</th><th>Com pouco dado</th></tr></thead>
+    <tbody>
+    <tr><td class="t">Verba</td><td class="tpl"><span class="v">V</span> passou do limite <span class="v">k vezes / uma vez</span> em 6 meses<span class="v">, em mês</span>. · <span class="v">V</span> ficou dentro do limite nos 6 meses.</td><td class="tpl">Só o mês atual: "Primeiro mês de <span class="v">V</span>: <span class="v">R$ x</span> até aqui."</td></tr>
+    <tr><td class="t">Marcador · Lugar</td><td class="tpl"><span class="v">m</span> aparece <span class="v">frequência</span><span class="v">, quase sempre no dia</span>. · É a compra grande: <span class="v">frequência</span>, uns <span class="v">R$ x</span>.<br><span class="muted small">frequência: quase todo dia · umas n vezes por semana · uma vez por semana · uma vez a cada duas semanas · uma vez por mês</span></td><td class="tpl">Menos de 4 vezes: "<span class="v">m</span> apareceu <span class="v">n</span> vezes: <span class="v">datas</span>." Sem frequência e sem dia.</td></tr>
+    <tr><td class="t">Avisos</td><td class="tpl">Do <span class="v">app</span> chegaram <span class="v">n</span> avisos; <span class="v">quase todos · quase 8 em 10 · metade</span> viraram gasto.</td><td class="tpl">Menos de 10: os números, sem fração.</td></tr>
+    <tr><td class="t">Fatos</td><td class="tpl">Em <span class="v">mês</span>: <span class="v">…</span>. · <span class="v">n</span> vezes em <span class="v">período</span>, <span class="v">R$ soma</span>. · <span class="v">R$ média</span> por vez; a maior, <span class="v">R$ x</span>, em <span class="v">data</span>.</td><td class="tpl">Sem "por vez" com 1 ocorrência.</td></tr>
+    <tr><td class="t">Junto com</td><td class="tpl">Quase toda na <span class="v">L</span>: <span class="v">k</span> das <span class="v">n</span>. · Sempre na verba <span class="v">V</span>. · Costuma vir com <span class="v">m</span>. · <span class="v">L</span> é onde mais vai: <span class="v">R$ x</span>.</td><td class="tpl">"Costuma vir com" só com ≥ 3 gastos em comum.</td></tr>
+    </tbody>
+  </table></div>
+</section>
+
+<!-- ================= 5 ================= -->
+<section id="vocab">
+  <div class="kick">5 · Vocabulário</div>
+  <h2>Termos novos ou <em>mudados</em></h2>
+  <p class="muted">Partindo do vocabulário de redesign-ab (aviso, confirmar, descartados, limite, conta reservada, lugares). Os nomes em código não mudam.</p>
+  <div class="tblw"><table>
+    <thead><tr><th>Em redesign-ab</th><th>Aqui</th><th></th><th>Por quê</th></tr></thead>
+    <tbody>
+    <tr><td class="t">(primeira camada da Análise)</td><td class="t">O mês até aqui · <i>A história</i></td><td><span class="pill p-ren">novo</span></td><td>"O mês até aqui" é o sobretítulo na tela (num mês passado, "O mês"). "História" é só o nome interno, para spec e código.</td></tr>
+    <tr><td class="t">Gasto · todos com este nome (tipo na busca)</td><td class="t">Lugar · Lugares</td><td><span class="pill p-ren">troca</span></td><td>A Análise já chama de lugar o nome do gasto no ranking. Um nome para a mesma coisa, no ranking e na busca.</td></tr>
+    <tr><td class="t">Mês · 6 meses · Tudo</td><td class="t">Novembro · 6 meses · Tudo</td><td><span class="pill p-ren">troca</span></td><td>O botão diz qual mês. Com pouco histórico, "Desde agosto".</td></tr>
+    <tr><td class="t">Parecidos · O que anda junto</td><td class="t">Junto com</td><td><span class="pill p-ren">troca</span></td><td>Um título só para as frases de relação em todos os tipos; cada frase diz o tipo de relação ("sempre na verba", "costuma vir com").</td></tr>
+    <tr><td class="t">Soma · Média · Maior · Dia da semana (quadrinhos)</td><td class="t">fatos escritos</td><td><span class="pill p-cut">sai</span></td><td>"R$ 49,82 por vez; a maior, R$ 86,00" se lê sem rótulo em caixa alta.</td></tr>
+    <tr><td class="t">"puxa a fila"</td><td class="t">o que mais se repete · o que mais soma</td><td><span class="pill p-ren">troca</span></td><td>"Puxa a fila" não dizia se era por valor ou por vezes.</td></tr>
+    <tr><td class="t">mercado · 1</td><td class="t">mercado · 1 vez</td><td><span class="pill p-ren">troca</span></td><td>O número sozinho não diz que é contagem.</td></tr>
+    <tr><td class="t">A confirmar (contagem)</td><td class="t">esperam você · Fora destas contas: n avisos a confirmar</td><td><span class="pill p-ren">novo</span></td><td>Dentro de uma frase, "espera você" é mais natural que "a confirmar". A aba e o botão seguem "A confirmar".</td></tr>
+    <tr><td class="t">Fonte · Avisos · fonte</td><td class="t">Avisos de um app lido</td><td><span class="pill p-ren">troca</span></td><td>redesign-ab já trocou "Fonte" por "Apps lidos" nos Ajustes; a análise usa a mesma expressão.</td></tr>
+    <tr><td class="t">Nenhum dia da semana pesa ainda</td><td class="t">(não aparece) · ressalva do começo do mês</td><td><span class="pill p-cut">sai</span></td><td>A história só diz o que achou. Nos dias 1 a 3, uma ressalva só cobre tudo o que ainda não dá para dizer.</td></tr>
+    <tr><td class="t">Todos os gráficos</td><td class="t">Todos os gráficos</td><td><span class="pill p-ren">novo</span></td><td>A linha de links no pé, que garante acesso a cada gráfico mesmo sem frase.</td></tr>
+    <tr><td class="t">Esperado · Se continuar assim · Gastando rápido · Passou</td><td class="t">iguais</td><td><span class="pill p-keep">fica</span></td><td>As mesmas palavras do Início e do Ritmo, para a história e o Início nunca discordarem.</td></tr>
+    </tbody>
+  </table></div>
+</section>
+
+<!-- ================= 6 ================= -->
+<section id="tradeoffs">
+  <div class="kick">6 · Trade-offs e decisões</div>
+  <h2>O que se ganha, o que se <em>perde</em></h2>
+  <ul class="plain">
+    <li><b>Menos números, mais um toque.</b> A primeira camada cai de uns vinte números para uns doze, mas quem abria a Análise para olhar as barras por verba passa a tocar na frase 2. As barras continuam inteiras, a um toque.</li>
+    <li><b>Tela que muda de forma.</b> Como as frases só aparecem quando cumprem a regra, a história tem 5 frases num mês e 7 no outro, e uma linha não fica sempre no mesmo lugar. A ordem fixa e o "Todos os gráficos" no pé reduzem esse efeito, mas não acabam com ele.</li>
+    <li><b>Um motor de frases para construir e testar.</b> Cada modelo tem regra, plural, frações por extenso e casos de pouco dado. É mais código e mais texto para manter do que barras com rótulo, e cada regra vira critério de aceite.</li>
+    <li><b>O que não vira frase fica menos visível.</b> Uma verba normal não aparece na história. Para quem quer ver "tudo", a resposta é Para onde foi, a um toque.</li>
+    <li><b>Frase pode soar como julgamento.</b> "É a compra grande" ou "gastando rápido" são leituras, não números. Os modelos ficam no tom do Início (fato, sem conselho), mas cada frase nova precisa dessa revisão.</li>
+    <li><b>A busca em todos os meses traz mais resultado.</b> Uma palavra comum ("ifood") pode render dezenas de avisos. O filtro e o recolhimento por mês resolvem, mas a lista "Tudo" fica mais longa que na busca só do mês.</li>
+  </ul>
+
+  <h3>Decisões para o dono</h3>
+  <ol class="dec">
+    <li><b>Tamanho da história.</b> No máximo 7 frases, ordem fixa, só as que cumprem a regra? <span class="rec-b">recomendo</span>Sim. Com mais de 7, a tela volta a ser lista.</li>
+    <li><b>Projeção na história.</b> A frase "Se continuar assim, Mercado fecha em…" só do dia 8 em diante (no gráfico, sempre, com ressalva até o dia 7)? <span class="rec-b">recomendo</span>Sim. No dia 4, a projeção do Mercado dá R$ 3.092 por causa de uma compra só.</li>
+    <li><b>A barra fina sob a frase 2.</b> Fica uma barra empilhada sem números, ou a história fica só em texto? <span class="rec-b">recomendo</span>Ficar. Com ela, "levam 84%" se vê num relance, e ela é o único traço gráfico da primeira camada.</li>
+    <li><b>Período padrão das análises.</b> 6 meses sempre, com o mês do topo como primeiro fato, ou abrir no mês quando a pessoa vem da história? <span class="rec-b">recomendo</span>6 meses sempre. Um padrão só, e o número da porta aparece no primeiro fato.</li>
+    <li><b>Alcance da busca.</b> Todos os meses (as frases falam do mês do topo) ou só o mês do topo, com um link "buscar em todos", como em redesign-ab? <span class="rec-b">recomendo</span>Todos os meses. A pessoa busca o que lembra, e o que ela lembra pode ser de agosto.</li>
+    <li><b>"Lugares" no lugar de "Gastos" na busca.</b> <span class="rec-b">recomendo</span>Sim. A busca pelo valor ("238,40") continua achando o gasto, que abre o lugar dele com o gasto em destaque.</li>
+    <li><b>Gráfico escolhido pela frase.</b> Cada tipo usa o gráfico que prova a sua frase (meses para verba, dia da semana para marcador, linha do tempo para lugar, barra empilhada para avisos), ou todos usam as 6 barras por mês? <span class="rec-b">recomendo</span>Pela frase, com só esses quatro gráficos no app.</li>
+    <li><b>Frases sem achado.</b> Some da história toda frase que diria "nada" ("nenhum dia pesa"), ficando só a ressalva única dos dias 1 a 3? <span class="rec-b">recomendo</span>Sim. O gráfico continua em "Todos os gráficos".</li>
+    <li><b>Avisos a confirmar na Análise.</b> Mostrar "Fora destas contas: 5 avisos a confirmar" abaixo do mês? <span class="rec-b">recomendo</span>Sim. Sem isso, os números da história parecem menores do que o mês de fato está, sem explicação.</li>
+  </ol>
+</section>
+
+</div>
+<script>
+(function(){
+  var b=document.getElementById('tema'),r=document.documentElement;
+  try{var s=localStorage.getItem('tema');if(s)r.setAttribute('data-theme',s);}catch(e){}
+  b.addEventListener('click',function(){
+    var dark=r.getAttribute('data-theme')?r.getAttribute('data-theme')==='dark':matchMedia('(prefers-color-scheme: dark)').matches;
+    var n=dark?'light':'dark';r.setAttribute('data-theme',n);
+    try{localStorage.setItem('tema',n);}catch(e){}
+  });
+})();
+</script>
+</body>
+</html>
