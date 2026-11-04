@@ -31,6 +31,7 @@ import com.kaiodelphino.margem.widgets.SnackTags
 import com.kaiodelphino.margem.widgets.money
 import com.kaiodelphino.margem.widgets.moneyParts
 import com.kaiodelphino.margem.widgets.moneyPlain
+import com.kaiodelphino.margem.widgets.stepValue
 import java.util.Collections
 import kotlin.random.Random
 import kotlinx.coroutines.CoroutineScope
@@ -121,50 +122,50 @@ class TetoLifecycleTest {
 
         // Sem teto (§7.1): Σ cotas = 2.000,00 + 1.720,00 = 3.720,00.
         await("sem teto: 'As cotas somam R$ 3.720,00.' e 'Pôr um teto'", BudgetTags.CEILING) {
-            shows(BudgetTags.CEILING, "As cotas somam ${money(Cents(372_000))}.") && shows(BudgetTags.CEILING, "Pôr um teto") &&
-                described(BudgetTags.CEILING, "As cotas de outubro somam ${money(Cents(372_000))}. Sem teto. Tocar para pôr um teto.")
+            shows(BudgetTags.CEILING, "de ${money(Cents(372_000))}") && shows(BudgetTags.CEILING, "Pôr um teto") &&
+                described(BudgetTags.CEILING, "Sem teto. Tocar para pôr um teto.")
         }
 
         assertTrue(fora { db.setCeiling(Cents(410_000), onward = true, today = DIA_FIXO) })
         // Abaixo: 4.100,00 − 3.720,00 = 380,00 do teto.
         await("teto 4.100,00 em diante, a 380,00 do teto", BudgetTags.CEILING) {
-            shows(BudgetTags.CEILING, "cotas ${money(Cents(372_000))}") && shows(BudgetTags.CEILING, "teto ${money(Cents(410_000))}") &&
+            shows(BudgetTags.CEILING, "de ${money(Cents(372_000))}") && shows(BudgetTags.CEILING, "teto ${stepValue(Cents(410_000))}") &&
                 !shows(BudgetTags.CEILING, "só outubro") && !shows(BudgetTags.CEILING, "Pôr um teto") &&
-                described(BudgetTags.CEILING, "Teto de outubro: ${money(Cents(410_000))}. Cotas somam ${money(Cents(372_000))}, a ${money(Cents(38_000))} do teto. Tocar para mudar.")
+                described(BudgetTags.CEILING, "Teto ${money(Cents(410_000))}, cotas a ${money(Cents(38_000))} do teto. Tocar para mudar o teto.")
         }
 
         assertTrue(fora { db.setCeiling(Cents(440_000), onward = false, today = DIA_FIXO) })
         // Só este mês: o do mês (4.400,00) difere do padrão (4.100,00) → "· só outubro".
         await("teto 4.400,00 só outubro", BudgetTags.CEILING) {
-            shows(BudgetTags.CEILING, "teto ${money(Cents(440_000))}") && shows(BudgetTags.CEILING, "só outubro") &&
+            shows(BudgetTags.CEILING, "teto ${stepValue(Cents(440_000))}") && shows(BudgetTags.CEILING, "só outubro") &&
                 described(BudgetTags.CEILING, "a ${money(Cents(68_000))} do teto")
         }
 
         assertTrue(fora { db.setLimit(mercado, Cents(268_000), DIA_FIXO) })
         // 2.680,00 + 1.720,00 = 4.400,00 = teto: "fecham no teto", sem excesso.
         await("cotas fecham no teto", BudgetTags.CEILING) {
-            shows(BudgetTags.CEILING, "cotas ${money(Cents(440_000))}") && !shows(BudgetTags.CEILING, "+ ") &&
-                described(BudgetTags.CEILING, "Teto de outubro: ${money(Cents(440_000))}. Cotas somam ${money(Cents(440_000))}, fecham no teto. Tocar para mudar.")
+            shows(BudgetTags.CEILING, "de ${money(Cents(440_000))}") && !shows(BudgetTags.CEILING, "+ ") &&
+                described(BudgetTags.CEILING, "Teto ${money(Cents(440_000))}, cotas fecham no teto. Tocar para mudar o teto.")
         }
 
         assertTrue(fora { db.setLimit(mercado, Cents(298_000), DIA_FIXO) })
         // 2.980,00 + 1.720,00 = 4.700,00: 300,00 além; legenda "+ 300" (reais inteiros).
         await("cotas acima: '+ 300'", BudgetTags.CEILING) {
-            shows(BudgetTags.CEILING, "cotas ${money(Cents(470_000))}") && shows(BudgetTags.CEILING, "+ 300") &&
+            shows(BudgetTags.CEILING, "de ${money(Cents(470_000))}") && shows(BudgetTags.CEILING, "+ 300") &&
                 !shows(BudgetTags.CEILING, "+ 300,") &&
-                described(BudgetTags.CEILING, "Cotas somam ${money(Cents(470_000))}, ${money(Cents(30_000))} além do teto. Tocar para mudar.")
+                described(BudgetTags.CEILING, "cotas ${money(Cents(30_000))} além do teto. Tocar para mudar o teto.")
         }
 
         assertTrue(fora { db.setLimit(casa, Cents(172_050), DIA_FIXO) })
         // 2.980,00 + 1.720,50 = 4.700,50: "+ 300,50" (com centavos quando há).
         await("cotas acima com centavos: '+ 300,50'", BudgetTags.CEILING) {
-            shows(BudgetTags.CEILING, "cotas ${money(Cents(470_050))}") && shows(BudgetTags.CEILING, "+ 300,50") &&
+            shows(BudgetTags.CEILING, "de ${money(Cents(470_050))}") && shows(BudgetTags.CEILING, "+ 300,50") &&
                 described(BudgetTags.CEILING, "${money(Cents(30_050))} além do teto")
         }
 
         assertTrue(fora { db.setCeiling(Cents(0), onward = true, today = DIA_FIXO) })
         await("teto tirado em diante: de novo 'Pôr um teto'", BudgetTags.CEILING) {
-            shows(BudgetTags.CEILING, "As cotas somam ${money(Cents(470_050))}.") && shows(BudgetTags.CEILING, "Pôr um teto") &&
+            shows(BudgetTags.CEILING, "de ${money(Cents(470_050))}") && shows(BudgetTags.CEILING, "Pôr um teto") &&
                 !shows(BudgetTags.CEILING, "só outubro")
         }
 
@@ -188,8 +189,8 @@ class TetoLifecycleTest {
         val id = budget("Lazer", 120_000)
         // 1.200,00 > 1.000,00: 200,00 além.
         await("linha do teto com a verba nova: '+ 200'", BudgetTags.CEILING) {
-            exists(BudgetTags.ROW + id.v) && shows(BudgetTags.CEILING, "cotas ${money(Cents(120_000))}") &&
-                shows(BudgetTags.CEILING, "teto ${money(Cents(100_000))}") && shows(BudgetTags.CEILING, "+ 200")
+            exists(BudgetTags.ROW + id.v) && shows(BudgetTags.CEILING, "de ${money(Cents(120_000))}") &&
+                shows(BudgetTags.CEILING, "teto ${stepValue(Cents(100_000))}") && shows(BudgetTags.CEILING, "+ 200")
         }
         // Com verba, o cabeçalho é o mesmo alvo da linha (§7.1).
         tap(BudgetTags.HEADER)
@@ -293,7 +294,7 @@ class TetoLifecycleTest {
         }
         assertEquals(Ceiling(OUT, Cents(435_000), Cents(380_000), Cents(435_000)), fora { db.ceiling(OUT) })
         await("cabeçalho 'teto R$ 4.350,00 · só outubro'", BudgetTags.CEILING) {
-            shows(BudgetTags.CEILING, "teto ${money(Cents(435_000))}") && shows(BudgetTags.CEILING, "só outubro")
+            shows(BudgetTags.CEILING, "teto ${stepValue(Cents(435_000))}") && shows(BudgetTags.CEILING, "só outubro")
         }
     }
 
@@ -347,7 +348,7 @@ class TetoLifecycleTest {
         await("snack em diante", SnackTags.TEXT) { shows(SnackTags.TEXT, "Teto de ${money(Cents(300_000))} de outubro em diante.") }
         assertEquals(Ceiling(OUT, Cents(300_000), Cents(300_000), Cents(200_000)), fora { db.ceiling(OUT) })
         await("cabeçalho 'teto R$ 3.000,00' sem 'só outubro'", BudgetTags.CEILING) {
-            shows(BudgetTags.CEILING, "cotas ${money(Cents(200_000))}") && shows(BudgetTags.CEILING, "teto ${money(Cents(300_000))}") &&
+            shows(BudgetTags.CEILING, "de ${money(Cents(200_000))}") && shows(BudgetTags.CEILING, "teto ${stepValue(Cents(300_000))}") &&
                 !shows(BudgetTags.CEILING, "só outubro")
         }
     }
@@ -429,7 +430,7 @@ class TetoLifecycleTest {
         assertEquals(Ceiling(OUT, Cents(0), Cents(410_000), Cents(372_000)), fora { db.ceiling(OUT) })
         // T10: mês sem teto com padrão que tem → o mesmo "sem teto", sem menção ao padrão.
         await("cabeçalho sem teto, sem menção ao padrão", BudgetTags.CEILING) {
-            shows(BudgetTags.CEILING, "As cotas somam ${money(Cents(372_000))}.") && shows(BudgetTags.CEILING, "Pôr um teto") &&
+            shows(BudgetTags.CEILING, "de ${money(Cents(372_000))}") && shows(BudgetTags.CEILING, "Pôr um teto") &&
                 !shows(BudgetTags.CEILING, money(Cents(410_000))) && !shows(BudgetTags.CEILING, "só outubro")
         }
     }
@@ -443,7 +444,7 @@ class TetoLifecycleTest {
         assertTrue(fora { db.setCeiling(Cents(380_000), onward = false, today = DIA_FIXO) })
         composeRule.setContent { Content() }
         await("cabeçalho 'teto R$ 3.800,00 · só outubro'", BudgetTags.CEILING) {
-            shows(BudgetTags.CEILING, "teto ${money(Cents(380_000))}") && shows(BudgetTags.CEILING, "só outubro")
+            shows(BudgetTags.CEILING, "teto ${stepValue(Cents(380_000))}") && shows(BudgetTags.CEILING, "só outubro")
         }
         openCeilingDialog()
         composeRule.onNodeWithTag(BudgetTags.CEILING_FIELD).performTextReplacement("450000")
@@ -466,7 +467,7 @@ class TetoLifecycleTest {
 
         tab = Screen.Budgets
         await("cabeçalho de volta a 'teto R$ 3.800,00 · só outubro'", BudgetTags.CEILING) {
-            shows(BudgetTags.CEILING, "teto ${money(Cents(380_000))}") && shows(BudgetTags.CEILING, "só outubro")
+            shows(BudgetTags.CEILING, "teto ${stepValue(Cents(380_000))}") && shows(BudgetTags.CEILING, "só outubro")
         }
     }
 
@@ -492,7 +493,7 @@ class TetoLifecycleTest {
         }
         pressBack()
         await("cabeçalho com teto de novo, sem 'só outubro'", BudgetTags.CEILING) {
-            shows(BudgetTags.CEILING, "teto ${money(Cents(410_000))}") && !shows(BudgetTags.CEILING, "só outubro")
+            shows(BudgetTags.CEILING, "teto ${stepValue(Cents(410_000))}") && !shows(BudgetTags.CEILING, "só outubro")
         }
     }
 
@@ -575,7 +576,7 @@ class TetoLifecycleTest {
         }
         assertFalse("não perguntou", exists(BudgetTags.CEILING_WARN))
         await("de volta a Verbas: cotas 4.500,00, teto 5.000,00", BudgetTags.CEILING) {
-            shows(BudgetTags.CEILING, "cotas ${money(Cents(450_000))}") && shows(BudgetTags.CEILING, "teto ${money(Cents(500_000))}") &&
+            shows(BudgetTags.CEILING, "de ${money(Cents(450_000))}") && shows(BudgetTags.CEILING, "teto ${stepValue(Cents(500_000))}") &&
                 !shows(BudgetTags.CEILING, "+ ")
         }
     }
@@ -710,16 +711,16 @@ class TetoLifecycleTest {
         tap(BudgetTags.CEILING_ONLY)
         await("snack só em outubro", SnackTags.TEXT) { shows(SnackTags.TEXT, "Teto de ${money(Cents(440_000))} só em outubro.") }
         await("cabeçalho 'teto R$ 4.400,00 · só outubro'", BudgetTags.CEILING) {
-            shows(BudgetTags.CEILING, "teto ${money(Cents(440_000))}") && shows(BudgetTags.CEILING, "só outubro")
+            shows(BudgetTags.CEILING, "teto ${stepValue(Cents(440_000))}") && shows(BudgetTags.CEILING, "só outubro")
         }
 
         day = NOV_2
         // D42: novembro recebe o padrão (4.100,00), não o de outubro; as cotas seguem (D8).
         await("novembro com o padrão", BudgetTags.CEILING, BudgetTags.HEADER) {
             shows(BudgetTags.HEADER, "novembro") &&
-                shows(BudgetTags.CEILING, "cotas ${money(Cents(372_000))}") && shows(BudgetTags.CEILING, "teto ${money(Cents(410_000))}") &&
+                shows(BudgetTags.CEILING, "de ${money(Cents(372_000))}") && shows(BudgetTags.CEILING, "teto ${stepValue(Cents(410_000))}") &&
                 !shows(BudgetTags.CEILING, "só") && !shows(BudgetTags.CEILING, money(Cents(440_000))) &&
-                described(BudgetTags.CEILING, "Teto de novembro: ${money(Cents(410_000))}. Cotas somam ${money(Cents(372_000))}, a ${money(Cents(38_000))} do teto. Tocar para mudar.")
+                described(BudgetTags.CEILING, "Novembro: margem de ${money(Cents(372_000))} de ${money(Cents(372_000))}. Gasto ${money(Cents(0))}, previstos ${money(Cents(0))}. Teto ${money(Cents(410_000))}, cotas a ${money(Cents(38_000))} do teto. Tocar para mudar o teto.")
         }
         assertEquals(Cents(440_000), fora { db.ceiling(OUT) }.cents)
         assertEquals(Ceiling(NOV, Cents(410_000), Cents(410_000), Cents(372_000)), fora { db.ceiling(NOV) })
@@ -738,14 +739,14 @@ class TetoLifecycleTest {
         tap(BudgetTags.CEILING_ONLY)
         await("snack 'Novembro sem teto.'", SnackTags.TEXT) { shows(SnackTags.TEXT, "Novembro sem teto.") }
         await("novembro sem teto, sem menção ao padrão", BudgetTags.CEILING) {
-            shows(BudgetTags.CEILING, "As cotas somam ${money(Cents(372_000))}.") && shows(BudgetTags.CEILING, "Pôr um teto") &&
-                described(BudgetTags.CEILING, "As cotas de novembro somam ${money(Cents(372_000))}. Sem teto. Tocar para pôr um teto.")
+            shows(BudgetTags.CEILING, "de ${money(Cents(372_000))}") && shows(BudgetTags.CEILING, "Pôr um teto") &&
+                described(BudgetTags.CEILING, "Novembro: margem de ${money(Cents(372_000))} de ${money(Cents(372_000))}. Gasto ${money(Cents(0))}, previstos ${money(Cents(0))}. Sem teto. Tocar para pôr um teto.")
         }
 
         day = DEZ_3
         await("dezembro volta ao padrão", BudgetTags.CEILING) {
-            shows(BudgetTags.CEILING, "teto ${money(Cents(410_000))}") && !shows(BudgetTags.CEILING, "Pôr um teto") &&
-                described(BudgetTags.CEILING, "Teto de dezembro: ${money(Cents(410_000))}.")
+            shows(BudgetTags.CEILING, "teto ${stepValue(Cents(410_000))}") && !shows(BudgetTags.CEILING, "Pôr um teto") &&
+                described(BudgetTags.CEILING, "Dezembro: margem de ${money(Cents(372_000))} de ${money(Cents(372_000))}. Gasto ${money(Cents(0))}, previstos ${money(Cents(0))}. Teto ${money(Cents(410_000))}")
         }
         assertEquals(Cents(0), fora { db.ceiling(NOV) }.cents)
     }
@@ -756,11 +757,11 @@ class TetoLifecycleTest {
         assertTrue(fora { db.setCeiling(Cents(440_000), onward = false, today = DIA_FIXO) })
         composeRule.setContent { Content() }
         await("outubro 'teto R$ 4.400,00 · só outubro'", BudgetTags.CEILING) {
-            shows(BudgetTags.CEILING, "teto ${money(Cents(440_000))}") && shows(BudgetTags.CEILING, "só outubro")
+            shows(BudgetTags.CEILING, "teto ${stepValue(Cents(440_000))}") && shows(BudgetTags.CEILING, "só outubro")
         }
         day = NOV_2
         await("novembro sem teto", BudgetTags.CEILING) {
-            shows(BudgetTags.CEILING, "As cotas somam ${money(Cents(372_000))}.") && shows(BudgetTags.CEILING, "Pôr um teto")
+            shows(BudgetTags.CEILING, "de ${money(Cents(372_000))}") && shows(BudgetTags.CEILING, "Pôr um teto")
         }
         assertEquals(Ceiling(NOV, Cents(0), Cents(0), Cents(372_000)), fora { db.ceiling(NOV) })
         assertEquals(Cents(440_000), fora { db.ceiling(OUT) }.cents)
@@ -778,8 +779,8 @@ class TetoLifecycleTest {
     private fun headerMatches(c: Ceiling): Boolean {
         val t = BudgetTags.CEILING
         if (c.cents.v == 0L) {
-            return shows(t, "As cotas somam ${money(c.limits)}.") && shows(t, "Pôr um teto") &&
-                described(t, "As cotas de outubro somam ${money(c.limits)}. Sem teto. Tocar para pôr um teto.")
+            return shows(t, "de ${money(c.limits)}") && shows(t, "Pôr um teto") &&
+                described(t, "Sem teto. Tocar para pôr um teto.")
         }
         val only = c.cents != c.standard
         val distance = when {
@@ -789,10 +790,10 @@ class TetoLifecycleTest {
         }
         val over = c.limits - c.cents
         val plus = if (over.v <= 0) "" else if (over.v % 100 == 0L) "+ ${moneyParts(over).first}" else "+ ${moneyPlain(over)}"
-        return shows(t, "cotas ${money(c.limits)}") && shows(t, "teto ${money(c.cents)}") &&
+        return shows(t, "de ${money(c.limits)}") && shows(t, "teto ${stepValue(c.cents)}") &&
             shows(t, "só outubro") == only &&
             (if (plus.isEmpty()) !shows(t, "+ ") else shows(t, plus)) &&
-            described(t, "Teto de outubro: ${money(c.cents)}. Cotas somam ${money(c.limits)}, $distance. Tocar para mudar.")
+            described(t, "Teto ${money(c.cents)}, cotas $distance. Tocar para mudar o teto.")
     }
 
     private fun openCeilingDialog() {

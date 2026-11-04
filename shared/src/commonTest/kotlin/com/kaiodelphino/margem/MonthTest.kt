@@ -19,7 +19,12 @@ class MonthTest {
         weekStart: DayOfWeek = MONDAY,
         edited: Map<LocalDate, Long> = emptyMap(),
         spent: Map<LocalDate, Long> = emptyMap(),
-    ) = budgetMonth(month, startDay, weekStart, today, Cents(limit), edited.mapValues { Cents(it.value) }, spent.mapValues { Cents(it.value) }, emptyMap(), Cents(0))
+        fixed: Map<LocalDate, Long> = emptyMap(),
+        open: Long = 0,
+    ) = budgetMonth(
+        month, startDay, weekStart, today, Cents(limit), edited.mapValues { Cents(it.value) }, spent.mapValues { Cents(it.value) },
+        fixed.mapValues { Cents(it.value) }, Cents(open),
+    )
 
     private fun BudgetMonth.steps() = weeks.map { it.step.v }
 
@@ -148,5 +153,127 @@ class MonthTest {
         assertEquals(Cents(4148), oct.idealByDay[5]) // day 6: 2000 + 7518 × 2 ÷ 7 = 2000 + 2148
         assertEquals(Cents(2000 + 7518 * 3), oct.idealByDay[24]) // day 25 closes the 4th week
         assertEquals(Cents(31000), oct.idealByDay.last())
+    }
+
+    // Margem honesta (D68, margem-plan M1–M6). Nov 2026 from Monday: weeks 1 · 2–8 · 9–15 · 16–22 · 23–29 · 30.
+
+    @Test
+    fun `an open aluguel reserves - cota 3000 aluguel 2000 leaves 1000 free and margem 960 with 40 spent`() {
+        // M1: margem = 3000 − 40 − 2000 = 960. M3: free 1000 over 30 days, 3333 a day rounded down (D11):
+        // week 1 = 3333, full weeks 23331 + 70 ÷ 30 = 23333, last 3333 + the 2 left = 3335.
+        val m = bm(today = LocalDate(2026, 11, 2), limit = 300000, spent = mapOf(LocalDate(2026, 11, 1) to 4000L), open = 200000)
+        assertEquals(Cents(200000), m.open)
+        assertEquals(Cents(0), m.fixed)
+        assertEquals(Cents(200000), m.planned)
+        assertEquals(Cents(100000), m.freeLimit)
+        assertEquals(Cents(4000), m.spent)
+        assertEquals(Cents(4000), m.variable)
+        assertEquals(Cents(96000), m.remaining)
+        assertEquals(listOf(3333L, 23333, 23333, 23333, 23333, 3335), m.steps())
+        // Ideal of Nov 2: 3333 + 23333 × 1 ÷ 7 = 3333 + 3333.
+        assertEquals(Cents(6666), m.ideal)
+        assertEquals(PaceStatus.ON_PACE, m.status)
+        assertEquals(Cents(100000), m.idealByDay.last())
+        // M6: 4000 × 100000 ÷ 6666 = 60006, + previstos 200000.
+        assertEquals(Cents(260006), m.projection)
+        // Every week max is against the free part (D70).
+        assertEquals(Cents(100000), m.weeks[1].max)
+    }
+
+    @Test
+    fun `aluguel lancado at 2100 is gasto out of the ritmo and leaves 900 free`() {
+        // M4: the whole 2100 is fixed; free = 3000 − 2100 = 900, 3000 a day; Week.spent is the variable part.
+        val m = bm(
+            today = LocalDate(2026, 11, 2), limit = 300000,
+            spent = mapOf(LocalDate(2026, 11, 1) to 4000L, LocalDate(2026, 11, 2) to 214000L),
+            fixed = mapOf(LocalDate(2026, 11, 2) to 210000L),
+        )
+        assertEquals(Cents(0), m.open)
+        assertEquals(Cents(210000), m.fixed)
+        assertEquals(Cents(210000), m.planned)
+        assertEquals(Cents(90000), m.freeLimit)
+        assertEquals(Cents(218000), m.spent)
+        assertEquals(Cents(8000), m.variable)
+        assertEquals(Cents(82000), m.remaining) // 3000 − 2180 − 0 open
+        assertEquals(listOf(3000L, 21000, 21000, 21000, 21000, 3000), m.steps())
+        assertEquals(listOf(4000L, 4000, 0, 0, 0, 0), m.weeks.map { it.spent.v })
+        // Ideal of Nov 2 = 3000 + 21000 ÷ 7 = 6000; 80 variable > 60 → Acima do ritmo, the 2100 never counts in it.
+        assertEquals(Cents(6000), m.ideal)
+        assertEquals(PaceStatus.AHEAD, m.status)
+    }
+
+    @Test
+    fun `variable over the ideal is Acima do ritmo and spent plus open over the cota is Fora da margem`() {
+        val nov2 = LocalDate(2026, 11, 2)
+        // 70 variable > ideal 66,66 of the free 1000; margem 3000 − 70 − 2000 = 930 ≥ 0.
+        val ahead = bm(today = nov2, limit = 300000, spent = mapOf(LocalDate(2026, 11, 1) to 7000L), open = 200000)
+        assertEquals(PaceStatus.AHEAD, ahead.status)
+        assertEquals(Cents(93000), ahead.remaining)
+        // 1010 spent + 2000 open > 3000: margem −10 (M1, M3).
+        val over = bm(today = nov2, limit = 300000, spent = mapOf(LocalDate(2026, 11, 1) to 101000L), open = 200000)
+        assertEquals(Cents(-1000), over.remaining)
+        assertEquals(PaceStatus.OVERRUN, over.status)
+        // The same gasto without the previsto is far from the cota but way over the ritmo.
+        assertEquals(PaceStatus.AHEAD, bm(today = nov2, limit = 300000, spent = mapOf(LocalDate(2026, 11, 1) to 101000L)).status)
+    }
+
+    @Test
+    fun `previstos over the cota leave no free part - steps 0 and no projection`() {
+        // limit 1000, open 1500: free = max(0, −500) = 0, every step 0, ideal 0 → no projection (M6); margem −500.
+        val m = bm(limit = 100000, spent = mapOf(LocalDate(2026, 11, 3) to 2000L), open = 150000)
+        assertEquals(Cents(0), m.freeLimit)
+        assertEquals(listOf(0L, 0, 0, 0, 0, 0), m.steps())
+        assertEquals(Cents(0), m.ideal)
+        assertEquals(Cents(0), m.projection)
+        assertEquals(Cents(-52000), m.remaining)
+        assertEquals(PaceStatus.OVERRUN, m.status)
+        assertEquals(Cents(0), m.idealByDay.last())
+    }
+
+    @Test
+    fun `exactly on the ritmo of the free part projects the cota`() {
+        // free 900, 3000 a day; Nov 15 closes the 3rd week: ideal 3000 + 21000 × 2 = 45000.
+        // M6: 45000 × 90000 ÷ 45000 + 210000 = 300000 = cota.
+        val m = bm(
+            limit = 300000,
+            spent = mapOf(LocalDate(2026, 11, 2) to 210000L, LocalDate(2026, 11, 10) to 45000L),
+            fixed = mapOf(LocalDate(2026, 11, 2) to 210000L),
+        )
+        assertEquals(Cents(45000), m.ideal)
+        assertEquals(PaceStatus.ON_PACE, m.status)
+        assertEquals(Cents(300000), m.projection)
+    }
+
+    @Test
+    fun `step edits over the free part are ignored and count again when it grows back`() {
+        // D70: weeks 2–8 and 9–15 edited to 500 each (1000). Free 1000 fits them, free 500 doesn't.
+        val edits = mapOf(LocalDate(2026, 11, 2) to 50000L, LocalDate(2026, 11, 9) to 50000L)
+        val fits = bm(limit = 300000, edited = edits, open = 200000)
+        assertEquals(listOf(false, true, true, false, false, false), fits.weeks.map { it.edited })
+        assertEquals(Cents(50000), fits.weeks[1].step)
+        assertEquals(100000L, fits.steps().sum())
+        // The edited week's max: free − the other edit = 1000 − 500.
+        assertEquals(Cents(50000), fits.weeks[1].max)
+        assertEquals(Cents(0), fits.weeks[0].max) // 1000 − 1000 edited
+
+        val over = bm(limit = 300000, edited = edits, open = 250000)
+        assertEquals(List(6) { false }, over.weeks.map { it.edited })
+        assertEquals(50000L, over.steps().sum())
+        assertEquals(Cents(50000), over.weeks[1].max)
+
+        val back = bm(limit = 300000, edited = edits, open = 0)
+        assertEquals(Cents(50000), back.weeks[1].step)
+        assertEquals(300000L, back.steps().sum())
+    }
+
+    @Test
+    fun `fixed and open outside the month are ignored and no previsto gives the rules of before`() {
+        val spent = mapOf(LocalDate(2026, 11, 3) to 7000L)
+        val plain = bm(spent = spent)
+        assertEquals(plain, bm(spent = spent, fixed = mapOf(LocalDate(2026, 10, 31) to 5000L, LocalDate(2026, 12, 1) to 5000L)))
+        assertEquals(Cents(60000), plain.freeLimit)
+        assertEquals(plain.spent, plain.variable)
+        assertEquals(Cents(53000), plain.remaining)
+        assertEquals(Cents(0), plain.planned)
     }
 }

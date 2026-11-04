@@ -50,7 +50,11 @@ import kotlinx.io.files.SystemTemporaryDirectory
 //   zero in every read but pending; Planned.noticeInPauta agrees with it;
 // - every Planned has ≥ 1 tag, an existing budget and a name ≤ 80 (D62);
 // - spent (budgetsOverview, budgetDetail, history) and the Leitura (tagRanking, merchantRanking,
-//   spentByDay) equal what the lançamentos alone give by spec §3/§7.5 (a previsto never counts).
+//   spentByDay) equal what the lançamentos alone give by spec §3/§7.5 (a previsto is never gasto);
+// - the margem of budgetsOverview is cota − gasto − the open occurrences of the verba dated in the month
+//   (margem honesta M1, D68), Fora da margem iff it is < 0; a lançamento of a previsto is fixed (D69) and dated
+//   in its occurrence's budget month (D72). Rewritten 2026-10-27 from "margem = cota − gasto": the previsto
+//   now reserves (margem-plan M1), and occurrences are created up to the end of today's month (D71).
 //
 // Bank-text keys are written by hand from the MerchantKey KDoc (spacing, case and accents ignored), never
 // computed with MerchantKey or fold.
@@ -207,7 +211,7 @@ private class PvInvTx(
     var budget: BudgetId,
     var tags: List<String>,
     var cents: Long,
-    val date: LocalDate,
+    var date: LocalDate,
     val time: LocalTime,
     val merchant: String,
     val caption: String,
@@ -218,6 +222,8 @@ private class PvInvTx(
 ) {
     /** D65: the previsto this lançamento's "Repete" created; null when none (or deleted). */
     var started: PvInvPlan? = null
+    /** D69: it closed an occurrence; kept by edit and when its previsto is deleted. */
+    val fixed: Boolean = plan != null
 }
 
 /** What a refused write must leave untouched ("nothing written", and no version bump: Db.version KDoc). */
@@ -331,10 +337,16 @@ private class PrevistoInvariantRun(val db: Db, val seed: Int, val startDay: Int)
      */
     fun due(o: OccurrenceId): Boolean = occIds[o]?.let { (p, m) -> pvinvOccDate(m, p.day) <= today.pvinvDays(10) } ?: true
 
-    /** Marks the occurrences planned(today)/pending(today) create: dated up to today + 10 (R1), ONCE only its first. */
+    /**
+     * Marks the occurrences planned(today)/pending(today)/budgetsOverview/budgetDetail create: dated up to the later
+     * of today + 10 (R1) and the end of today's budget month (D71), ONCE only its first. The first month's row
+     * exists from the write that made the previsto, whatever its date (the reading readPlanned tolerates), and
+     * reserves from then on (M1).
+     */
     fun markCreated() {
-        val horizon = today.pvinvDays(10)
+        val horizon = maxOf(today.pvinvDays(10), pvinvWindow(cur(), startDay).second)
         for (p in plans) {
+            p.occs.getOrPut(p.first) { PvInvOcc() }
             var m = p.first
             while (pvinvOccDate(m, p.day) <= horizon) {
                 p.occs.getOrPut(m) { PvInvOcc() }
@@ -442,7 +454,7 @@ private class PrevistoInvariantRun(val db: Db, val seed: Int, val startDay: Int)
         for (p in plans) {
             if (p.id.v == 0L) {
                 assertTrue(
-                    p.occs.isEmpty(),
+                    p.occs.keys.none { pvinvOccDate(it, p.day) <= today.pvinvDays(10) },
                     "$p has occurrences dated up to today + 10 (${p.occs.keys}) but planned(today) doesn't list it (R1)",
                 )
                 continue
@@ -535,7 +547,15 @@ private class PrevistoInvariantRun(val db: Db, val seed: Int, val startDay: Int)
     fun newTx(id: TransactionId, notice: NoticeId, f: TransactionForm, plan: PvInvPlan?, month: YearMonth, linkAlt: PvInvLink?) {
         assertFalse(id in txs || id in goneTx, "lançamento id ${id.v} was never used before (Db.accept KDoc)")
         if (plan != null) assertTrue(txs.values.none { it.plan === plan && it.month == month }, "model: $plan month $month closed by one lançamento only")
-        txs[id] = PvInvTx(id, notice, f.budget, pvinvTags(f.tags), f.total.v, f.date, f.time, f.merchant.trim(), pvinvClean(f.caption), plan, month, linkAlt)
+        // D72: a lançamento of a previsto dated in another budget month than its occurrence takes the occurrence's date.
+        val date = if (plan == null) f.date else keptDate(f.date, plan, month)
+        txs[id] = PvInvTx(id, notice, f.budget, pvinvTags(f.tags), f.total.v, date, f.time, f.merchant.trim(), pvinvClean(f.caption), plan, month, linkAlt)
+    }
+
+    /** D72: [date], or the date of [p]'s occurrence of calendar month [m] when that falls in another budget month. */
+    fun keptDate(date: LocalDate, p: PvInvPlan, m: YearMonth): LocalDate {
+        val occ = pvinvOccDate(m, p.day)
+        return if (pvinvMonthOf(date, startDay) != pvinvMonthOf(occ, startDay)) occ else date
     }
 
     fun closeOcc(p: PvInvPlan, m: YearMonth, tx: TransactionId) {
@@ -996,6 +1016,8 @@ private class PrevistoInvariantRun(val db: Db, val seed: Int, val startDay: Int)
         t.tags = pvinvTags(f.tags)
         t.cents = f.total.v
         if (drop) dropPlan(own!!)
+        // D72: an edit that keeps the occurrence keeps the lançamento in its budget month (the previsto's day may have moved).
+        t.plan?.let { p -> if (p in plans) t.date = keptDate(t.date, p, t.month) }
         if (monthly && own == null) {
             val info = if (t.notice.v == 0L) PvInvLink() else noticeInfo.getValue(t.notice)
             val link = if (info.on && keyOf(info.text).isNotEmpty()) info else PvInvLink()
@@ -1064,6 +1086,18 @@ private class PrevistoInvariantRun(val db: Db, val seed: Int, val startDay: Int)
         p.day = day
         p.repeats = repeats
         if (repeats == Repeats.MONTHLY) p.everMonthly = true
+        // Db.addManual KDoc ("Só uma vez" keeps it alone, spec §2.13): without the occurrence opened, the earliest open
+        // month stays and the other open rows are deleted. Modeled 2026-10-27: with D71 those rows now reserve (M1).
+        if (repeats == Repeats.ONCE) {
+            val open = p.occs.entries.filter { it.value.state == PvInvState.OPEN }.sortedBy { it.key }
+            for ((m, o) in open.drop(1)) {
+                p.occs.remove(m)
+                if (o.id.v != 0L) {
+                    occIds.remove(o.id)
+                    deletedOccs.add(o.id)
+                }
+            }
+        }
         assertEquals(before.txs, db.transactions(), "Editar previsto changes no lançamento")
     }
 
@@ -1187,7 +1221,8 @@ private class PrevistoInvariantRun(val db: Db, val seed: Int, val startDay: Int)
             val t = txs.getValue(r.id)
             assertEquals(t.budget, r.budget, "lançamento ${r.id.v}: verba")
             assertEquals(Cents(t.cents), r.total, "lançamento ${r.id.v}: value (Lançar previsto: the recado's, P7)")
-            assertEquals(t.date, r.date, "lançamento ${r.id.v}: date")
+            assertEquals(t.date, r.date, "lançamento ${r.id.v}: date (D72: in its occurrence's budget month)")
+            assertEquals(t.fixed, r.fixed, "lançamento ${r.id.v}: fixed iff it closed an occurrence (D69)")
             assertEquals(t.tags, r.tags, "lançamento ${r.id.v}: marcadores")
             assertEquals(t.notice, r.notice, "lançamento ${r.id.v}: recado")
             assertEquals(1, r.installments, "lançamento ${r.id.v}: à vista")
@@ -1197,9 +1232,15 @@ private class PrevistoInvariantRun(val db: Db, val seed: Int, val startDay: Int)
     fun spent(b: BudgetId, from: LocalDate, to: LocalDate) =
         txs.values.filter { it.budget == b && it.date >= from && it.date <= to }.sumOf { it.cents }
 
-    /** spec §3 Gasto do mês, §2.13: the lançamentos alone; previstos never count. */
+    /** M1: Σ of the previsto's value of [b]'s open occurrences dated in [from]..[to]. */
+    fun open(b: BudgetId, from: LocalDate, to: LocalDate) = plans.filter { it.budget == b }.sumOf { p ->
+        p.occs.entries.filter { (m, o) -> o.state == PvInvState.OPEN && pvinvOccDate(m, p.day) in from..to }.size * p.cents
+    }
+
+    /** spec §3 Gasto do mês, §2.13: the lançamentos alone, previstos never gasto; the margem reserves the open ones (M1). */
     suspend fun checkSpent() {
         val cur = cur()
+        markCreated()
         for (k in -1..1) {
             val m = cur.pvinvShift(k)
             val (ws, we) = pvinvWindow(m, startDay)
@@ -1208,8 +1249,9 @@ private class PrevistoInvariantRun(val db: Db, val seed: Int, val startDay: Int)
             for (s in ov) {
                 val exp = spent(s.id, ws, we)
                 assertEquals(exp, s.month.spent.v, "budgetsOverview($m) verba ${s.id.v}: spent = Σ of its lançamentos in $ws..$we; a previsto never counts")
-                assertEquals(s.month.limit.v - exp, s.month.remaining.v, "budgetsOverview($m) verba ${s.id.v}: margem = cota − gasto")
-                assertEquals(exp > s.month.limit.v, s.month.status == PaceStatus.OVERRUN, "budgetsOverview($m) verba ${s.id.v}: Fora da margem iff gasto > cota (§5)")
+                val margem = s.month.limit.v - exp - open(s.id, ws, we)
+                assertEquals(margem, s.month.remaining.v, "budgetsOverview($m) verba ${s.id.v}: margem = cota − gasto − previstos em aberto (M1)")
+                assertEquals(margem < 0, s.month.status == PaceStatus.OVERRUN, "budgetsOverview($m) verba ${s.id.v}: Fora da margem iff margem < 0 (M3)")
             }
         }
         if (budgets.isNotEmpty()) {

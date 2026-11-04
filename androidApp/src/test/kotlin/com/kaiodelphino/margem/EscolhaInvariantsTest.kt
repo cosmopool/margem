@@ -184,6 +184,11 @@ class EscolhaInvariantsTest {
 
     private fun margin(budget: BudgetId, date: LocalDate): Cents? = margins(date)[budget]?.let { Cents(it) }
 
+    /** The open previstos the margin reserves (margem honesta M1): BudgetMonth.open of [budget] in [date]'s month. */
+    private fun open(budget: BudgetId, date: LocalDate): Long = runBlocking {
+        db.budgetsOverview(db.monthOf(date), OCT_9, BudgetOrder.MANUAL).firstOrNull { it.id == budget }?.month?.open?.v ?: 0L
+    }
+
     private fun at(hour: Int, minute: Int, day: LocalDate = OCT_9) =
         LocalDateTime(day.year, day.month, day.day, hour, minute).toInstant(ZONE).toEpochMilliseconds()
 
@@ -370,7 +375,8 @@ class EscolhaInvariantsTest {
         }
         await({ "$ctx: tracejados esperados $marks, na tela ${suggestionMarks()}" }) { suggestionMarks() == marks }
 
-        // The preview: same budget, same month, so its "before" is the field's margin.
+        // The preview: same budget, same month. Rewritten 2026-10-27: the field's margin reserves the open previstos (M1)
+        // and the preview stays cota − gasto (margem-plan §8, out of this block), so "before" = field margin + open.
         val future = count(TransactionTags.FORM_FUTURE) > 0
         if (!chosen || f.total.v == 0L) {
             await({ "$ctx: sem verba ou sem valor, sem prévia: ${texts(TransactionTags.FORM_PREVIEW)}" }) { count(TransactionTags.FORM_PREVIEW) == 0 }
@@ -378,8 +384,8 @@ class EscolhaInvariantsTest {
             if (f.previewSaid) await({ "$ctx: com verba e valor, a prévia aparece" }) { count(TransactionTags.FORM_PREVIEW) > 0 }
             if (count(TransactionTags.FORM_PREVIEW) > 0) {
                 val p = runBlocking { db.previewAccept(f.budget, f.date, f.total, 1, OCT_9, f.replacing) }
-                assertEquals("$ctx: Db.previewAccept.before é a margem da visão geral do mesmo mês", r, p.before)
-                val want = "$name: margem ${mt(r)} → ${mt(p.after)}"
+                assertEquals("$ctx: Db.previewAccept.before é a margem da visão geral do mesmo mês mais os previstos em aberto", Cents(r.v + open(f.budget, f.date)), p.before)
+                val want = "$name: margem ${mt(p.before)} → ${mt(p.after)}"
                 await({ "$ctx: FORM_PREVIEW deveria mostrar \"$want\": ${texts(TransactionTags.FORM_PREVIEW)}" }) { shows(TransactionTags.FORM_PREVIEW, want) }
             }
         }
@@ -735,7 +741,8 @@ class EscolhaInvariantsTest {
         // The occurrence's date, Oct 12: the October margins.
         val f = Form(budget = casa, date = OCT_12, total = Cents(11990), chips = mutableSetOf("contas"), previewSaid = false)
         checkForm(f, "Editar previsto, aberto")
-        assertShows("Editar previsto", TransactionTags.FORM_BUDGET, "margem ${money(Cents(150000))}")
+        // M1: Casa's 1.500,00 less the Internet itself, open on Oct 12 (119,90).
+        assertShows("Editar previsto", TransactionTags.FORM_BUDGET, "margem ${money(Cents(138010))}")
         checkTagSearch(f, "", "Editar previsto")
 
         checkSheetAndPick(f, mercado, "Editar previsto, folha", search = "MER")
@@ -751,7 +758,9 @@ class EscolhaInvariantsTest {
         compose.waitUntil(5_000) { runBlocking { db.planned(OCT_9) }.first { it.name == "Internet" }.budget == mercado }
         val pl = runBlocking { db.planned(OCT_9) }.first { it.name == "Internet" }
         assertEquals("marcadores gravados no previsto = chips", f.chips, pl.tags.toSet())
-        assertEquals("editar previsto não lança: margem de Mercado igual", Cents(39655), margin(mercado, OCT_9))
+        // Rewritten 2026-10-27: editar previsto still launches nothing, but its 119,90 now reserve in Mercado (M1).
+        assertEquals("editar previsto não lança: margem de Mercado menos o previsto em aberto", Cents(39655 - 11990), margin(mercado, OCT_9))
+        assertEquals("editar previsto não lança: Casa volta à cota inteira", Cents(150000), margin(casa, OCT_9))
     }
 
     // ---- A seeded walk over the tags ----

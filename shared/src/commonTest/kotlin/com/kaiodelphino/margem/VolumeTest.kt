@@ -225,6 +225,7 @@ class VolumeTest {
     @Test
     fun `two years of launched previstos keep pending and planned under twice the time`() = runTest(timeout = 10.minutes) {
         // Architecture testing "Volume" (2026-10-24): 200 previstos and 24 months launched, pending() and planned(today) at most 2× the same Db without that history (median of 5).
+        // Margem honesta (D68, D71, 2026-10-27): budgetsOverview printed too (sub-millisecond here; its ceiling is in the five-year test).
         val today = LocalDate(2026, 10, 16)
         val freshPath = Path(SystemTemporaryDirectory, "margem-volume-fresh-${Random.nextLong().toULong()}.db").toString()
         val fresh = Db(BundledSQLiteDriver(), freshPath, timeZone = tz)
@@ -290,9 +291,12 @@ class VolumeTest {
             val pending = median { db.pending() }
             val planned = median { db.planned(today) }
             val pendingToday = median { db.pending(today) }
+            val freshOverview = median { fresh.budgetsOverview(YearMonth(2026, 10), today, BudgetOrder.RISK) }
+            val overview = median { db.budgetsOverview(YearMonth(2026, 10), today, BudgetOrder.RISK) }
             println(
                 "VOLUME 200 previstos, 24 months launched vs none: pending() $pending vs $freshPending ms; " +
-                    "planned(today) $planned vs $freshPlanned ms; pending(today) $pendingToday vs $freshPendingToday ms (not asserted)",
+                    "planned(today) $planned vs $freshPlanned ms; pending(today) $pendingToday vs $freshPendingToday ms (not asserted); " +
+                    "budgetsOverview $overview vs $freshOverview ms (not asserted)",
             )
             assertTrue(pending <= 2 * freshPending, "pending() $pending ms with the history vs $freshPending ms without")
             assertTrue(planned <= 2 * freshPlanned, "planned(today) $planned ms with the history vs $freshPlanned ms without")

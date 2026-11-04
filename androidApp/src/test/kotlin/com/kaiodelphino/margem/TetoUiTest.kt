@@ -91,8 +91,10 @@ class TetoUiTest {
         assertEquals(false, shown(BudgetTags.CEILING))
         budgets()
         waitFor(BudgetTags.CEILING)
-        compose.onNodeWithTag(BudgetTags.CEILING).assertTextContains("As cotas somam ${money(Cents(372_000))}.").assertTextContains("Pôr um teto")
-            .assert(described("As cotas de outubro somam ${money(Cents(372_000))}. Sem teto. Tocar para pôr um teto."))
+        // M9 (2026-10-27): the teto line is the total of the month; nothing spent, no previstos.
+        compose.onNodeWithTag(BudgetTags.CEILING).assertTextContains("Margem ${money(Cents(372_000))} de ${money(Cents(372_000))}")
+            .assertTextContains("gasto 0 · previstos 0").assertTextContains("Pôr um teto")
+            .assert(described("Outubro: margem de ${money(Cents(372_000))} de ${money(Cents(372_000))}. Gasto ${money(Cents(0))}, previstos ${money(Cents(0))}. Sem teto. Tocar para pôr um teto."))
     }
 
     @Test
@@ -101,8 +103,9 @@ class TetoUiTest {
         runBlocking { db.ensureMonths(OCT); db.setCeiling(Cents(410_000), onward = true, OCT_9) }
         open()
         waitFor(BudgetTags.CEILING)
-        compose.onNodeWithTag(BudgetTags.CEILING).assertTextContains("cotas ${money(Cents(372_000))}").assertTextContains("teto ${money(Cents(410_000))}")
-            .assert(described("Teto de outubro: ${money(Cents(410_000))}. Cotas somam ${money(Cents(372_000))}, a ${money(Cents(38_000))} do teto. Tocar para mudar."))
+        compose.onNodeWithTag(BudgetTags.CEILING).assertTextContains("Margem ${money(Cents(372_000))} de ${money(Cents(372_000))}")
+            .assertTextContains("gasto 0 · previstos 0 · teto 4.100")
+            .assert(described("Outubro: margem de ${money(Cents(372_000))} de ${money(Cents(372_000))}. Gasto ${money(Cents(0))}, previstos ${money(Cents(0))}. Teto ${money(Cents(410_000))}, cotas a ${money(Cents(38_000))} do teto. Tocar para mudar o teto."))
 
         compose.onNodeWithTag(BudgetTags.HEADER).performClick()
         waitFor(BudgetTags.CEILING_DIALOG)
@@ -118,8 +121,8 @@ class TetoUiTest {
         waitGone(BudgetTags.CEILING_DIALOG)
         compose.onNodeWithTag(SnackTags.TEXT).assertTextContains("Teto de ${money(Cents(350_000))} só em outubro.")
         assertEquals(Ceiling(OCT, Cents(350_000), Cents(410_000), Cents(372_000)), runBlocking { db.ceiling(OCT) })
-        compose.waitUntil(5_000) { runCatching { compose.onNodeWithTag(BudgetTags.CEILING).assertTextContains("+ 220") }.isSuccess }
-        compose.onNodeWithTag(BudgetTags.CEILING).assertTextContains("teto ${money(Cents(350_000))} · só outubro")
+        compose.waitUntil(5_000) { runCatching { compose.onNodeWithTag(BudgetTags.CEILING).assertTextContains("+ 220", substring = true) }.isSuccess }
+        compose.onNodeWithTag(BudgetTags.CEILING).assertTextContains("gasto 0 · previstos 0 · teto 3.500 · só outubro · + 220")
 
         compose.onNodeWithTag(SnackTags.ACTION).performClick()
         compose.waitUntil(5_000) { runBlocking { db.ceiling(OCT) }.cents == Cents(410_000) }

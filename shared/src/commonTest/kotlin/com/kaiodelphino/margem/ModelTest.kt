@@ -32,6 +32,10 @@ import kotlinx.io.files.SystemTemporaryDirectory
 // D43). After every step the public reads of both must be equal. The model is plain lists and maps: no SQL and
 // nothing `internal` of the shared module; it computes months, weeks, steps, pace and installments on its own.
 // Where the spec is silent, the model follows the public KDoc of the Db (orderings, the merchant key) and says so.
+// Margem honesta (2026-10-27, margem-plan M1–M6, D68–D73): previstos made by "Salvar previsto", launched without a
+// recado, skipped and deleted; the model computes their months (D71), the reserve, the fixed lançamentos (D69, D72),
+// the cota livre and "Previstos de <mês>" on its own. Occurrence ids are the Db's: the model keys a month by
+// (previsto, calendar month) and copies the id from the read.
 
 private const val MT_NU = "com.nu.production"
 /** A second app, a source only while the run says so. Its texts carry no R$ value: nothing is read from them. */
@@ -46,6 +50,9 @@ private val MT_FORM_MERCHANTS = MT_MERCHANTS + listOf("loja x", " Padaria  do ze
 private val MT_OTHER_TEXTS = listOf("Seu cartão virtual foi criado.", "Confira as novidades do app.")
 private val MT_TAGS = listOf("padaria", " Mercado ", "CAFE", "feira", "lazer", "Transporte")
 private val MT_NAMES = listOf("Mercado", "Casa", "Lazer", "Transporte", "Saude", "mercado", "CASA", "  ", " Pets ")
+private val MT_PLAN_NAMES = listOf("Aluguel", "Internet", "Academia", "Condominio")
+/** "Previstos de <mês>" without the Db's occurrence ids: by date, then previsto. */
+private val MT_LINE_ORDER = compareBy<PlannedLine> { it.planned.date }.thenBy { it.planned.planned.v }
 
 private val DAY = DateTimeUnit.DAY
 
@@ -77,7 +84,17 @@ private data class MtTx(
     val tags: Set<String>,
     val corrected: Boolean,
     val inst: List<Installment>,
+    /** D69: it closed an occurrence; kept by edit and when the previsto goes. */
+    val fixed: Boolean = false,
+    /** The occurrence it closed, (previsto, calendar month); null when none or its previsto was deleted (D59). */
+    val occ: Pair<PlannedId, YearMonth>? = null,
 )
+
+/** A previsto made by "Salvar previsto" (spec §2.13, D64): never linked, named by its legenda. */
+private data class MtPlan(val id: PlannedId, val name: String, val budget: BudgetId, val tags: Set<String>, val cents: Long, val day: Int, val repeats: Repeats)
+
+/** One month of a previsto (D59), in its calendar [month]. Closed = a transaction's [MtTx.occ] is it (derived). */
+private data class MtOcc(val plan: PlannedId, val month: YearMonth, val skipped: Boolean = false)
 
 private data class MtModel(
     val settings: Settings = Settings(),
@@ -94,8 +111,82 @@ private data class MtModel(
     /** Ids handed out, never handed out again (D38). */
     val usedBudgetIds: Set<BudgetId> = emptySet(),
     val usedTxIds: Set<TransactionId> = emptySet(),
+    val plans: List<MtPlan> = emptyList(),
+    val occs: List<MtOcc> = emptyList(),
 ) {
     val day get() = settings.monthStartDay
+
+    fun plan(id: PlannedId) = plans.firstOrNull { it.id == id }
+
+    fun occDate(o: MtOcc) = mtOccDate(o.month, plan(o.plan)!!.day)
+
+    fun closer(o: MtOcc) = txs.firstOrNull { it.occ == (o.plan to o.month) }
+
+    /** D59: not skipped and no lançamento closing it. */
+    fun isOpen(o: MtOcc) = !o.skipped && closer(o) == null
+
+    /** R1, D71: each Todo mês previsto gets its months dated up to the later of today + 10 and the end of today's month, from its latest row on. */
+    fun filled(today: LocalDate): MtModel {
+        val until = maxOf(today.plus(10, DAY), mtWindow(mtMonthOf(today, day), day).second)
+        val more = ArrayList<MtOcc>()
+        for (p in plans) {
+            if (p.repeats != Repeats.MONTHLY) continue
+            var mo = occs.filter { it.plan == p.id }.maxOf { it.month }
+            while (mtOccDate(mo.mtShift(1), p.day) <= until) {
+                mo = mo.mtShift(1)
+                more += MtOcc(p.id, mo)
+            }
+        }
+        return if (more.isEmpty()) this else copy(occs = occs + more)
+    }
+
+    /** M1: the previsto's value of every open month of [budget]'s previstos dated in [from]..[to]. */
+    fun openIn(budget: BudgetId, from: LocalDate, to: LocalDate): Long =
+        occs.filter { isOpen(it) && plan(it.plan)!!.budget == budget && occDate(it) in from..to }.sumOf { plan(it.plan)!!.cents }
+
+    /** D68: installments of [budget]'s fixed transactions by day, refunded ones out. */
+    fun fixedOn(budget: BudgetId, from: LocalDate, to: LocalDate): Map<LocalDate, Long> {
+        val out = LinkedHashMap<LocalDate, Long>()
+        for (t in txs) if (t.fixed && t.budget == budget && !refunded(t.id)) for (i in t.inst) if (i.date in from..to) out[i.date] = (out[i.date] ?: 0L) + i.cents.v
+        return out
+    }
+
+    /** M5, D70: the cota livre of [budget] in [month] with [limit]. */
+    fun freeIn(budget: BudgetId, month: YearMonth, limit: Long): Long {
+        val (from, to) = mtWindow(month, day)
+        return maxOf(0L, limit - openIn(budget, from, to) - fixedOn(budget, from, to).values.sum())
+    }
+
+    /** Apagar previsto (D59, D69): rule and months go; its lançamentos stay, fixed, without origin. */
+    fun withoutPlans(gone: Set<PlannedId>) = copy(
+        plans = plans.filter { it.id !in gone }, occs = occs.filter { it.plan !in gone },
+        txs = txs.map { if (it.occ?.first in gone) it.copy(occ = null) else it },
+    )
+
+    /** D72: a lançamento whose occurrence is still there is dated in the occurrence's budget month (time kept, not an emenda). */
+    fun kept(t: MtTx): MtTx {
+        val o = t.occ ?: return t
+        val d = mtOccDate(o.second, plan(o.first)!!.day)
+        if (mtMonthOf(t.date, day) == mtMonthOf(d, day)) return t
+        return t.copy(date = d, inst = mtInstallments(d, t.total, t.inst.size, day))
+    }
+
+    /** Planned KDoc: one month of a previsto as the reads show it, with the Db's [id]. */
+    fun planned(o: MtOcc, id: OccurrenceId, today: LocalDate): Planned {
+        val p = plan(o.plan)!!
+        val date = occDate(o)
+        return Planned(
+            occurrence = id, planned = p.id, name = p.name, budget = p.budget, budgetName = budget(p.budget)?.name ?: "", tags = p.tags.sorted(),
+            cents = Cents(p.cents), day = p.day, repeats = p.repeats, date = date,
+            next = if (p.repeats == Repeats.MONTHLY) mtOccDate(o.month.mtShift(1), p.day) else NO_DATE, late = date < today,
+        )
+    }
+
+    /** TransactionDetail KDoc (D65): with the previsto whose occurrence it closed. */
+    fun txDetail(t: MtTx): TransactionDetail {
+        val p = t.occ?.let { plan(it.first) }
+        return TransactionDetail(row(t, null), t.inst, notice(t.notice)?.let { noticeRow(it) } ?: NoticeRow(), p?.id ?: PlannedId(0), p?.repeats ?: Repeats.ONCE, p?.day ?: 0)
+    }
 
     fun budget(id: BudgetId) = budgets.firstOrNull { it.id == id }
 
@@ -124,7 +215,7 @@ private data class MtModel(
         alias = aliases[mtKey(t.merchant)] ?: "", total = Cents(t.total), installments = t.inst.size, date = t.date, time = t.time,
         tags = t.tags.sorted(), estorno = refunds.entries.firstOrNull { it.value.first == t.id }?.key ?: NoticeId(0), corrected = t.corrected,
         now = if (today == null) Installment() else t.inst.firstOrNull { mtMonthOf(it.date, day) == mtMonthOf(today, day) } ?: Installment(),
-        caption = t.caption,
+        caption = t.caption, fixed = t.fixed,
     )
 
     /** Spec §3: Gasto do mês = installments of the budget dated in the month, without the refunded purchases. */
@@ -140,6 +231,7 @@ private data class MtModel(
         return mtBudgetMonth(
             month, day, settings.weekStart, today, limit ?: 0L, limit != null, b?.edits ?: emptyMap(),
             if (b == null) emptyMap() else spentOn(b.id, from, to),
+            if (b == null) emptyMap() else fixedOn(b.id, from, to), if (b == null) 0L else openIn(b.id, from, to),
         )
     }
 
@@ -150,7 +242,14 @@ private data class MtModel(
         val lines = txs.filter { it.budget == id }
             .flatMap { t -> t.inst.filter { it.date in bm.start..bm.end }.map { MonthLine(row(t, null), it.k, it.date, it.cents) } }
             .sortedWith(compareBy<MonthLine> { it.date }.thenBy { it.row.time }.thenBy { it.row.id.v })
-        return BudgetDetail(id, b.name, bm, lines, b.limits.keys.min())
+        // D73: its previstos' months dated in the month, skipped ones out; a lançada one at what it adds to this verba's fixed.
+        val plannedLines = occs.filter { !it.skipped && plan(it.plan)!!.budget == id && occDate(it) in bm.start..bm.end }.map { o ->
+            val p = planned(o, OccurrenceId(0), today)
+            val t = closer(o) ?: return@map PlannedLine(p, p.cents)
+            val cents = if (t.budget != id || refunded(t.id)) 0L else t.inst.filter { it.date in bm.start..bm.end }.sumOf { it.cents.v }
+            PlannedLine(p.copy(late = false), Cents(cents), t.date)
+        }.sortedWith(MT_LINE_ORDER)
+        return BudgetDetail(id, b.name, bm, lines, b.limits.keys.min(), plans.count { it.budget == id }, plannedLines)
     }
 
     /** Lançar / manual / editar (§2.4, §6, §7.3): a refused form gives null. */
@@ -187,7 +286,7 @@ private data class MtModel(
         val from = mtWindow(cur, day).first
         return copy(budgets = budgets.map { b ->
             if (b.id != id) return@map b
-            val over = b.edits.filterKeys { it >= from }.entries.groupBy { mtMonthOf(it.key, day) }.filterValues { e -> e.sumOf { it.value } > limit }.keys
+            val over = b.edits.filterKeys { it >= from }.entries.groupBy { mtMonthOf(it.key, day) }.filter { (mo, e) -> e.sumOf { it.value } > freeIn(id, mo, limit) }.keys
             b.copy(limits = b.limits.filterKeys { it < cur } + (cur to limit), edits = b.edits.filterKeys { it < from || mtMonthOf(it, day) !in over })
         })
     }
@@ -240,6 +339,9 @@ private fun mtCaption(s: String) = s.replace(Regex("\\r\\n|[\\r\\n\\u2028\\u2029
 
 private fun YearMonth.mtShift(n: Int): YearMonth = if (n >= 0) plus(n, DateTimeUnit.MONTH) else minus(-n, DateTimeUnit.MONTH)
 
+/** P8: the previsto's day in that calendar month, or its last day. */
+private fun mtOccDate(m: YearMonth, day: Int) = LocalDate(m.year, m.month, minOf(day, m.numberOfDays))
+
 /** Spec §3: from day D to the eve of day D of the next month; a D the month doesn't have is its last day. */
 private fun mtWindow(m: YearMonth, day: Int): Pair<LocalDate, LocalDate> {
     val next = m.mtShift(1)
@@ -264,12 +366,20 @@ private fun mtInstallments(date: LocalDate, total: Long, n: Int, day: Int): List
     }
 }
 
-/** Everything about one budget in one month, from spec §3–§5 (architecture §6). [hasRow]: the budget has a limit in the month. */
+/**
+ * Everything about one budget in one month, from spec §3–§5 (architecture §6). [hasRow]: the budget has a limit in the month.
+ * Margem honesta (M1–M6): [fixedOn] the fixed part of [spentOn], [open] the reserve; the steps, ideal and pace are of the
+ * cota livre against the gasto variável.
+ */
 private fun mtBudgetMonth(
     month: YearMonth, day: Int, weekStart: DayOfWeek, today: LocalDate,
     limit: Long, hasRow: Boolean, edits: Map<LocalDate, Long>, spentOn: Map<LocalDate, Long>,
+    fixedOn: Map<LocalDate, Long> = emptyMap(), open: Long = 0L,
 ): BudgetMonth {
     val (start, end) = mtWindow(month, day)
+    val fixed = fixedOn.filterKeys { it in start..end }.values.sum()
+    // M3, M10: cota livre = cota − previstos do mês (open + fixed), at least 0.
+    val free = maxOf(0L, limit - open - fixed)
     // §4: calendar weeks from the week start day, cut to the month; the first and last may be partial.
     val ws = ArrayList<LocalDate>()
     val we = ArrayList<LocalDate>()
@@ -286,10 +396,11 @@ private fun mtBudgetMonth(
     var edited = List(n) { ws[it] in edits }
     // §4: one week always stays automatic, and no automatic week goes below zero. Edits that break this only come from a
     // past month recalculated with a new start day (D10); the spec doesn't say what then: like budgetMonth's KDoc, none counts.
-    if (edited.all { it } || (0 until n).filter { edited[it] }.sumOf { edits.getValue(ws[it]) } > limit) edited = List(n) { false }
+    // D70: edits over the cota livre don't count while it doesn't fit them.
+    if (edited.all { it } || (0 until n).filter { edited[it] }.sumOf { edits.getValue(ws[it]) } > free) edited = List(n) { false }
     val editedSum = (0 until n).filter { edited[it] }.sumOf { edits.getValue(ws[it]) }
     // §4: automatic weeks share what the edits leave by days, rounded down; the last automatic week takes the cents left.
-    val rest = limit - editedSum
+    val rest = free - editedSum
     val autoDays = (0 until n).filter { !edited[it] }.sumOf { days[it] }
     val steps = LongArray(n) { if (edited[it]) edits.getValue(ws[it]) else rest * days[it] / autoDays }
     steps[(0 until n).last { !edited[it] }] += rest - (0 until n).filter { !edited[it] }.sumOf { steps[it] }
@@ -302,13 +413,17 @@ private fun mtBudgetMonth(
         }
     }
     val spent = spentOn.filterKeys { it in start..end }.values.sum()
+    // M3, M4: the gasto variável leaves the previstos' lançamentos out.
+    val variable = spent - fixed
+    val remaining = limit - spent - open
     val ideal = idealOn(today)
     val auto = edited.count { !it }
     val weeks = List(n) { i ->
-        // §4: the only week left automatic can't be edited; an edit takes at most limit − the other edited weeks.
+        // §4, D70: the only week left automatic can't be edited; an edit takes at most cota livre − the other edited weeks.
         val locked = !hasRow || (!edited[i] && auto == 1)
-        val max = if (locked) 0L else limit - editedSum + (if (edited[i]) steps[i] else 0L)
-        Week(ws[i], we[i], Cents(steps[i]), edited[i], Cents(spentOn.filterKeys { it in ws[i]..we[i] }.values.sum()), Cents(max), locked)
+        val max = if (locked) 0L else free - editedSum + (if (edited[i]) steps[i] else 0L)
+        val weekVariable = spentOn.filterKeys { it in ws[i]..we[i] }.values.sum() - fixedOn.filterKeys { it in ws[i]..we[i] }.values.sum()
+        Week(ws[i], we[i], Cents(steps[i]), edited[i], Cents(weekVariable), Cents(max), locked)
     }
     val idealByDay = ArrayList<Cents>()
     var d = start
@@ -317,23 +432,22 @@ private fun mtBudgetMonth(
         d = d.plus(1, DAY)
     }
     return BudgetMonth(
-        month = month, start = start, end = end, limit = Cents(limit), spent = Cents(spent), remaining = Cents(limit - spent),
+        month = month, start = start, end = end, limit = Cents(limit), spent = Cents(spent), remaining = Cents(remaining),
         weeks = weeks, ideal = Cents(ideal),
-        // §5: a cent above the ideal is already Acima do ritmo; above the limit is Fora da margem.
+        // §5, M3: a cent of variável above the ideal is already Acima do ritmo; a margem below 0 is Fora da margem.
         status = when {
-            spent > limit -> PaceStatus.OVERRUN
-            spent > ideal -> PaceStatus.AHEAD
+            remaining < 0 -> PaceStatus.OVERRUN
+            variable > ideal -> PaceStatus.AHEAD
             else -> PaceStatus.ON_PACE
         },
-        // §5: No passo atual = spent × (Σ steps ÷ today's ideal); none when the ideal is 0. Rounded down (spec silent).
-        projection = Cents(if (ideal == 0L) 0L else spent * steps.sum() / ideal),
+        // M6: No passo atual = variável × (Σ steps ÷ today's ideal) + previstos do mês; none when the ideal is 0. Rounded down (spec silent).
+        projection = Cents(if (ideal == 0L) 0L else variable * steps.sum() / ideal + open + fixed),
         idealByDay = idealByDay,
-        // D68 without a previsto in the month: the cota livre is the limit and all the gasto is variável.
-        freeLimit = Cents(limit), variable = Cents(spent),
+        open = Cents(open), fixed = Cents(fixed), freeLimit = Cents(free), variable = Cents(variable),
     )
 }
 
-/** Spec §8.1: negative when [a] is riskier. Fora da margem by excess, Acima do ritmo by distance to the ideal, No ritmo by margin share. */
+/** Spec §8.1: negative when [a] is riskier. Fora da margem by excess (−margem), Acima do ritmo by variável − ideal (D68), No ritmo by margin share. */
 private fun mtRiskCmp(a: BudgetMonth, b: BudgetMonth): Int {
     fun rank(x: BudgetMonth) = when (x.status) {
         PaceStatus.OVERRUN -> 0
@@ -342,8 +456,8 @@ private fun mtRiskCmp(a: BudgetMonth, b: BudgetMonth): Int {
     }
     if (rank(a) != rank(b)) return rank(a).compareTo(rank(b))
     return when (a.status) {
-        PaceStatus.OVERRUN -> (b.spent.v - b.limit.v).compareTo(a.spent.v - a.limit.v)
-        PaceStatus.AHEAD -> (b.spent.v - b.ideal.v).compareTo(a.spent.v - a.ideal.v)
+        PaceStatus.OVERRUN -> a.remaining.v.compareTo(b.remaining.v)
+        PaceStatus.AHEAD -> (b.variable.v - b.ideal.v).compareTo(a.variable.v - a.ideal.v)
         PaceStatus.ON_PACE -> (a.remaining.v * b.limit.v).compareTo(b.remaining.v * a.limit.v)
     }
 }
@@ -419,7 +533,7 @@ private class MtRun(val db: Db, val path: String, val seed: Int) {
 
     suspend fun act() {
         db.ensureMonths(cur().mtShift(3))
-        when (rnd.nextInt(100)) {
+        when (rnd.nextInt(110)) {
             in 0..9 -> captureNew()
             in 10..12 -> captureOdd()
             13 -> sourceAction()
@@ -446,6 +560,8 @@ private class MtRun(val db: Db, val path: String, val seed: Int) {
             83 -> settingsAction()
             in 84..88 -> advance()
             in 89..90 -> backupAction()
+            in 100..103 -> plannedNew()
+            in 104..109 -> plannedAct()
             else -> probe()
         }
     }
@@ -639,7 +755,16 @@ private class MtRun(val db: Db, val path: String, val seed: Int) {
         val got = db.edit(id, f)
         log("edit ${id.v} ${describe(f)} -> $got")
         assertEquals(t != null, got, "edit ${id.v} accepted")
-        if (t != null) m = m.saveTx(t, f)
+        if (t == null || old == null) return
+        // D69: fixed never changes on edit. D65: the form's Repete is Só uma vez, so a Todo mês previsto it closed goes;
+        // otherwise its occurrence is kept and D72 keeps the date in the occurrence's month.
+        val own = old.occ?.let { m.plan(it.first) }
+        val x = t.copy(fixed = old.fixed, occ = old.occ)
+        if (own != null && own.repeats == Repeats.MONTHLY) {
+            m = m.saveTx(x, f).withoutPlans(setOf(own.id))
+        } else {
+            m = m.saveTx(m.kept(x), f)
+        }
     }
 
     suspend fun deleteTx() {
@@ -729,8 +854,9 @@ private class MtRun(val db: Db, val path: String, val seed: Int) {
         val id = pickBudget()
         db.deleteBudget(id)
         log("deleteBudget ${id.v}")
-        // §3: its transactions go, their notices back to the Pauta.
+        // §3: its transactions go, their notices back to the Pauta; its previstos go (D59).
         m = m.withoutTxs(m.txs.filter { it.budget == id }.map { it.id }.toSet()).let { it.copy(budgets = it.budgets.filter { b -> b.id != id }) }
+            .let { it.withoutPlans(it.plans.filter { p -> p.budget == id }.map { p -> p.id }.toSet()) }
     }
 
     suspend fun reorder() {
@@ -829,7 +955,10 @@ private class MtRun(val db: Db, val path: String, val seed: Int) {
                 assertEquals(expect, got, "renameTag $name \"$raw\"")
                 if (!got || name == null) return
                 assertEquals(id, db.tags().firstOrNull { it.name == clean }?.id, "renaming keeps the tag's id")
-                m = m.copy(tags = m.tags - name + clean, txs = m.txs.map { if (name in it.tags) it.copy(tags = it.tags - name + clean) else it })
+                m = m.copy(
+                    tags = m.tags - name + clean, txs = m.txs.map { if (name in it.tags) it.copy(tags = it.tags - name + clean) else it },
+                    plans = m.plans.map { if (name in it.tags) it.copy(tags = it.tags - name + clean) else it },
+                )
             }
             2 -> {
                 val into = m.tags.randomOrNull(rnd)
@@ -837,7 +966,10 @@ private class MtRun(val db: Db, val path: String, val seed: Int) {
                 log("mergeTags ${id.v} ($name) -> $into -> $got")
                 assertEquals(name != null && into != null && name != into, got, "mergeTags $name -> $into")
                 if (!got || name == null || into == null) return
-                m = m.copy(tags = m.tags - name, txs = m.txs.map { if (name in it.tags) it.copy(tags = it.tags - name + into) else it })
+                m = m.copy(
+                    tags = m.tags - name, txs = m.txs.map { if (name in it.tags) it.copy(tags = it.tags - name + into) else it },
+                    plans = m.plans.map { if (name in it.tags) it.copy(tags = it.tags - name + into) else it },
+                )
             }
             else -> {
                 db.deleteTag(id)
@@ -845,7 +977,10 @@ private class MtRun(val db: Db, val path: String, val seed: Int) {
                 if (name == null) return
                 // §2.9: transactions left without a tag go; their notices back to the Pauta.
                 val stripped = m.txs.map { if (name in it.tags) it.copy(tags = it.tags - name) else it }
-                m = m.copy(tags = m.tags - name, txs = stripped).withoutTxs(stripped.filter { it.tags.isEmpty() }.map { it.id }.toSet())
+                val plans = m.plans.map { if (name in it.tags) it.copy(tags = it.tags - name) else it }
+                // D59: previstos left without a tag go too.
+                m = m.copy(tags = m.tags - name, txs = stripped, plans = plans).withoutTxs(stripped.filter { it.tags.isEmpty() }.map { it.id }.toSet())
+                    .withoutPlans(plans.filter { it.tags.isEmpty() }.map { it.id }.toSet())
             }
         }
     }
@@ -898,6 +1033,69 @@ private class MtRun(val db: Db, val path: String, val seed: Int) {
                 m = b
             }
             else -> assertEquals(false, db.importFrom("$path.missing"), "importFrom a missing file")
+        }
+    }
+
+    /** Salvar previsto (spec §2.13, D64): a manual date ahead of today, Só uma vez or Todo mês; the first month's row at once. */
+    suspend fun plannedNew() {
+        val f = form(null).copy(
+            date = today.plus(1 + rnd.nextInt(45), DAY), caption = MT_PLAN_NAMES.random(rnd),
+            repeats = if (rnd.nextBoolean()) Repeats.MONTHLY else Repeats.ONCE,
+        )
+        val ok = m.txOf(TransactionId(0), NoticeId(0), f) != null
+        val saved = db.addManual(f, today)
+        log("Salvar previsto ${describe(f)} ${f.repeats} -> $saved")
+        assertEquals(ok, saved.planned.v != 0L, "Salvar previsto accepted")
+        assertEquals(TransactionId(0), saved.transaction, "Salvar previsto writes no lançamento")
+        if (!ok) return
+        val tags = mtClean(f.tags).toSet()
+        val p = MtPlan(saved.planned, f.caption, f.budget, tags, f.total.v, f.date.day, f.repeats)
+        m = m.copy(plans = m.plans + p, occs = m.occs + MtOcc(p.id, YearMonth(f.date.year, f.date.month)), tags = m.tags + tags)
+    }
+
+    /** "A caminho" (R1: today + 10 only, D71), then Lançar sem recado (R6b), Pular este mês or Apagar previsto. */
+    suspend fun plannedAct() {
+        val rows = db.planned(today)
+        m = m.filled(today)
+        val byKey = rows.associateBy { it.planned to YearMonth(it.date.year, it.date.month) }
+        val due = m.occs.filter { m.isOpen(it) && m.occDate(it) <= today.plus(10, DAY) }
+        assertEquals(due.map { it.plan to it.month }.toSet(), byKey.keys, "planned(today): the open months dated up to today + 10 (R1)")
+        assertEquals(rows.size, byKey.size, "planned(today): one row per previsto and month")
+        for (o in due) {
+            val row = byKey.getValue(o.plan to o.month)
+            assertEquals(m.planned(o, row.occurrence, today), row, "planned(today) ${o.plan.v} ${o.month}")
+        }
+        assertEquals(rows.sortedWith(compareBy<Planned> { it.date }.thenBy { it.occurrence.v }), rows, "planned(today): oldest first")
+        val row = rows.randomOrNull(rnd)
+        when (rnd.nextInt(6)) {
+            0 -> {
+                row ?: return
+                assertTrue(db.skipOccurrence(row.occurrence), "skipOccurrence ${row.occurrence.v}")
+                log("skipOccurrence ${row.occurrence.v} (${row.planned.v} ${row.date})")
+                m = m.copy(occs = m.occs.map { if (it.plan == row.planned && it.month == YearMonth(row.date.year, row.date.month)) it.copy(skipped = true) else it })
+                assertEquals(false, db.skipOccurrence(row.occurrence), "skipOccurrence twice")
+            }
+            1 -> {
+                val id = m.plans.randomOrNull(rnd)?.id ?: PlannedId(987_654)
+                db.deletePlanned(id)
+                log("deletePlanned ${id.v}")
+                m = m.withoutPlans(setOf(id))
+            }
+            else -> {
+                row ?: return
+                // M8, D72: a date in another month than the occurrence's lands on the occurrence's day.
+                val date = if (rnd.nextInt(3) == 0) row.date.plus(rnd.nextInt(-40, 41), DAY) else row.date
+                val f = form(null).copy(date = date, occurrence = row.occurrence)
+                val key = row.planned to YearMonth(row.date.year, row.date.month)
+                val t = m.txOf(TransactionId(0), NoticeId(0), f)?.copy(fixed = true, occ = key)?.let { m.kept(it) }
+                val saved = db.addManual(f)
+                log("Lançar sem recado ${row.occurrence.v} (${row.planned.v} ${row.date}) ${describe(f)} -> $saved")
+                assertEquals(t != null, saved.transaction.v != 0L, "Lançar sem recado accepted")
+                if (t == null) return
+                assertTrue(saved.transaction !in m.usedTxIds, "Lançar sem recado: transaction id never used before (D38)")
+                m = m.saveTx(t.copy(id = saved.transaction), f)
+                assertEquals(m.txDetail(m.txs.last()), db.transaction(saved.transaction), "transaction ${saved.transaction.v} after Lançar sem recado")
+            }
         }
     }
 
@@ -987,6 +1185,8 @@ private class MtRun(val db: Db, val path: String, val seed: Int) {
     suspend fun check(full: Boolean) {
         val cur = cur()
         db.ensureMonths(cur.mtShift(3))
+        // D71: budgetsOverview and budgetDetail create the previstos' months first.
+        m = m.filled(today)
         val s = m.settings
         assertEquals(s, db.settings(), "settings")
         assertEquals(m.sources.values.sortedWith(compareBy<Source> { it.label.lowercase() }.thenBy { it.packageName }), db.sources(), "sources")
@@ -1009,7 +1209,7 @@ private class MtRun(val db: Db, val path: String, val seed: Int) {
         assertEquals(rows, db.transactions(today), "transactions")
 
         // §7.6 Marcadores: how many transactions use each, and how many would go with it.
-        val tagRows = m.tags.sorted().map { g -> TagRow(TagId(0), g, m.txs.count { g in it.tags }, m.txs.count { it.tags == setOf(g) }) }
+        val tagRows = m.tags.sorted().map { g -> TagRow(TagId(0), g, m.txs.count { g in it.tags }, m.txs.count { it.tags == setOf(g) }, m.plans.count { it.tags == setOf(g) }) }
         assertEquals(tagRows, db.tags().map { it.copy(id = TagId(0)) }, "tags")
 
         // §7.1 Verbas and the budget detail, in the current month and around it.
@@ -1029,7 +1229,15 @@ private class MtRun(val db: Db, val path: String, val seed: Int) {
                 }
             }
             val ids = m.budgets.map { it.id } + if (full) listOf(pickBudget(), MT_UNKNOWN_BUDGET) else emptyList()
-            for (id in ids.distinct()) assertEquals(m.detail(id, month, today), db.budgetDetail(id, month, today), "budgetDetail ${id.v} $month")
+            for (id in ids.distinct()) {
+                // Occurrence ids are the Db's: compared apart; by date, then occurrence id (BudgetDetail KDoc).
+                val got = db.budgetDetail(id, month, today)
+                val lines = got.plannedLines
+                assertEquals(lines.sortedWith(compareBy<PlannedLine> { it.planned.date }.thenBy { it.planned.occurrence.v }), lines, "budgetDetail ${id.v} $month: previstos by date")
+                assertEquals(lines.size, lines.map { it.planned.occurrence }.toSet().size, "budgetDetail ${id.v} $month: one line per occurrence")
+                val bare = lines.map { it.copy(planned = it.planned.copy(occurrence = OccurrenceId(0))) }.sortedWith(MT_LINE_ORDER)
+                assertEquals(m.detail(id, month, today), got.copy(plannedLines = bare), "budgetDetail ${id.v} $month")
+            }
         }
         if (!full) return
 
@@ -1081,8 +1289,7 @@ private class MtRun(val db: Db, val path: String, val seed: Int) {
 
         // §7.3 the edit screen and the notice behind each transaction.
         for (t in m.txs) {
-            val n = m.notice(t.notice)
-            assertEquals(TransactionDetail(m.row(t, null), t.inst, n?.let { m.noticeRow(it) } ?: NoticeRow()), db.transaction(t.id), "transaction ${t.id.v}")
+            assertEquals(m.txDetail(t), db.transaction(t.id), "transaction ${t.id.v}")
         }
         assertEquals(TransactionDetail(), db.transaction(MT_UNKNOWN_TX), "unknown transaction")
         for (n in m.notices) assertEquals(m.noticeRow(n), db.notice(n.id), "notice ${n.id.v}")
