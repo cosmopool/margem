@@ -627,32 +627,35 @@ class LeituraLifecycleTest {
         }
         assertEquals("um dia por dia da janela de outubro", (1..31).map { LocalDate(2026, 10, it).toString() }.toSet(), suffixes(InsightsTags.CAL_DAY))
         assertTrue("dia 6 sem gasto", cdIs(InsightsTags.CAL_DAY + "2026-10-06", "6: sem gasto") && state(InsightsTags.CAL_DAY + "2026-10-06") == "degrau 0")
-        await("legenda e frases", InsightsTags.CAL_LEGEND, InsightsTags.CAL_SENTENCE, InsightsTags.CAL_SHARE) {
-            textIs(InsightsTags.CAL_LEGEND, "cada degrau ≈ R$ 20") && textIs(InsightsTags.CAL_SENTENCE, "As segundas pesam.") &&
-                textIs(InsightsTags.CAL_SHARE, "100% do mês em quatro segundas")
+        // §7.5 (2026-11-04): uma segunda só com gasto não basta (pede ≥ 2 dias com gasto no dia da semana): nenhum pesa.
+        await("legenda e frase sem dia que pese", InsightsTags.CAL_LEGEND, InsightsTags.CAL_SENTENCE) {
+            textIs(InsightsTags.CAL_LEGEND, "cada degrau ≈ R$ 20") && textIs(InsightsTags.CAL_SENTENCE, "Nenhum dia da semana pesa.") &&
+                !exists(InsightsTags.CAL_SHARE)
         }
 
-        // 120,00 no sábado 3/10: maior dia 120 → degrau 30; 3/10 ⌈120/30⌉ = 4, 5/10 ⌈80/30⌉ = 3.
-        // Sábados pesam: 120 de 200 = 60%, cinco sábados (3, 10, 17, 24, 31).
-        val sab = tx(casa, 12_000, LocalDate(2026, 10, 3), listOf("feira"))
-        await("sábado pesa", InsightsTags.CAL_SENTENCE, InsightsTags.CAL_SHARE, InsightsTags.CAL_LEGEND) {
-            textIs(InsightsTags.CAL_SENTENCE, "Os sábados pesam.") && textIs(InsightsTags.CAL_SHARE, "60% do mês em cinco sábados") &&
+        // 100,00 nas sextas 2/10 e 9/10 (hoje é 9/10): sextas até hoje = 2 e 9, média 100 > segundas 80 ÷ 1 = 80.
+        // Maior dia 100 → degrau 100 ÷ 4 = 25 → R$ 30; 5/10 ⌈80/30⌉ = 3. Parte: 200 de 280 = 71,4% → 71%, duas sextas.
+        val sex1 = tx(casa, 10_000, LocalDate(2026, 10, 2), listOf("feira"))
+        val sex2 = tx(casa, 10_000, LocalDate(2026, 10, 9), listOf("feira"))
+        await("sextas pesam", InsightsTags.CAL_SENTENCE, InsightsTags.CAL_SHARE, InsightsTags.CAL_LEGEND) {
+            textIs(InsightsTags.CAL_SENTENCE, "As sextas pesam.") && textIs(InsightsTags.CAL_SHARE, "71% do mês em duas sextas") &&
                 textIs(InsightsTags.CAL_LEGEND, "cada degrau ≈ R$ 30")
         }
-        assertEquals("degrau 4", state(InsightsTags.CAL_DAY + "2026-10-03"))
+        assertEquals("degrau 4", state(InsightsTags.CAL_DAY + "2026-10-02"))
         assertEquals("degrau 3", state(InsightsTags.CAL_DAY + "2026-10-05"))
 
-        // Estorno do sábado (não conta): de volta às segundas.
+        // Estorno da sexta 9/10 (não conta): sextas 100 ÷ 2 = 50 < segunda 80, que tem um dia só: nenhum pesa.
         ensureSource()
-        val e = estorno("e1", 12_000, at(9, 12, 0))
-        assertTrue("registerRefund", fora { db.registerRefund(e, sab) })
-        await("segundas de novo", InsightsTags.CAL_SENTENCE, InsightsTags.CAL_DAY + "2026-10-03") {
-            textIs(InsightsTags.CAL_SENTENCE, "As segundas pesam.") && cdIs(InsightsTags.CAL_DAY + "2026-10-03", "3: sem gasto") &&
-                textIs(InsightsTags.CAL_LEGEND, "cada degrau ≈ R$ 20")
+        val e = estorno("e1", 10_000, at(9, 12, 0))
+        assertTrue("registerRefund", fora { db.registerRefund(e, sex2) })
+        await("nenhum de novo", InsightsTags.CAL_SENTENCE, InsightsTags.CAL_DAY + "2026-10-09") {
+            textIs(InsightsTags.CAL_SENTENCE, "Nenhum dia da semana pesa.") && cdIs(InsightsTags.CAL_DAY + "2026-10-09", "9: sem gasto") &&
+                !exists(InsightsTags.CAL_SHARE) && textIs(InsightsTags.CAL_LEGEND, "cada degrau ≈ R$ 30")
         }
 
-        // A segunda apagada: só resta a compra estornada, nada conta: vazio.
+        // A segunda e a primeira sexta apagadas: só resta a compra estornada, nada conta: vazio.
         fora { db.deleteTransaction(seg) }
+        fora { db.deleteTransaction(sex1) }
         await("calendário vazio de novo", InsightsTags.CAL_EMPTY) {
             textIs(InsightsTags.CAL_EMPTY, "Nada lançado em outubro.") && !exists(InsightsTags.CAL_DAY + "2026-10-05") &&
                 !exists(InsightsTags.CAL_SENTENCE) && !exists(InsightsTags.CAL_LEGEND)

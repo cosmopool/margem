@@ -443,13 +443,25 @@ class LeituraInvariantsTest {
         val legend = "cada degrau ≈ R$$NNBSP${moneyParts(Cents(step)).first}"
         check(sameText(InsightsTags.CAL_LEGEND, legend)) { "CAL_LEGEND '${text(InsightsTags.CAL_LEGEND)}', esperado '$legend'" }
 
-        // The heaviest weekday; ties: first in week order from the Ajustes week start.
+        // §7.5 (2026-11-04): over the days so far (up to today, OCT_9, in the current month), the weekday with the highest
+        // mean per occurrence, with spending on ≥ 2 of them and no tie; otherwise "Nenhum dia da semana pesa." and no share.
+        val sofar = if (e.current) days.filter { it <= OCT_9 } else days
         val order = (0 until 7).map { DayOfWeek((weekStart.isoDayNumber - 1 + it) % 7 + 1) }
-        val byWeekday = order.associateWith { wd -> e.byDay.filterKeys { it.dayOfWeek == wd }.values.sumOf { it.v } }
-        val top = order.maxBy { byWeekday.getValue(it) }
-        val total = e.byDay.values.sumOf { it.v }
+        val byWeekday = order.associateWith { wd -> sofar.filter { it.dayOfWeek == wd }.sumOf { e.byDay[it]?.v ?: 0L } }
+        val occurrences = order.associateWith { wd -> sofar.count { it.dayOfWeek == wd } }
+        val withSpending = order.associateWith { wd -> sofar.count { it.dayOfWeek == wd && (e.byDay[it]?.v ?: 0L) > 0 } }
+        val present = order.filter { occurrences.getValue(it) > 0 }
+        // Means as exact fractions: a ÷ n vs b ÷ m by a × m vs b × n.
+        val tops = present.filter { wd -> present.all { o -> byWeekday.getValue(wd) * occurrences.getValue(o) >= byWeekday.getValue(o) * occurrences.getValue(wd) } }
+        val total = byWeekday.values.sum()
+        val top = tops.singleOrNull()
+        if (top == null || withSpending.getValue(top) < 2 || total == 0L) {
+            check(sameText(InsightsTags.CAL_SENTENCE, "Nenhum dia da semana pesa.")) { "CAL_SENTENCE '${text(InsightsTags.CAL_SENTENCE)}', esperado nenhum ($byWeekday, $occurrences, $withSpending)" }
+            check(!exists(InsightsTags.CAL_SHARE)) { "CAL_SHARE sem dia que pese ($byWeekday)" }
+            return
+        }
         val pct = (200 * byWeekday.getValue(top) + total) / (2 * total)
-        val n = days.count { it.dayOfWeek == top }
+        val n = occurrences.getValue(top)
         val fem = top.isoDayNumber <= 5
         val sentence = "${if (fem) "As" else "Os"} ${PLURAL.getValue(top)} pesam."
         val share = "$pct% do mês em ${countWord(n, fem)} ${if (n == 1) SINGULAR.getValue(top) else PLURAL.getValue(top)}"

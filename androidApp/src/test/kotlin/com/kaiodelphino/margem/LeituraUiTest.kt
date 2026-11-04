@@ -145,9 +145,10 @@ class LeituraUiTest {
         node(InsightsTags.CAL_DAY + "2026-10-02").assert(description(r("2: R$ 477,00"))).assert(SemanticsMatcher.expectValue(SemanticsProperties.StateDescription, "degrau 4"))
         node(InsightsTags.CAL_DAY + "2026-10-04").assert(SemanticsMatcher.expectValue(SemanticsProperties.StateDescription, "degrau 1"))
         node(InsightsTags.CAL_DAY + "2026-10-05").assert(description("5: sem gasto")).assert(SemanticsMatcher.expectValue(SemanticsProperties.StateDescription, "degrau 0"))
-        // Fridays: 47700 of 70810 = 67.4% → 67%; Oct 2026 has five (2, 9, 16, 23, 30).
-        node(InsightsTags.CAL_SENTENCE).assertTextEquals("As sextas pesam.")
-        node(InsightsTags.CAL_SHARE).assertTextEquals("67% do mês em cinco sextas")
+        // §7.5 (2026-11-04): days so far, 1 to 9. Fridays (2, 9) have the highest mean, 47700 ÷ 2, but spending on one
+        // of them only: no weekday weighs, and no share line.
+        node(InsightsTags.CAL_SENTENCE).assertTextEquals("Nenhum dia da semana pesa.")
+        compose.onAllNodes(SemanticsMatcher.expectValue(SemanticsProperties.TestTag, InsightsTags.CAL_SHARE)).assertCountEquals(0)
     }
 
     @Test
@@ -177,8 +178,9 @@ class LeituraUiTest {
         node(InsightsTags.MONTH_LABEL).assertTextContains("setembro de 2026").assertTextContains("1 A 30")
         node(InsightsTags.PACE_CHART).assert(description(r("Ritmo do mês de Mercado: R$ 1.180,00 no mês, para uma cota de R$ 1.240,00")))
         node(InsightsTags.MONTH_PREV).assertIsNotEnabled()
-        // Saturday Sep 12 holds the whole month; Sep 2026 has four Saturdays (5, 12, 19, 26).
-        node(InsightsTags.CAL_SHARE).performScrollTo().assertTextEquals("100% do mês em quatro sábados")
+        // Saturday Sep 12 holds the whole month, but a single day doesn't weigh (§7.5, 2026-11-04).
+        node(InsightsTags.CAL_SENTENCE).performScrollTo().assertTextEquals("Nenhum dia da semana pesa.")
+        compose.onAllNodes(SemanticsMatcher.expectValue(SemanticsProperties.TestTag, InsightsTags.CAL_SHARE)).assertCountEquals(0)
     }
 
     /** money() puts U+202F after "R$" (widgets/Theme.kt). */

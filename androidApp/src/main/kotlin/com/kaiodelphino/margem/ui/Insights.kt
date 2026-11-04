@@ -199,16 +199,18 @@ object InsightsTags {
     // ---- Calendário de gastos (book Fig. 9.5) ----
 
     /**
-     * The weekday with the most spending in the month window (ties: the first in week order from the
-     * Ajustes week start): "Os sábados pesam." / "As sextas pesam." (plural, lowercase weekday;
-     * article "As" for segunda–sexta, "Os" for sábado and domingo). Absent when nothing was spent.
+     * The weekday with the highest mean per occurrence over the days so far (the whole window in a past
+     * month), when it had spending on at least two of them and no other weekday ties it: "Os sábados
+     * pesam." / "As sextas pesam." (plural, lowercase weekday; article "As" for segunda–sexta, "Os" for
+     * sábado and domingo); otherwise "Nenhum dia da semana pesa." (spec §7.5, 2026-11-04). Absent when
+     * nothing was spent.
      */
     const val CAL_SENTENCE = "insights.cal.sentence"
 
     /**
-     * "31% do mês em quatro sábados": that weekday's share of the month's spending (rounded half up)
-     * and how many of that weekday the month window has, in words ("um sábado", "uma sexta",
-     * "dois sábados", "duas sextas", "três", "quatro", "cinco"). Absent when nothing was spent.
+     * "31% do mês em quatro sábados": that weekday's share of the spending so far (rounded half up)
+     * and how many of that weekday the days so far have, in words ("um sábado", "uma sexta",
+     * "dois sábados", "duas sextas", "três", "quatro", "cinco"). Only with a weekday that weighs.
      */
     const val CAL_SHARE = "insights.cal.share"
 
@@ -317,7 +319,7 @@ fun Insights(db: Db) {
                 History(data, color)
             }
             Ranking(data, rank, all, { rank = it }, { all = true })
-            Calendar(data)
+            Calendar(data, if (isCurrent) today else data.end)
         }
     }
     if (choosing && data != null) BudgetChoice(data, { chosen = it; choosing = false }) { choosing = false }
@@ -602,7 +604,7 @@ private fun countOf(day: DayOfWeek, n: Int): String {
 }
 
 @Composable
-private fun Calendar(data: InsightsData) {
+private fun Calendar(data: InsightsData, until: LocalDate) {
     val c = Margem.colors
     SectionLine("Gasto por dia", aside = monthLong(data.month.month))
     val total = data.byDay.values.sumOf { it.v }
@@ -611,17 +613,28 @@ private fun Calendar(data: InsightsData) {
         return
     }
     val days = (0..data.start.daysUntil(data.end)).map { data.start.plusDays(it) }
-    // Weekday with the most spending; ties go to the first in week order.
+    // Spec §7.5 (2026-11-04): the days so far (the whole window in a past month); the weekday with the highest mean
+    // per occurrence, with spending on at least two of them and no tie; otherwise no weekday weighs.
+    val sofar = days.filter { it <= until }
     val order = (0 until 7).map { DayOfWeek.entries[(data.weekStart.ordinal + it) % 7] }
-    val byWeekday = order.associateWith { wd -> days.filter { it.dayOfWeek == wd }.sumOf { data.byDay[it]?.v ?: 0L } }
-    val heavy = order.maxBy { byWeekday.getValue(it) }
-    val article = if (heavy.ordinal <= 4) "As" else "Os"
-    Text("$article ${weekdayPlural[heavy.ordinal]} pesam.", serif(15, 400, 21, italic = true), Modifier.padding(top = 8.dp).testTag(InsightsTags.CAL_SENTENCE), c.inkSecondary)
-    val share = (200 * byWeekday.getValue(heavy) + total) / (2 * total)
-    Text(
-        "$share% do mês em ${countOf(heavy, days.count { it.dayOfWeek == heavy })}", sans(13f, 500, 17f),
-        Modifier.padding(top = 2.dp).testTag(InsightsTags.CAL_SHARE), c.inkTertiary,
-    )
+    val sum = order.associateWith { wd -> sofar.filter { it.dayOfWeek == wd }.sumOf { data.byDay[it]?.v ?: 0L } }
+    val count = order.associateWith { wd -> sofar.count { it.dayOfWeek == wd } }
+    val spentDays = order.associateWith { wd -> sofar.count { it.dayOfWeek == wd && (data.byDay[it]?.v ?: 0L) > 0 } }
+    // Means compared without division: a ÷ n > b ÷ m ⇔ a × m > b × n.
+    val heavy = order.filter { count.getValue(it) > 0 }.maxWithOrNull { a, b -> (sum.getValue(a) * count.getValue(b)).compareTo(sum.getValue(b) * count.getValue(a)) }
+    val tied = heavy != null && order.any { it != heavy && count.getValue(it) > 0 && sum.getValue(it) * count.getValue(heavy) == sum.getValue(heavy) * count.getValue(it) }
+    val sofarTotal = sum.values.sum()
+    if (heavy == null || tied || spentDays.getValue(heavy) < 2 || sofarTotal == 0L) {
+        Text("Nenhum dia da semana pesa.", serif(15, 400, 21, italic = true), Modifier.padding(top = 8.dp).testTag(InsightsTags.CAL_SENTENCE), c.inkSecondary)
+    } else {
+        val article = if (heavy.ordinal <= 4) "As" else "Os"
+        Text("$article ${weekdayPlural[heavy.ordinal]} pesam.", serif(15, 400, 21, italic = true), Modifier.padding(top = 8.dp).testTag(InsightsTags.CAL_SENTENCE), c.inkSecondary)
+        val share = (200 * sum.getValue(heavy) + sofarTotal) / (2 * sofarTotal)
+        Text(
+            "$share% do mês em ${countOf(heavy, count.getValue(heavy))}", sans(13f, 500, 17f),
+            Modifier.padding(top = 2.dp).testTag(InsightsTags.CAL_SHARE), c.inkTertiary,
+        )
+    }
     // Spec §7.5: step = highest day ÷ 4, rounded up to R$ 10.
     val max = data.byDay.values.maxOf { it.v }
     val step = (max + 3999) / 4000 * 1000
