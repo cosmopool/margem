@@ -784,7 +784,7 @@ fun Meter(month: BudgetMonth, modifier: Modifier = Modifier, tall: Boolean = fal
 }
 
 /** Book `.rsv`: the open previstos, a 1 dp dashed outline. */
-private fun DrawScope.dashedBox(color: Color, at: Offset, area: Size) {
+internal fun DrawScope.dashedBox(color: Color, at: Offset, area: Size) {
     val b = 0.5f.dp.toPx()
     drawRect(
         color, Offset(at.x + b, at.y + b), Size(maxOf(0f, area.width - 2 * b), area.height - 2 * b),

@@ -58,6 +58,7 @@ import com.kaiodelphino.margem.HistoryRow
 import com.kaiodelphino.margem.R
 import com.kaiodelphino.margem.RankRow
 import com.kaiodelphino.margem.widgets.EmptyState
+import com.kaiodelphino.margem.widgets.dashedBox
 import com.kaiodelphino.margem.widgets.Icon
 import com.kaiodelphino.margem.widgets.Margem
 import com.kaiodelphino.margem.widgets.NNBSP
@@ -370,16 +371,21 @@ private fun Pace(data: InsightsData, today: LocalDate, isCurrent: Boolean, color
     val description = if (isCurrent) {
         "Ritmo do mês de ${d.name}: ${money(bm.variable)} até o dia ${today.day}, contra ritmo ideal de ${money(bm.ideal)}" +
             (if (projects) "; no passo atual, ${reais(bm.projection)} no fim do mês" else "") +
-            ", para uma cota de ${money(bm.limit)}"
-    } else "Ritmo do mês de ${d.name}: ${money(bm.spent)} no mês, para uma cota de ${money(bm.limit)}"
+            ", para uma cota de ${money(bm.limit)}" + (if (bm.planned.v > 0) ", com ${money(bm.planned)} em previstos" else "")
+    } else "Ritmo do mês de ${d.name}: ${money(bm.spent)} no mês, para uma cota de ${money(bm.limit)}" +
+        (if (bm.open.v > 0) ", com ${money(bm.open)} em previstos em aberto" else "")
 
-    // Cumulative gasto variável at the end of each day of the window (refunds and previstos' lançamentos out, D68).
+    // Spec §7.5 (2026-11-04): the previstos do mês (lançados at their value, open at the previsto's) are a band at the
+    // base; the gasto variável and the ritmo ideal of the cota livre stand on it, so the line meets the cota's rule
+    // exactly when the margem reaches zero, and the projection (M6, previstos included) starts from the same base.
+    val base = bm.planned.v
     val days = bm.start.daysUntil(bm.end) + 1
     val cumulative = LongArray(days)
     for (line in d.lines) if (!line.row.refunded && !line.row.fixed) {
         val i = bm.start.daysUntil(line.date)
         if (i in 0 until days) cumulative[i] += line.cents.v
     }
+    cumulative[0] += base
     for (i in 1 until days) cumulative[i] += cumulative[i - 1]
     val last = if (isCurrent) bm.start.daysUntil(today).coerceIn(-1, days - 1) else days - 1
     val showProjection = isCurrent && projects
@@ -399,11 +405,18 @@ private fun Pace(data: InsightsData, today: LocalDate, isCurrent: Boolean, color
             val from = x(last.coerceAtLeast(0)) + w / days / 2
             drawRect(c.surfaceSunken.copy(alpha = 0.6f), Offset(from, 0f), Size(size.width - from, bottom))
         }
+        // Previstos at the base, as the régua (M11): lançados in ink 3, open ones in the dashed outline.
+        if (bm.fixed.v > 0) drawRect(c.inkTertiary.copy(alpha = 0.3f), Offset(left, y(bm.fixed.v)), Size(w, bottom - y(bm.fixed.v)))
+        if (bm.open.v > 0) dashedBox(c.ruleStrong, Offset(left, y(base)), Size(w, y(bm.fixed.v) - y(base)))
+        if (base > 0 && bottom - y(base) > 16.dp.toPx()) {
+            val t = measurer.measure("previstos", label)
+            drawText(t, topLeft = Offset(left + 4.dp.toPx(), bottom - t.size.height - 3.dp.toPx()))
+        }
         // Cota: the argila double rule.
         for (dy in listOf(-1.5f, 1.5f)) drawLine(c.brand, Offset(left, y(bm.limit.v) + dy.dp.toPx()), Offset(size.width, y(bm.limit.v) + dy.dp.toPx()), 0.75f.dp.toPx())
-        // Ritmo ideal, dashed, the whole month.
+        // Ritmo ideal of the cota livre, dashed, the whole month, on the previstos.
         val ideal = Path()
-        bm.idealByDay.forEachIndexed { i, v -> if (i == 0) ideal.moveTo(x(i), y(v.v)) else ideal.lineTo(x(i), y(v.v)) }
+        bm.idealByDay.forEachIndexed { i, v -> if (i == 0) ideal.moveTo(x(i), y(base + v.v)) else ideal.lineTo(x(i), y(base + v.v)) }
         drawPath(ideal, c.inkTertiary, style = Stroke(1.25f.dp.toPx(), pathEffect = PathEffect.dashPathEffect(floatArrayOf(4.dp.toPx(), 3.dp.toPx()))))
         if (showProjection && last >= 0) drawLine(
             c.ahead, Offset(x(last), y(cumulative[last])), Offset(x(days - 1), y(bm.projection.v)), 1.5f.dp.toPx(),
