@@ -350,30 +350,32 @@ private fun Pace(data: InsightsData, today: LocalDate, isCurrent: Boolean, color
     }
     // No projection without ideal (spec §5) or without spending: "fecharia em R$ 0" says nothing (spec §7.5).
     val projects = bm.ideal.v > 0 && bm.spent.v > 0
+    // Margem honesta (D68): the ritmo is the gasto variável against the ideal of the cota livre; "além" and "dentro"
+    // are the margem, open previstos reserved (M1).
     val sentence = if (isCurrent) {
         val first = when {
-            bm.spent > bm.limit -> "${money(bm.spent - bm.limit)} além da cota."
-            bm.spent > bm.ideal -> "+ ${money(bm.spent - bm.ideal)} sobre o ritmo ideal."
-            bm.spent < bm.ideal -> "${money(bm.ideal - bm.spent)} abaixo do ritmo ideal."
+            bm.remaining.v < 0 -> "${money(Cents(-bm.remaining.v))} além da cota."
+            bm.variable > bm.ideal -> "+ ${money(bm.variable - bm.ideal)} sobre o ritmo ideal."
+            bm.variable < bm.ideal -> "${money(bm.ideal - bm.variable)} abaixo do ritmo ideal."
             else -> "No ritmo ideal."
         }
         if (projects) "$first No passo atual, o mês fecharia em ${reais(bm.projection)}." else first
     } else when {
-        bm.spent < bm.limit -> "Fechou em ${money(bm.spent)}, ${money(bm.limit - bm.spent)} dentro da cota."
-        bm.spent > bm.limit -> "Fechou em ${money(bm.spent)}, ${money(bm.spent - bm.limit)} além da cota."
+        bm.remaining.v > 0 -> "Fechou em ${money(bm.spent)}, ${money(bm.remaining)} dentro da cota."
+        bm.remaining.v < 0 -> "Fechou em ${money(bm.spent)}, ${money(Cents(-bm.remaining.v))} além da cota."
         else -> "Fechou em ${money(bm.spent)}, exatamente a cota."
     }
     Text(sentence, serif(15, 400, 21, italic = true), Modifier.padding(top = 2.dp).testTag(InsightsTags.PACE_SENTENCE), c.inkSecondary)
     val description = if (isCurrent) {
-        "Ritmo do mês de ${d.name}: ${money(bm.spent)} até o dia ${today.day}, contra ritmo ideal de ${money(bm.ideal)}" +
+        "Ritmo do mês de ${d.name}: ${money(bm.variable)} até o dia ${today.day}, contra ritmo ideal de ${money(bm.ideal)}" +
             (if (projects) "; no passo atual, ${reais(bm.projection)} no fim do mês" else "") +
             ", para uma cota de ${money(bm.limit)}"
     } else "Ritmo do mês de ${d.name}: ${money(bm.spent)} no mês, para uma cota de ${money(bm.limit)}"
 
-    // Cumulative spent at the end of each day of the window (refunds out, installments on their date).
+    // Cumulative gasto variável at the end of each day of the window (refunds and previstos' lançamentos out, D68).
     val days = bm.start.daysUntil(bm.end) + 1
     val cumulative = LongArray(days)
-    for (line in d.lines) if (!line.row.refunded) {
+    for (line in d.lines) if (!line.row.refunded && !line.row.fixed) {
         val i = bm.start.daysUntil(line.date)
         if (i in 0 until days) cumulative[i] += line.cents.v
     }

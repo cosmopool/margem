@@ -79,6 +79,7 @@ import androidx.compose.ui.text.SpanStyle
 import androidx.compose.ui.text.TextLayoutResult
 import androidx.compose.ui.text.TextStyle
 import androidx.compose.ui.text.buildAnnotatedString
+import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.input.ImeAction
 import androidx.compose.ui.text.input.KeyboardType
 import androidx.compose.ui.text.input.OffsetMapping
@@ -744,59 +745,78 @@ internal fun DrawScope.hatch(color: Color, at: Offset, area: Size, line: Float, 
 }
 
 /**
- * Book §8.5, the budget's ruler: a 2 dp rail (100% of the limit), the spent ink in the state's color,
- * a 2 dp mark at today's ideal pace, the argila double rule at the limit and, past it, 9% reserved for
- * the excess hatch (up to 10% drawn; above that, the number speaks). [tall] = the detail's 22 dp ruler.
+ * Book §8.5, the budget's ruler (margem honesta, M11): a 2 dp rail (100% of the limit); the previstos do mês
+ * first — lançados (BudgetMonth.fixed) in ink 3, open ones (BudgetMonth.open) a dashed outline in fio forte —,
+ * then the gasto variável in the state's color; a 2 dp mark at previstos + today's ideal pace, always in the
+ * free part; the argila double rule at the limit and, past it, 9% reserved for the excess hatch (−remaining,
+ * up to 10% drawn; above that, the number speaks). [tall] = the detail's 22 dp ruler. Draws only.
  */
 @Composable
-fun Meter(spent: Cents, limit: Cents, ideal: Cents, status: PaceStatus, modifier: Modifier = Modifier, tall: Boolean = false) {
+fun Meter(month: BudgetMonth, modifier: Modifier = Modifier, tall: Boolean = false) {
     val c = Margem.colors
-    val description = "${money(spent)} de ${money(limit)}"
-    Canvas(modifier.fillMaxWidth().height(if (tall) 22.dp else 14.dp).semantics { contentDescription = description }) {
+    Canvas(modifier.fillMaxWidth().height(if (tall) 22.dp else 14.dp)) {
         val h = size.height
         val rail = size.width / 1.09f
-        val l = limit.v.toFloat()
-        val g = if (l <= 0f) (if (spent.v > 0) 1f else 0f) else (spent.v / l).coerceIn(0f, 1f)
-        val p = if (l <= 0f) 0f else (ideal.v / l).coerceIn(0f, 1f)
-        val railY = if (tall) 10.dp.toPx() else 6.dp.toPx()
-        drawRect(c.rule, Offset(0f, railY), Size(rail, 2.dp.toPx()))
-        val fillTop = if (tall) 5.dp.toPx() else 3.dp.toPx()
-        val fillH = if (tall) 12.dp.toPx() else 8.dp.toPx()
-        val fill = when (status) {
+        val l = month.limit.v.toFloat()
+        fun at(v: Long) = if (l <= 0f) 0f else (v / l).coerceIn(0f, 1f)
+        val f = at(month.fixed.v)
+        val fs = at(month.fixed.v + month.open.v)
+        val g = if (l <= 0f) (if (month.variable.v > 0) 1f else 0f) else (month.variable.v / l).coerceIn(0f, 1f - fs)
+        drawRect(c.rule, Offset(0f, if (tall) 10.dp.toPx() else 6.dp.toPx()), Size(rail, 2.dp.toPx()))
+        val top = if (tall) 5.dp.toPx() else 3.dp.toPx()
+        val fh = if (tall) 12.dp.toPx() else 8.dp.toPx()
+        if (f > 0f) drawRect(c.inkTertiary, Offset(0f, top), Size(f * rail, fh))
+        if (fs > f) dashedBox(c.ruleStrong, Offset(f * rail, top), Size((fs - f) * rail, fh))
+        val fill = when (month.status) {
             PaceStatus.ON_PACE -> c.onPace
             PaceStatus.AHEAD -> c.ahead
             PaceStatus.OVERRUN -> c.overrun
         }
-        if (g > 0f) drawRect(fill, Offset(0f, fillTop), Size(if (status == PaceStatus.OVERRUN) rail else g * rail, fillH))
-        if (status == PaceStatus.OVERRUN && l > 0f) {
-            val x = ((spent.v - limit.v) / l).coerceIn(0f, 0.1f)
-            hatch(c.overrun, Offset(rail + 3.dp.toPx(), fillTop), Size(x * rail, fillH), 1.6f.dp.toPx(), 4.dp.toPx())
+        if (g > 0f) drawRect(fill, Offset(fs * rail, top), Size(g * rail, fh))
+        if (month.status == PaceStatus.OVERRUN && l > 0f) {
+            val x = (-month.remaining.v / l).coerceIn(0f, 0.1f)
+            hatch(c.overrun, Offset(rail + 3.dp.toPx(), top), Size(x * rail, fh), 1.6f.dp.toPx(), 4.dp.toPx())
         }
+        val p = at(month.planned.v + month.ideal.v)
         drawRect(c.ink, Offset(p * rail - 1.dp.toPx(), -1.dp.toPx()), Size(2.dp.toPx(), h + 2.dp.toPx()))
         for (x in listOf(rail - 1.5f.dp.toPx(), rail + 2.5f.dp.toPx())) drawLine(c.brand, Offset(x, 0f), Offset(x, h), 1.dp.toPx())
     }
 }
 
-@Composable
-fun Meter(month: BudgetMonth, modifier: Modifier = Modifier, tall: Boolean = false) =
-    Meter(month.spent, month.limit, month.ideal, month.status, modifier, tall)
+/** Book `.rsv`: the open previstos, a 1 dp dashed outline. */
+private fun DrawScope.dashedBox(color: Color, at: Offset, area: Size) {
+    val b = 0.5f.dp.toPx()
+    drawRect(
+        color, Offset(at.x + b, at.y + b), Size(maxOf(0f, area.width - 2 * b), area.height - 2 * b),
+        style = Stroke(1.dp.toPx(), pathEffect = PathEffect.dashPathEffect(floatArrayOf(3.dp.toPx(), 2.dp.toPx()))),
+    )
+}
 
 /**
- * Book §8.10, the ceiling line: a meter without pace. 1 dp rail in fio forte, the limits in a 3 dp ink
- * stroke (not spending: no state color), the argila double rule at the ceiling and, past it, the same 9%
- * reserved for the excess hatch (up to 10% drawn).
+ * Book §8.10, the total of the month fused with the teto line (M9, M11): no ritmo, no state. [total] holds
+ * the sums of the month's budgets (limit, spent, open, fixed, variable, remaining; D73). The track is the
+ * teto, or the sum of the cotas without one; previstos lançados in ink 3, open ones dashed, then the gasto
+ * variável in ink; a thin ink 2 mark at the sum of the cotas when it falls before the teto; the argila
+ * double rule at the teto (none without one) and the cotas above it hatched in the 9% reserved (up to 10%).
  */
 @Composable
-fun CeilingMeter(limits: Cents, ceiling: Cents, modifier: Modifier = Modifier) {
+fun TotalMeter(total: BudgetMonth, ceiling: Cents, modifier: Modifier = Modifier) {
     val c = Margem.colors
     Canvas(modifier.fillMaxWidth().height(10.dp)) {
         val rail = size.width / 1.09f
-        val t = ceiling.v.toFloat()
-        val g = if (t <= 0f) 0f else (limits.v / t).coerceIn(0f, 1f)
+        val track = (if (ceiling.v > 0) ceiling.v else total.limit.v).toFloat()
+        fun at(v: Long) = if (track <= 0f) 0f else (v / track).coerceIn(0f, 1f)
+        val f = at(total.fixed.v)
+        val fs = at(total.fixed.v + total.open.v)
+        val g = at(total.fixed.v + total.open.v + total.variable.v) - fs
         drawRect(c.ruleStrong, Offset(0f, 4.dp.toPx()), Size(rail, 1.dp.toPx()))
-        if (g > 0f) drawRect(c.ink, Offset(0f, 3.dp.toPx()), Size(g * rail, 3.dp.toPx()))
-        if (limits > ceiling && t > 0f) {
-            val x = ((limits.v - ceiling.v) / t).coerceIn(0f, 0.1f)
+        if (f > 0f) drawRect(c.inkTertiary, Offset(0f, 2.dp.toPx()), Size(f * rail, 5.dp.toPx()))
+        if (fs > f) dashedBox(c.ruleStrong, Offset(f * rail, 2.dp.toPx()), Size((fs - f) * rail, 5.dp.toPx()))
+        if (g > 0f) drawRect(c.ink, Offset(fs * rail, 3.dp.toPx()), Size(g * rail, 3.dp.toPx()))
+        if (ceiling.v <= 0L) return@Canvas
+        if (total.limit < ceiling) drawRect(c.inkSecondary, Offset(at(total.limit.v) * rail, 1.dp.toPx()), Size(1.dp.toPx(), size.height - 2.dp.toPx()))
+        if (total.limit > ceiling) {
+            val x = ((total.limit.v - ceiling.v) / track).coerceIn(0f, 0.1f)
             // Kept inside the 9% reserved: 10% of the rail after the 3 dp gap would cross the page margin.
             val w = minOf(x * rail, size.width - rail - 3.dp.toPx())
             hatch(c.overrun, Offset(rail + 3.dp.toPx(), 2.dp.toPx()), Size(w, 5.dp.toPx()), 1.6f.dp.toPx(), 4.dp.toPx())
@@ -806,36 +826,35 @@ fun CeilingMeter(limits: Cents, ceiling: Cents, modifier: Modifier = Modifier) {
 }
 
 /**
- * Book §8.10 under the Verbas header: the ceiling line with "cotas R$ 3.720,00 · teto R$ 4.100,00" ("· só
- * outubro" when the month's ceiling isn't the default, "+ 300" in lacre above it), or, without a ceiling,
- * the dotted rule with "As cotas somam R$ 3.720,00." and "Pôr um teto". Draws only: the header is the target.
+ * Book §8.10 under the Verbas header: [TotalMeter], then "Margem R$ 1.570,00 de R$ 5.720,00" ("R$ 12,00 além de
+ * R$ 5.720,00" below zero) and "gasto 1.850 · previstos 2.300 · teto 6.000" ("· só outubro" when the month's teto
+ * isn't the default, "· + 300" in lacre above it); without a teto the second line ends in "Pôr um teto". Draws
+ * only: the header is the target.
  */
 @Composable
-fun CeilingLegend(ceiling: Ceiling, modifier: Modifier = Modifier) {
+fun TotalLegend(ceiling: Ceiling, total: BudgetMonth, modifier: Modifier = Modifier) {
     val c = Margem.colors
-    val style = sans(12f, 600, 14.4f, tabular = true)
-    if (ceiling.cents.v == 0L) {
-        Row(
-            modifier.fillMaxWidth().padding(top = 8.dp).heightIn(min = 44.dp).drawBehind {
-                drawLine(c.ruleStrong, Offset(0f, 0.5f), Offset(size.width, 0.5f), 1.dp.toPx(), pathEffect = PathEffect.dashPathEffect(floatArrayOf(1.dp.toPx(), 1.dp.toPx())))
-            },
-            verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.SpaceBetween,
-        ) {
-            Text("As cotas somam ${money(ceiling.limits)}.", sans(13.5f, 400, 17.5f, tabular = true), color = c.inkTertiary)
-            Text("Pôr um teto", sans(14f, 600, 20f, 0.01f), Modifier.padding(start = 12.dp), color = c.info)
+    val margem = total.remaining
+    val line = buildAnnotatedString {
+        append("gasto ${stepValue(total.spent)} · previstos ${stepValue(total.open)} · ")
+        if (ceiling.cents.v == 0L) {
+            withStyle(SpanStyle(color = c.info, fontWeight = FontWeight.SemiBold)) { append("Pôr um teto") }
+        } else {
+            append("teto ${stepValue(ceiling.cents)}")
+            if (ceiling.cents != ceiling.standard) append(" · só ${monthLong(ceiling.month.month)}")
+            if (ceiling.over.v > 0) {
+                append(" · ")
+                withStyle(SpanStyle(color = c.overrun, fontWeight = FontWeight.SemiBold)) { append("+ ${stepValue(ceiling.over)}") }
+            }
         }
-        return
     }
-    val over = ceiling.over.v > 0
-    val only = if (ceiling.cents != ceiling.standard) " · só ${monthLong(ceiling.month.month)}" else ""
     Column(modifier.fillMaxWidth()) {
-        CeilingMeter(ceiling.limits, ceiling.cents, Modifier.padding(top = 10.dp))
-        // Book `.tlab`: the legend ends under the double rule (9% reserved), or spans it when "+ 300" is there.
-        Row(Modifier.padding(top = 5.dp).fillMaxWidth(if (over) 1f else 1f / 1.09f), horizontalArrangement = Arrangement.spacedBy(8.dp)) {
-            Text("cotas ${money(ceiling.limits)}", style, Modifier.weight(1f), c.inkTertiary, maxLines = 1)
-            Text("teto ${money(ceiling.cents)}$only", style, if (over) Modifier else Modifier.offset(x = 5.dp), c.inkTertiary, maxLines = 1)
-            if (over) Text("+ ${stepValue(ceiling.over)}", style, Modifier.widthIn(min = 30.dp), c.overrun, align = TextAlign.End, maxLines = 1)
-        }
+        TotalMeter(total, ceiling.cents, Modifier.padding(top = 10.dp))
+        Text(
+            if (margem.v >= 0) "Margem ${money(margem)} de ${money(total.limit)}" else "${money(Cents(-margem.v))} além de ${money(total.limit)}",
+            serif(16, 500, 21, tabular = true), Modifier.padding(top = 6.dp), maxLines = 1,
+        )
+        Text(line, sans(13f, 400, 17f, tabular = true), Modifier.padding(top = 2.dp), c.inkSecondary)
     }
 }
 

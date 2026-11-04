@@ -35,6 +35,7 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.drawBehind
 import androidx.compose.ui.draw.shadow
 import androidx.compose.ui.geometry.Offset
+import androidx.compose.ui.geometry.Size
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.PathEffect
 import androidx.compose.ui.graphics.graphicsLayer
@@ -65,16 +66,19 @@ import com.kaiodelphino.margem.Ceiling
 import com.kaiodelphino.margem.Cents
 import com.kaiodelphino.margem.Db
 import com.kaiodelphino.margem.MonthLine
+import com.kaiodelphino.margem.NO_DATE
 import com.kaiodelphino.margem.PaceStatus
+import com.kaiodelphino.margem.Planned
 import com.kaiodelphino.margem.PlannedLine
+import com.kaiodelphino.margem.Repeats
 import com.kaiodelphino.margem.R
 import com.kaiodelphino.margem.Week
 import com.kaiodelphino.margem.widgets.AliasText
 import com.kaiodelphino.margem.widgets.Amount
 import com.kaiodelphino.margem.widgets.Button
 import com.kaiodelphino.margem.widgets.ButtonKind
-import com.kaiodelphino.margem.widgets.CeilingLegend
 import com.kaiodelphino.margem.widgets.CreditLine
+import com.kaiodelphino.margem.widgets.DayStamp
 import com.kaiodelphino.margem.widgets.EmptyState
 import com.kaiodelphino.margem.widgets.Field
 import com.kaiodelphino.margem.widgets.Gap
@@ -97,6 +101,7 @@ import com.kaiodelphino.margem.widgets.StatusLabel
 import com.kaiodelphino.margem.widgets.StepsEditor
 import com.kaiodelphino.margem.widgets.Text
 import com.kaiodelphino.margem.widgets.TopBar
+import com.kaiodelphino.margem.widgets.TotalLegend
 import com.kaiodelphino.margem.widgets.money
 import com.kaiodelphino.margem.widgets.moneyPlain
 import com.kaiodelphino.margem.widgets.monthLong
@@ -476,7 +481,7 @@ fun Budgets(db: Db, snack: SnackHost, go: (Screen) -> Unit) {
                     .padding(start = 12.dp, end = 12.dp, top = 2.dp, bottom = 8.dp),
             ) {
                 PageHeader(over, headline, Modifier.texts(BudgetTags.HEADER, over, headline, dek), dek)
-                if (any) CeilingLine(data.ceiling)
+                if (any) CeilingLine(data.ceiling, data.budgets)
             }
             if (data.pending > 0) PautaStrip(data.pending, data.fresh) { go(Screen.Inbox) }
             val ink = Margem.colors.ink
@@ -568,8 +573,16 @@ private fun PautaStrip(count: Int, fresh: Int, onClick: () -> Unit) {
 private fun BudgetLine(b: BudgetSummary, onClick: () -> Unit) {
     val c = Margem.colors
     val m = b.month
+    // M12: the row reads as it shows, with the previstos when some are open.
+    val state = when {
+        m.status == PaceStatus.OVERRUN -> "fora da margem, ${money(Cents(-m.remaining.v))} além."
+        m.spent.v == 0L -> "sem gasto, margem de ${money(m.remaining)}."
+        m.status == PaceStatus.AHEAD -> "acima do ritmo, margem de ${money(m.remaining)}."
+        else -> "no ritmo, margem de ${money(m.remaining)}."
+    }
+    val spoken = "${b.name}, ${money(m.spent)} de ${money(m.limit)}, " + (if (m.open.v > 0) "${money(m.open)} em previstos, " else "") + state
     Column(
-        Modifier.fillMaxWidth().testTag(BudgetTags.ROW + b.id.v).clickable(onClick = onClick)
+        Modifier.fillMaxWidth().testTag(BudgetTags.ROW + b.id.v).clickable(onClick = onClick).semantics { contentDescription = spoken }
             .drawBehind { drawLine(c.rule, Offset(0f, size.height - 0.5f), Offset(size.width, size.height - 0.5f), 1.dp.toPx()) }
             .padding(top = 10.dp, bottom = 9.dp),
     ) {
@@ -582,7 +595,7 @@ private fun BudgetLine(b: BudgetSummary, onClick: () -> Unit) {
         Meter(m, Modifier.padding(top = 9.dp, bottom = 6.dp))
         Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.SpaceBetween) {
             StatusLabel(m.status, empty = m.spent.v == 0L)
-            if (m.status == PaceStatus.OVERRUN) Text("${money(m.spent - m.limit)} além", sans(13f, 600, 16f, tabular = true), color = c.overrun)
+            if (m.status == PaceStatus.OVERRUN) Text("${money(Cents(-m.remaining.v))} além", sans(13f, 600, 16f, tabular = true), color = c.overrun)
             else Text("margem ${money(m.remaining)}", sans(13f, 400, 16f, tabular = true), color = c.inkSecondary)
         }
     }
@@ -754,24 +767,37 @@ private fun StepsPreview(bm: BudgetMonth, today: LocalDate) {
 
 // ---- Teto ----
 
-/** Book 8.10: the ceiling line and its legend, or the dotted line with "Pôr um teto". Tags: [BudgetTags.CEILING]. */
+/**
+ * Book 8.10: the total of the month fused with the teto line (M9, D73): the sums of the month's [budgets]
+ * against [ceiling]. Tags: [BudgetTags.CEILING].
+ */
 @Composable
-private fun CeilingLine(ceiling: Ceiling) {
+private fun CeilingLine(ceiling: Ceiling, budgets: List<BudgetSummary>) {
+    val ms = budgets.map { it.month }
+    val total = BudgetMonth(
+        limit = Cents(ms.sumOf { it.limit.v }), spent = Cents(ms.sumOf { it.spent.v }), remaining = Cents(ms.sumOf { it.remaining.v }),
+        open = Cents(ms.sumOf { it.open.v }), fixed = Cents(ms.sumOf { it.fixed.v }), variable = Cents(ms.sumOf { it.variable.v }),
+    )
     val m = monthLong(ceiling.month.month)
-    val texts = if (ceiling.cents.v == 0L) listOf("As cotas somam ${money(ceiling.limits)}.", "Pôr um teto") else buildList {
-        add("cotas ${money(ceiling.limits)}")
-        add("teto ${money(ceiling.cents)}" + if (ceiling.cents != ceiling.standard) " · só $m" else "")
-        if (ceiling.over.v > 0) add("+ ${stepValue(ceiling.over)}")
-    }
-    val spoken = when {
-        ceiling.cents.v == 0L -> "As cotas de $m somam ${money(ceiling.limits)}. Sem teto. Tocar para pôr um teto."
-        else -> "Teto de $m: ${money(ceiling.cents)}. Cotas somam ${money(ceiling.limits)}, " + when {
+    val margem = if (total.remaining.v >= 0) "Margem ${money(total.remaining)} de ${money(total.limit)}"
+        else "${money(Cents(-total.remaining.v))} além de ${money(total.limit)}"
+    val sums = "gasto ${stepValue(total.spent)} · previstos ${stepValue(total.open)}"
+    val texts = if (ceiling.cents.v == 0L) listOf(margem, sums, "Pôr um teto") else listOf(
+        "$sums · teto ${stepValue(ceiling.cents)}" + (if (ceiling.cents != ceiling.standard) " · só $m" else "") +
+            if (ceiling.over.v > 0) " · + ${stepValue(ceiling.over)}" else "",
+    ).let { listOf(margem) + it }
+    val head = (if (total.remaining.v >= 0) "${m.replaceFirstChar { it.uppercase() }}: margem de ${money(total.remaining)} de ${money(total.limit)}."
+        else "${m.replaceFirstChar { it.uppercase() }}: ${money(Cents(-total.remaining.v))} além de ${money(total.limit)}.") +
+        " Gasto ${money(total.spent)}, previstos ${money(total.open)}. "
+    val spoken = head + when {
+        ceiling.cents.v == 0L -> "Sem teto. Tocar para pôr um teto."
+        else -> "Teto ${money(ceiling.cents)}, cotas " + when {
             ceiling.over.v > 0 -> "${money(ceiling.over)} além do teto."
             ceiling.limits == ceiling.cents -> "fecham no teto."
             else -> "a ${money(ceiling.cents - ceiling.limits)} do teto."
-        } + " Tocar para mudar."
+        } + " Tocar para mudar o teto."
     }
-    CeilingLegend(ceiling, Modifier.clearAndSetSemantics {
+    TotalLegend(ceiling, total, Modifier.clearAndSetSemantics {
         testTag = BudgetTags.CEILING
         this[SemanticsProperties.Text] = texts.map(::AnnotatedString)
         contentDescription = spoken
@@ -883,8 +909,9 @@ fun BudgetDetailScreen(db: Db, id: BudgetId, month: YearMonth, go: (Screen) -> U
         it.ensureMonths(month)
         DetailData(it.budgetDetail(id, month, today), it.monthOf(today))
     }
-    // The tapped week, by its start; survives recreation.
+    // The tapped week, by its start, and the tapped previsto, by its occurrence; both survive recreation.
     var editing by rememberSaveable(month) { mutableStateOf("") }
+    var sheet by rememberSaveable(month) { mutableLongStateOf(0L) }
     val d = data?.detail
     Column(Modifier.fillMaxSize()) {
         TopBar(d?.name ?: "", Modifier.testTag(BudgetTags.DETAIL_TITLE).semantics(mergeDescendants = true) {}, onBack = back) {
@@ -901,14 +928,18 @@ fun BudgetDetailScreen(db: Db, id: BudgetId, month: YearMonth, go: (Screen) -> U
                 canNext = month < data.current, canPrev = month > d.firstMonth, tag = "budget.month",
             )
             Headline(bm, today)
-            Meter(bm, Modifier.padding(top = 8.dp).testTag(BudgetTags.DETAIL_METER), tall = true)
+            val described = "${money(bm.spent)} de ${money(bm.limit)}"
+            Meter(bm, Modifier.padding(top = 8.dp).testTag(BudgetTags.DETAIL_METER).semantics { contentDescription = described }, tall = true)
             Row(Modifier.fillMaxWidth().padding(top = 6.dp)) {
                 Text("R$ 0", sans(12f, 600, 16f, tabular = true), Modifier.weight(1f), c.inkTertiary)
                 Text("cota ${money(bm.limit)}", sans(12f, 600, 16f, tabular = true), Modifier.padding(end = 10.dp), c.inkTertiary)
-                if (bm.spent > bm.limit) Text("+ ${moneyPlain(bm.spent - bm.limit)}", sans(12f, 600, 16f, tabular = true), color = c.overrun)
+                if (bm.remaining.v < 0) Text("+ ${moneyPlain(Cents(-bm.remaining.v))}", sans(12f, 600, 16f, tabular = true), color = c.overrun)
             }
-            SectionLine("Passos semanais", aside = "toque para editar")
+            if (d.plannedLines.isNotEmpty()) PlannedLines(d.plannedLines, month) { sheet = it.planned.occurrence.v }
+            // Book 10.8: with previstos, the steps share the cota livre and the rubric says how much.
+            SectionLine(if (bm.planned.v > 0) "Passos · cota livre ${moneyPlain(bm.freeLimit)}" else "Passos semanais", aside = "toque para editar")
             StepsEditor(bm.weeks, today, { editing = it.start.toString() }, tag = BudgetTags.WEEK)
+            StepsSum(bm)
             SectionLine("Lançamentos do mês", aside = "valor · soma")
             if (d.lines.isEmpty()) Text(
                 "Nenhum lançamento neste mês.", Margem.type.body,
@@ -918,8 +949,10 @@ fun BudgetDetailScreen(db: Db, id: BudgetId, month: YearMonth, go: (Screen) -> U
             var cut = false
             for (line in d.lines) {
                 if (!line.row.refunded) sum += line.cents.v
-                MonthLineRow(line, sum, sum > bm.limit.v) { go(Screen.Edit(line.row.id)) }
-                if (!cut && bm.limit.v > 0 && sum >= bm.limit.v) {
+                // Book 10.8: the sums after the cut are in lacre.
+                MonthLineRow(line, sum, cut || sum > bm.limit.v) { go(Screen.Edit(line.row.id)) }
+                // M13: the margem reaches zero where the running sum plus the open previstos reaches the cota.
+                if (!cut && bm.limit.v > 0 && sum + bm.open.v >= bm.limit.v) {
                     cut = true
                     CutLine()
                 }
@@ -928,6 +961,9 @@ fun BudgetDetailScreen(db: Db, id: BudgetId, month: YearMonth, go: (Screen) -> U
     }
     val week = d?.month?.weeks?.firstOrNull { it.start.toString() == editing }
     if (week != null && !week.locked) StepDialog(db, id, month, week) { editing = "" }
+    d?.plannedLines?.firstOrNull { it.planned.occurrence.v == sheet }?.let { l ->
+        PlannedSheet(db, l.planned, today, go, { sheet = 0L }, launched = l.launched, month = month)
+    }
 }
 
 /** Book 10.8 headline: the fact and the number, in the tone of a newspaper. */
@@ -935,14 +971,17 @@ fun BudgetDetailScreen(db: Db, id: BudgetId, month: YearMonth, go: (Screen) -> U
 private fun Headline(bm: BudgetMonth, today: LocalDate) {
     val past = bm.end < today
     val next = bm.end.plus(1, DateTimeUnit.DAY)
+    // M12: the open previstos join the fact; the ideal is of the cota livre when previstos take part of the cota.
+    val launched = "Você lançou ${money(bm.spent)} de ${money(bm.limit)}" + if (bm.open.v > 0) " e tem ${money(bm.open)} em previstos" else ""
     val (headline, dek) = when {
-        bm.status == PaceStatus.OVERRUN -> "${money(bm.spent - bm.limit)} além da cota." to
-            "Você lançou ${money(bm.spent)} de ${money(bm.limit)}. Nada foi bloqueado." +
+        bm.status == PaceStatus.OVERRUN -> "${money(Cents(-bm.remaining.v))} além da cota." to
+            "$launched. Nada foi bloqueado." +
             (if (past) "" else " O mês recomeça em ${next.day} de ${monthLong(next.month)}, com a cota inteira.")
-        past -> "Sobraram ${money(bm.remaining)}." to "Você lançou ${money(bm.spent)} de ${money(bm.limit)}."
+        past -> "Sobraram ${money(bm.remaining)}." to "$launched."
         bm.status == PaceStatus.AHEAD -> "Sobram ${money(bm.remaining)}." to
-            "Você lançou ${money(bm.spent)} de ${money(bm.limit)}, ${money(bm.spent - bm.ideal)} acima do ritmo ideal de hoje."
-        else -> "Sobram ${money(bm.remaining)}." to "Você lançou ${money(bm.spent)} de ${money(bm.limit)}. No ritmo: o ideal até hoje é ${money(bm.ideal)}."
+            "$launched, ${money(bm.variable - bm.ideal)} acima do ritmo ideal de hoje."
+        else -> "Sobram ${money(bm.remaining)}." to
+            "$launched. No ritmo: o ideal${if (bm.planned.v > 0) " da cota livre" else ""} até hoje é ${money(bm.ideal)}."
     }
     Column(Modifier.padding(top = 2.dp).testTag(BudgetTags.DETAIL_HEADLINE).semantics(mergeDescendants = true) {}) {
         Text(headline, serif(29, 400, 33, tracking = -0.01f), Modifier.padding(bottom = 6.dp))
@@ -1007,11 +1046,55 @@ private fun CutLine() {
 
 /** Book 10.8, M12: "Previstos de outubro" and its lines. Tags: [BudgetTags.PLANNED_LINES], [BudgetTags.PLANNED_LINE]. */
 @Composable
-private fun PlannedLines(lines: List<PlannedLine>, month: YearMonth, open: (PlannedLine) -> Unit): Unit = TODO()
+internal fun PlannedLines(lines: List<PlannedLine>, month: YearMonth, open: (PlannedLine) -> Unit) {
+    val title = "Previstos de ${monthLong(month.month)}"
+    SectionLine(title, Modifier.texts(BudgetTags.PLANNED_LINES, title, "valor"), aside = "valor")
+    for (l in lines) PlannedLineRow(l) { open(l) }
+}
+
+/** Book 8.11 `.prow` in the detail: the folhinha, the name, "esperando · todo mês" or "lançado em 4 out", the value. */
+@Composable
+internal fun PlannedLineRow(l: PlannedLine, onClick: () -> Unit) {
+    val c = Margem.colors
+    val p = l.planned
+    val sub = when {
+        !l.open -> "lançado em ${l.launched.day}\u00A0${monthShort(l.launched.month)}"
+        p.late -> "esperando desde ${p.date.day}\u00A0${monthShort(p.date.month)}"
+        else -> "esperando · ${if (p.repeats == Repeats.MONTHLY) "todo mês" else "só uma vez"}"
+    }
+    Row(
+        Modifier.fillMaxWidth().testTag(BudgetTags.PLANNED_LINE + p.occurrence.v).clickable(onClick = onClick)
+            .drawBehind { drawLine(c.rule, Offset(0f, size.height - 0.5f), Offset(size.width, size.height - 0.5f), 1.dp.toPx()) }
+            .padding(vertical = 9.dp),
+        verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(12.dp),
+    ) {
+        DayStamp(p.date, p.late && l.open)
+        Column(Modifier.weight(1f)) {
+            Text(p.name, serif(17, 500, 22), maxLines = 2)
+            Text(sub, sans(13f, 400, 17f), color = if (p.late && l.open) c.inkSecondary else c.inkTertiary, maxLines = 1)
+        }
+        Amount(l.cents, size = 17, color = if (l.open) c.inkSecondary else c.ink)
+    }
+}
 
 /** Book 8.6, M12: "Soma = cota livre" (or "Soma = cota") under the steps. Tag: [BudgetTags.STEPS_SUM]. */
 @Composable
-private fun StepsSum(bm: BudgetMonth): Unit = TODO()
+internal fun StepsSum(bm: BudgetMonth) {
+    val c = Margem.colors
+    val free = bm.planned.v > 0
+    Row(
+        Modifier.fillMaxWidth().testTag(BudgetTags.STEPS_SUM).semantics(mergeDescendants = true) {}
+            .drawBehind { drawRect(c.ink, Offset.Zero, Size(size.width, 2.dp.toPx())) }
+            .padding(top = 10.dp, bottom = 8.dp),
+        verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(12.dp),
+    ) {
+        Column(Modifier.weight(1f)) {
+            Text(if (free) "Soma = cota livre" else "Soma = cota", sans(15f, 600, 20f))
+            if (free) Text("cota ${money(bm.limit)} − previstos ${money(bm.planned)}", sans(13f, 400, 17f, tabular = true), color = c.inkTertiary)
+        }
+        Amount(if (free) bm.freeLimit else bm.limit, size = 17)
+    }
+}
 
 /** The step of one week: value, "no máximo R$ X", Salvar, and Voltar ao automático on an edited week. */
 @Composable

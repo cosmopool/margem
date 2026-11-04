@@ -59,8 +59,10 @@ import com.kaiodelphino.margem.widgets.ListRow
 import com.kaiodelphino.margem.widgets.Margem
 import com.kaiodelphino.margem.widgets.MargemDialog
 import com.kaiodelphino.margem.widgets.MargemTheme
+import com.kaiodelphino.margem.widgets.TotalLegend
+import com.kaiodelphino.margem.ui.PlannedLines
+import com.kaiodelphino.margem.ui.StepsSum
 import com.kaiodelphino.margem.widgets.Mark
-import com.kaiodelphino.margem.widgets.CeilingLegend
 import com.kaiodelphino.margem.widgets.Meter
 import com.kaiodelphino.margem.widgets.MoneyField
 import com.kaiodelphino.margem.widgets.MonthPicker
@@ -220,23 +222,62 @@ private fun Catalog(dark: Boolean, setDark: (Boolean) -> Unit) {
                 }
 
                 SectionLine("8.5 Régua")
-                Meter(Cents(72000), Cents(100000), Cents(57000), PaceStatus.AHEAD, Modifier.padding(top = 16.dp), tall = true)
-                for ((spent, status) in listOf(53000L to PaceStatus.ON_PACE, 72000L to PaceStatus.AHEAD, 108000L to PaceStatus.OVERRUN, 0L to PaceStatus.ON_PACE)) {
+                // The states of the margem honesta mock (M11): Casa, cota 3.000, aluguel 2.000 open on day 5 or lançado at 2.100.
+                fun bm(limit: Long, spent: Long, ideal: Long, status: PaceStatus, open: Long = 0, fixed: Long = 0) = BudgetMonth(
+                    limit = Cents(limit), spent = Cents(spent), remaining = Cents(limit - spent - open), ideal = Cents(ideal), status = status,
+                    open = Cents(open), fixed = Cents(fixed), freeLimit = Cents(maxOf(0, limit - open - fixed)), variable = Cents(spent - fixed),
+                )
+                Meter(bm(300000, 214000, 34800, PaceStatus.AHEAD, fixed = 210000), Modifier.padding(top = 16.dp), tall = true)
+                for ((label, m) in listOf(
+                    "sem previsto" to bm(100000, 53000, 57000, PaceStatus.ON_PACE),
+                    "previsto em aberto" to bm(300000, 4000, 6452, PaceStatus.ON_PACE, open = 200000),
+                    "previsto lançado" to bm(300000, 240000, 34800, PaceStatus.ON_PACE, fixed = 210000),
+                    "acima do ritmo" to bm(300000, 255000, 34800, PaceStatus.AHEAD, fixed = 210000),
+                    "fora da margem" to bm(300000, 110000, 66400, PaceStatus.OVERRUN, open = 200000),
+                    "sem gasto" to bm(100000, 0, 29000, PaceStatus.ON_PACE),
+                    "sem gasto, previsto em aberto" to bm(300000, 0, 6452, PaceStatus.ON_PACE, open = 200000),
+                )) {
                     Column(Modifier.padding(top = 14.dp)) {
-                        StatusLabel(status, empty = spent == 0L)
-                        Meter(Cents(spent), Cents(100000), Cents(if (spent == 0L) 29000 else 57000), status, Modifier.padding(top = 6.dp))
+                        Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+                            StatusLabel(m.status, empty = m.spent.v == 0L)
+                            Text(label, sans(13f, 400, 16f), color = c.inkTertiary)
+                        }
+                        Meter(m, Modifier.padding(top = 6.dp))
                     }
                 }
 
-                SectionLine("8.10 Cabeçalho do teto")
+                SectionLine("8.10 Cabeçalho do teto e total do mês")
                 val oct = YearMonth(2026, 10)
-                for (ceiling in listOf(
-                    Ceiling(oct, Cents(0), Cents(0), Cents(372000)),
-                    Ceiling(oct, Cents(410000), Cents(410000), Cents(372000)),
-                    Ceiling(oct, Cents(410000), Cents(410000), Cents(410000)),
-                    Ceiling(oct, Cents(410000), Cents(410000), Cents(440000)),
-                    Ceiling(oct, Cents(440000), Cents(410000), Cents(440000)),
-                )) CeilingLegend(ceiling, Modifier.padding(top = 10.dp))
+                // Book 8.10: gasto 1.850 (1.200 lançados de previstos + 650 variáveis), 2.300 em previstos em aberto.
+                fun total(limits: Long) = BudgetMonth(
+                    limit = Cents(limits), spent = Cents(185000), remaining = Cents(limits - 185000 - 230000),
+                    open = Cents(230000), fixed = Cents(120000), variable = Cents(65000),
+                )
+                for ((ceiling, limits) in listOf(
+                    Ceiling(oct, Cents(0), Cents(0), Cents(572000)) to 572000L,
+                    Ceiling(oct, Cents(600000), Cents(600000), Cents(572000)) to 572000L,
+                    Ceiling(oct, Cents(600000), Cents(600000), Cents(600000)) to 600000L,
+                    Ceiling(oct, Cents(600000), Cents(600000), Cents(630000)) to 630000L,
+                    Ceiling(oct, Cents(630000), Cents(600000), Cents(630000)) to 630000L,
+                    Ceiling(oct, Cents(0), Cents(0), Cents(300000)) to 300000L,
+                )) TotalLegend(ceiling, total(limits), Modifier.padding(top = 10.dp))
+
+                SectionLine("10.8 Previstos do mês e passos")
+                val aluguel = Planned(
+                    occurrence = OccurrenceId(2), planned = PlannedId(2), name = "Aluguel", budget = BudgetId(2), budgetName = "Casa",
+                    tags = listOf("casa"), cents = Cents(200000), day = 5, repeats = Repeats.MONTHLY, date = LocalDate(2026, 10, 5), next = LocalDate(2026, 11, 5),
+                )
+                PlannedLines(
+                    listOf(
+                        PlannedLine(academia, Cents(8990)),
+                        PlannedLine(aluguel.copy(occurrence = OccurrenceId(3), name = "Condomínio", date = LocalDate(2026, 10, 10), repeats = Repeats.ONCE), Cents(60000)),
+                        PlannedLine(aluguel.copy(occurrence = OccurrenceId(4), date = LocalDate(2026, 10, 4)), Cents(210000), LocalDate(2026, 10, 4)),
+                        PlannedLine(aluguel.copy(occurrence = OccurrenceId(5), name = "Internet", date = LocalDate(2026, 10, 20)), Cents(11990)),
+                    ),
+                    oct,
+                ) {}
+                StepsSum(bm(300000, 4000, 6452, PaceStatus.ON_PACE, open = 200000))
+                StepsSum(bm(124000, 51230, 58000, PaceStatus.ON_PACE))
 
                 SectionLine("8.6 Mês e passos")
                 MonthPicker(YearMonth(2026, 10), "1 a 31 · mês atual", {}, {}, canNext = false)

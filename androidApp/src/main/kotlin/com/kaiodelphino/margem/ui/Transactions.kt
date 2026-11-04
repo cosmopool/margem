@@ -134,6 +134,7 @@ import kotlinx.datetime.DayOfWeek
 import kotlinx.datetime.LocalDate
 import kotlinx.datetime.LocalTime
 import kotlinx.datetime.TimeZone
+import kotlinx.datetime.YearMonth
 import kotlinx.datetime.onDay
 import kotlinx.datetime.plusMonth
 import kotlinx.datetime.toLocalDateTime
@@ -559,7 +560,7 @@ fun Transactions(db: Db, snack: SnackHost, go: (Screen) -> Unit) {
         }
     }
     // A skipped, launched or deleted occurrence leaves the list, and its sheet with it.
-    planned?.firstOrNull { it.occurrence.v == sheet }?.let { PlannedSheet(db, it, today, go) { sheet = 0L } }
+    planned?.firstOrNull { it.occurrence.v == sheet }?.let { PlannedSheet(db, it, today, go, { sheet = 0L }) }
 }
 
 /** Book 10.5 `.lrow`: name, "Lazer · bar, amigos · ‸ emendado · Parcela 1 de 10", the value; refunded: struck, with Desfazer estorno. */
@@ -696,9 +697,14 @@ private fun SheetAction(icon: Int, label: String, sub: String, tag: String, colo
     }
 }
 
-/** Book 8.11: the previsto sheet with its actions. Tags: [TransactionTags.PLANNED_SHEET]. */
+/**
+ * Book 8.11: the previsto sheet with its actions. Tags: [TransactionTags.PLANNED_SHEET]. From the budget detail of
+ * [month], [launched] is the date of a lançada line (only Editar and Apagar, M12); NO_DATE while open.
+ */
 @Composable
-private fun PlannedSheet(db: Db, p: Planned, today: LocalDate, go: (Screen) -> Unit, close: () -> Unit) {
+internal fun PlannedSheet(
+    db: Db, p: Planned, today: LocalDate, go: (Screen) -> Unit, close: () -> Unit, launched: LocalDate = NO_DATE, month: YearMonth = NO_MONTH,
+) {
     val c = Margem.colors
     val scope = rememberCoroutineScope()
     var ask by rememberSaveable { mutableStateOf(false) }
@@ -715,25 +721,28 @@ private fun PlannedSheet(db: Db, p: Planned, today: LocalDate, go: (Screen) -> U
             Amount(p.cents, size = 17, color = c.inkSecondary)
         }
         val about = listOfNotNull(
-            if (p.late) "Esperando o recado desde ${p.date.day} de ${monthLong(p.date.month)}." else null,
+            if (launched != NO_DATE) "Lançado em ${dayMonth(launched)}." else null,
+            if (p.late && launched == NO_DATE) "Esperando o recado desde ${p.date.day} de ${monthLong(p.date.month)}." else null,
             if (p.linked) "Ligado a “${p.linkText}” · ${p.linkSource}." else null,
         ).joinToString(" ")
         if (about.isNotEmpty()) Text(about, sans(14f, 400, 20f), Modifier.padding(top = 2.dp, bottom = 8.dp), c.inkSecondary)
         // R6: lançar sem recado only from the occurrence's day on.
-        if (p.date <= today) SheetAction(
+        val open = launched == NO_DATE
+        if (open && p.date <= today) SheetAction(
             R.drawable.i_lancamento, "Lançar sem recado", "vira um lançamento de ${dayMonth(p.date)}, sem ligação", TransactionTags.PLANNED_LAUNCH_NO_NOTICE,
         ) {
             close()
             go(Screen.FromPlanned(p.occurrence))
         }
-        SheetAction(
+        if (open) SheetAction(
             R.drawable.i_avancar, "Pular este mês",
             if (p.next != NO_DATE) "some sem lançar; volta em ${p.next.day} de ${monthLong(p.next.month)}" else "some sem lançar",
             TransactionTags.PLANNED_SKIP,
         ) { scope.launch { db.skipOccurrence(p.occurrence); close() } }
         SheetAction(R.drawable.i_emenda, "Editar previsto", "", TransactionTags.PLANNED_EDIT) {
             close()
-            go(Screen.EditPlanned(p.occurrence))
+            // From the detail, the occurrence may be past today + 10 or lançada: the form finds it in that month (D73).
+            go(Screen.EditPlanned(p.occurrence, if (month == NO_MONTH) BudgetId(0) else p.budget, month))
         }
         SheetAction(R.drawable.i_fechar, "Apagar previsto", "este e os próximos meses", TransactionTags.PLANNED_DELETE, c.overrun) { ask = true }
     }
@@ -836,8 +845,9 @@ fun NewTransaction(db: Db, snack: SnackHost, go: (Screen) -> Unit, back: () -> U
 
 /** Editar previsto (D64): the manual form of the previsto of [occurrence]. */
 @Composable
-fun EditPlanned(db: Db, occurrence: OccurrenceId, snack: SnackHost, go: (Screen) -> Unit, back: () -> Unit) =
-    TxForm(db, NoticeId(0), TransactionId(0), snack, go, {}, back, editPlanned = occurrence)
+fun EditPlanned(
+    db: Db, occurrence: OccurrenceId, snack: SnackHost, go: (Screen) -> Unit, back: () -> Unit, budget: BudgetId = BudgetId(0), month: YearMonth = NO_MONTH,
+) = TxForm(db, NoticeId(0), TransactionId(0), snack, go, {}, back, editPlanned = occurrence, plannedIn = budget to month)
 
 private const val GONE_PLANNED = "Este previsto não existe mais."
 
@@ -869,7 +879,7 @@ private fun missingText(items: List<String>): String = when (items.size) {
 @Composable
 private fun TxForm(
     db: Db, notice: NoticeId, edit: TransactionId, snack: SnackHost, go: (Screen) -> Unit, replace: (Screen) -> Unit, back: () -> Unit,
-    from: OccurrenceId = OccurrenceId(0), editPlanned: OccurrenceId = OccurrenceId(0),
+    from: OccurrenceId = OccurrenceId(0), editPlanned: OccurrenceId = OccurrenceId(0), plannedIn: Pair<BudgetId, YearMonth> = BudgetId(0) to NO_MONTH,
 ) {
     val c = Margem.colors
     val today = LocalToday.current()
@@ -885,7 +895,13 @@ private fun TxForm(
         val d = if (isEdit) it.transaction(edit) else TransactionDetail()
         FormData(
             n, d, it.budgetsOverview(month, today, BudgetOrder.MANUAL), it.tags(), it.settings().weekStart,
-            if (isPost) it.suggestion(n.parsed.merchant) else Suggestion(), if (isEdit) emptyList() else it.planned(today),
+            if (isPost) it.suggestion(n.parsed.merchant) else Suggestion(),
+            when {
+                isEdit -> emptyList()
+                // Editar previsto from the budget detail: that month's previstos too, lançados and past today + 10 (D73).
+                plannedIn.first.v != 0L -> it.planned(today) + it.budgetDetail(plannedIn.first, plannedIn.second, today).plannedLines.map { l -> l.planned }
+                else -> it.planned(today)
+            },
         )
     }
     var loaded by rememberSaveable { mutableStateOf(false) }

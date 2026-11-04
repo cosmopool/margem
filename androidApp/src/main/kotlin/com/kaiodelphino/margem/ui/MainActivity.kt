@@ -39,6 +39,7 @@ import androidx.compose.ui.platform.LocalContext
 import androidx.lifecycle.Lifecycle
 import androidx.lifecycle.compose.LifecycleEventEffect
 import com.kaiodelphino.margem.BudgetId
+import com.kaiodelphino.margem.NO_MONTH
 import com.kaiodelphino.margem.Db
 import com.kaiodelphino.margem.MargemApp
 import com.kaiodelphino.margem.NoticeId
@@ -81,8 +82,11 @@ sealed interface Screen {
     data object NewTransaction : Screen
     /** Lançar sem recado (R6): Novo lançamento filled from the open [occurrence]. */
     data class FromPlanned(val occurrence: OccurrenceId) : Screen
-    /** Editar previsto: the manual form of the previsto of [occurrence] (TransactionForm.planned). */
-    data class EditPlanned(val occurrence: OccurrenceId) : Screen
+    /**
+     * Editar previsto: the manual form of the previsto of [occurrence] (TransactionForm.planned). From the budget
+     * detail, [budget] and [month] say where the occurrence is listed (it may be lançada or past today + 10).
+     */
+    data class EditPlanned(val occurrence: OccurrenceId, val budget: BudgetId = BudgetId(0), val month: YearMonth = NO_MONTH) : Screen
     data object Dismissed : Screen
     data object Sources : Screen
     data object Tags : Screen
@@ -105,7 +109,7 @@ private fun encode(s: Screen): String = when (s) {
     is Screen.Edit -> "edit:${s.id.v}"
     Screen.NewTransaction -> "new"
     is Screen.FromPlanned -> "fromPlanned:${s.occurrence.v}"
-    is Screen.EditPlanned -> "editPlanned:${s.occurrence.v}"
+    is Screen.EditPlanned -> "editPlanned:${s.occurrence.v}:${s.budget.v}:${s.month}"
     Screen.Dismissed -> "dismissed"
     Screen.Sources -> "sources"
     Screen.Tags -> "tags"
@@ -130,7 +134,9 @@ private fun decode(s: String): Screen {
         "edit" -> Screen.Edit(TransactionId(p[1].toLong()))
         "new" -> Screen.NewTransaction
         "fromPlanned" -> Screen.FromPlanned(OccurrenceId(p[1].toLong()))
-        "editPlanned" -> Screen.EditPlanned(OccurrenceId(p[1].toLong()))
+        "editPlanned" -> Screen.EditPlanned(
+            OccurrenceId(p[1].toLong()), BudgetId(p.getOrNull(2)?.toLong() ?: 0), p.getOrNull(3)?.let(YearMonth::parse) ?: NO_MONTH,
+        )
         "dismissed" -> Screen.Dismissed
         "sources" -> Screen.Sources
         "tags" -> Screen.Tags
@@ -260,7 +266,7 @@ fun App(db: Db, tabRequest: Screen?, onTabOpened: () -> Unit) {
                 is Screen.Edit -> EditTransaction(db, screen.id, snack, go, back)
                 Screen.NewTransaction -> NewTransaction(db, snack, go, back)
                 is Screen.FromPlanned -> NewTransaction(db, snack, go, back, from = screen.occurrence)
-                is Screen.EditPlanned -> EditPlanned(db, screen.occurrence, snack, go, back)
+                is Screen.EditPlanned -> EditPlanned(db, screen.occurrence, snack, go, back, screen.budget, screen.month)
                 Screen.Dismissed -> Dismissed(db, back)
                 Screen.Tags -> Tags(db, back)
                 Screen.StartDays -> StartDays(db, back)
