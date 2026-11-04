@@ -8,7 +8,7 @@ APK_DIR := androidApp/build/outputs
 FILTER  := $(if $(T),--tests '*$(T)*',)
 
 .DEFAULT_GOAL := help
-.PHONY: help debug install run catalog release bundle test test-shared test-android ios mutation check clean
+.PHONY: help debug install run catalog release bundle test test-shared test-android ios mutation coverage check clean
 
 help: ## List the commands
 	@grep -E '^[a-z-]+:.*## ' $(MAKEFILE_LIST) | awk -F':.*## ' '{printf "  make %-13s %s\n", $$1, $$2}'
@@ -49,6 +49,10 @@ ios: ## Compile shared and its tests for the iOS simulator (no iOS app in v1)
 mutation: ## Mutation testing of shared on the JVM (PIT, Kotlin + SQL mutants); fails below the threshold (D48)
 	$(GRADLE) :shared:mutation
 	@echo "  report: shared/build/reports/pitest/index.html"
+
+coverage: ## Every test of both modules with Kover; one merged XML for the feature pipeline (D75)
+	$(GRADLE) koverXmlReportPipeline
+	@echo "  report: build/reports/kover/reportPipeline.xml"
 
 check: test ios debug ## Everything a block must pass: tests, iOS compile, debug build (mutation runs apart: make mutation, D48)
 

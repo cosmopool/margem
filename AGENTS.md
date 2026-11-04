@@ -27,6 +27,7 @@ Every branch a caller must handle multiplies codepaths; give callers one.
 - While developing, run `make test` after each change and fix every failure.
 - When a feature or implementation is finished, run `make check` (tests, iOS compile, debug build) and fix every failure. Mutation (`make mutation`) runs apart, out of `make check` since 2026-10-23 (architecture D48).
 - Always follow `.agents/rules/testing.md` when writing/editing/reviewing tests.
+- A feature can run through the pipeline (architecture D75): `/req-gather <slug>`, then `/dev-run <slug>`; its rules are `.claude/pipeline/RULES.md`.
 
 ## Naming conventions
 - Types: PascalCase (`Input`, `MpReader`)
