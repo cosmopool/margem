@@ -1,58 +1,86 @@
 #!/usr/bin/env bash
-# Necessity oracle: production lines this feature added that no test executes.
+# Necessity oracle: list production lines this feature added that no test executes.
 #
-#   make coverage            # every test of both modules, one merged Kover XML
-#   scripts/pipeline/uncovered.sh --base <ref> [--xml build/reports/kover/reportPipeline.xml]
+#   Run the configured commands.coverage first.
+#   scripts/pipeline/uncovered.sh --base <ref> [--lcov coverage/lcov.info]
 #
-# The feature's tests come from its acceptance criteria and the blind contract round, never from
-# the implementation, so an added line no test reaches is a line no requirement asked for: a
-# deletion *candidate*, classified per .claude/pipeline/RULES.md before anything is removed.
-# Defensive code at an I/O boundary is exempt even when uncovered.
+# Because the test suite is derived only from the acceptance criteria in
+# requirement.md — never from the implementation — an added line that no test reaches
+# is a line no requirement asked for. That makes it a deletion *candidate*: classify it
+# per .claude/pipeline/RULES.md before removing anything. Defensive code at an I/O
+# boundary is exempt even when uncovered.
 #
-# Kover writes JaCoCo XML: <package name="com/x"><sourcefile name="Db.kt"><line nr= mi= ci=>.
-# A line with a record and no covered instruction is uncovered; lines with no record (comments,
-# braces, declarations, inline lambdas the compiler moved) are not executable and are ignored.
-# A file with no record at all is reported apart — usually no test loads it, which is the finding.
-# Composables only run under Robolectric (make test-android); the merged report includes them.
+# Lines with no coverage record (comments, braces, declarations) are not executable and
+# are ignored. Files with no record at all are reported separately — usually they were
+# never imported by any test, which is itself the finding.
 #
 # Exits 0 when nothing is uncovered, 1 when there are candidates, 2 on usage error.
 set -euo pipefail
-. "$(dirname "$0")/common.sh"
+source "$(dirname "$0")/lib.sh"
 
-BASE=""; XML="build/reports/kover/reportPipeline.xml"
+BASE=""
+LCOV="$(config get coverage.lcov)"
+
 while [ $# -gt 0 ]; do
   case "$1" in
     --base) BASE="$2"; shift 2 ;;
-    --xml)  XML="$2"; shift 2 ;;
+    --lcov) LCOV="$2"; shift 2 ;;
     *) echo "uncovered.sh: unknown argument: $1" >&2; exit 2 ;;
   esac
 done
-need_base uncovered.sh "$BASE"
-[ -f "$XML" ] || { echo "uncovered.sh: no coverage file at $XML — run 'make coverage' first" >&2; exit 2; }
-intent_to_add
 
-added_lines "$BASE" | python3 -I -c '
-import sys, xml.etree.ElementTree as ET
-cov = {}   # "pkg/File.kt" -> {line: covered}
-for pkg in ET.parse(sys.argv[1]).getroot().iter("package"):
-    for sf in pkg.iter("sourcefile"):
-        lines = cov.setdefault(pkg.get("name") + "/" + sf.get("name"), {})
-        for ln in sf.iter("line"):
-            n = int(ln.get("nr"))
-            lines[n] = lines.get(n, False) or int(ln.get("ci")) > 0
-def record(path):
-    # src/<set>/kotlin/<package path>/<File>.kt -> the key Kover uses
-    for key in cov:
-        if path.endswith("/" + key): return cov[key]
-    return None
-found = 0; missing = {}
-for item in sys.stdin.read().split():
-    path, n = item.rsplit(":", 1)
-    lines = record(path)
-    if lines is None: missing[path] = 1; continue
-    if lines.get(int(n)) is False:
-        print(item); found += 1
-for path in missing:
-    print(path + ": no coverage record — not reached by any test", file=sys.stderr); found += 1
-sys.exit(1 if found else 0)
-' "$XML"
+[ -n "$BASE" ] || { echo "uncovered.sh: --base <ref> is required" >&2; exit 2; }
+git rev-parse --verify --quiet "$BASE" >/dev/null || {
+  echo "uncovered.sh: not a valid ref: $BASE" >&2; exit 2; }
+[ -f "$LCOV" ] || {
+  echo "uncovered.sh: no coverage file at $LCOV — run the configured coverage command first" >&2
+  exit 2; }
+
+git add -A -N >/dev/null 2>&1 || true
+
+ROOT="$(git rev-parse --show-toplevel)"
+
+mapfile -t PATHSPEC < <(config pathspec production)
+PATHSPEC=(-- "${PATHSPEC[@]}")
+
+git diff -U0 "$BASE" "${PATHSPEC[@]}" \
+  | awk -v lcov="$LCOV" -v root="$ROOT" '
+  function norm(p) {
+    sub(/^\.\//, "", p)
+    if (index(p, root "/") == 1) p = substr(p, length(root) + 2)
+    return p
+  }
+  BEGIN {
+    while ((getline line < lcov) > 0) {
+      if (line ~ /^SF:/)      { sf = norm(substr(line, 4)); seen[sf] = 1 }
+      else if (line ~ /^DA:/) {
+        split(substr(line, 4), a, ",")
+        # A line can appear more than once; executed anywhere counts as covered.
+        if (a[2] + 0 > 0) cov[sf ":" a[1]] = 1
+        else if (!((sf ":" a[1]) in cov)) cov[sf ":" a[1]] = 0
+      }
+    }
+    close(lcov)
+  }
+  /^\+\+\+ b\// { file = norm(substr($0, 7)); next }
+  /^\+\+\+/     { file = ""; next }
+  /^@@/ {
+    # @@ -old,n +new,m @@  — added lines start at `new`
+    match($0, /\+[0-9]+/)
+    lineno = substr($0, RSTART + 1, RLENGTH - 1) + 0
+    next
+  }
+  /^\+/ {
+    key = file ":" lineno
+    if (!(file in seen))      uninstrumented[file] = uninstrumented[file] " " lineno
+    else if (key in cov && cov[key] == 0) { print file ":" lineno; n++ }
+    lineno++
+  }
+  /^[ -]/ { next }
+  END {
+    for (f in uninstrumented) {
+      print f ": no coverage record — not reached by any test" > "/dev/stderr"
+      n++
+    }
+    exit (n > 0 ? 1 : 0)
+  }'

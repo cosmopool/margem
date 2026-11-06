@@ -1,32 +1,44 @@
 #!/usr/bin/env bash
-# Land a finished feature on main: the one step that needs the user's approval.
+# Cut the branch the merge request is opened from: the run's code, without checkpoints.
 #
-#   scripts/pipeline/finish.sh <slug>          # shows what would land, changes nothing
-#   scripts/pipeline/finish.sh <slug> --yes    # cherry-picks it onto main
+#   scripts/pipeline/finish.sh --slug <slug> --into <new-branch>
 #
-# Run only after /dev-run (or the last stage) reported done and the user approved in chat — the
-# skill asks; this script never decides. It cherry-picks every commit of the work branch since
-# .work/<slug>/base.txt onto main, in order, then runs `make check` on main. It never pushes main:
-# the user pushes. The work branch stays, so a failed check can be redone from it.
+# Creates <new-branch> at the base and cherry-picks every commit of the run that is not
+# a "chore(checkpoint)", oldest first, in a temporary worktree, so this checkout and
+# its .work/ folder stay as they are. Code and checkpoint commits touch different files,
+# so the picks cannot conflict. Cherry-pick does not re-run the commit-msg hook: the
+# copies keep the jira and branch lines the hook added on the work branch.
+#
+# The work branch stays on the remote as the audit trail. Nothing is pushed or rebased.
 set -euo pipefail
-SLUG="${1:-}"; YES="${2:-}"
-[ -n "$SLUG" ] || { echo "usage: finish.sh <slug> [--yes]" >&2; exit 2; }
-ROOT="$(git rev-parse --show-toplevel)"; cd "$ROOT"
+source "$(dirname "$0")/lib.sh"
 
-BRANCH="$(git symbolic-ref --quiet --short HEAD || true)"
-[ -n "$BRANCH" ] && [ "$BRANCH" != main ] || { echo "finish: run it from the work branch" >&2; exit 1; }
-[ -z "$(git status --porcelain)" ] || { echo "finish: working tree not clean" >&2; exit 1; }
-BASE="$(cat ".work/$SLUG/base.txt" 2>/dev/null || true)"
-[ -n "$BASE" ] || { echo "finish: no .work/$SLUG/base.txt" >&2; exit 1; }
+SLUG="" INTO=""
+while [ $# -gt 0 ]; do
+  case "$1" in
+    --slug) SLUG="$2"; shift 2 ;;
+    --into) INTO="$2"; shift 2 ;;
+    *) die "unknown argument: $1" ;;
+  esac
+done
+[ -n "$SLUG" ] && [ -n "$INTO" ] || die "--slug and --into are required"
+! git rev-parse -q --verify "refs/heads/$INTO" >/dev/null || die "branch $INTO already exists" 1
+[ -z "$(git status --porcelain -- . "${NON_CODE[@]}")" ] || die "uncommitted code changes" 1
+BASE="$(feature_base "$SLUG")"
 
-echo "branch $BRANCH, base $(git rev-parse --short "$BASE"), main at $(git rev-parse --short main):"
-git log --reverse --format='  %h %s' "$BASE..$BRANCH"
-[ "$YES" = "--yes" ] || { echo "dry run — rerun with --yes once the user approved"; exit 0; }
+mapfile -t PICKS < <(git log --reverse --no-merges --format='%H %s' "$BASE..HEAD" \
+  | grep -vF " $CHECKPOINT_PREFIX" | cut -d' ' -f1)
+[ ${#PICKS[@]} -gt 0 ] || die "the run has no code commits" 1
 
-git switch --quiet main
-git cherry-pick "$BASE..$BRANCH" || {
-  echo "finish: cherry-pick stopped on a conflict. Resolve it and 'git cherry-pick --continue'," >&2
-  echo "        or 'git cherry-pick --abort && git switch $BRANCH' to back out." >&2
-  exit 1; }
-make check
-echo "landed on main ($(git rev-parse --short HEAD)); not pushed — push when you are ready"
+WT="$MAIN_ROOT/.claude/worktrees/feature-$SLUG-finish"
+git worktree add -q -b "$INTO" "$WT" "$BASE"
+if ! git -C "$WT" cherry-pick "${PICKS[@]}" >&2; then
+  git -C "$WT" cherry-pick --abort || true
+  git worktree remove --force "$WT"
+  git branch -q -D "$INTO"
+  die "cherry-pick failed; $INTO was not created" 1
+fi
+git worktree remove "$WT"
+
+printf '{"branch": "%s", "base": "%s", "picked": %s, "head": "%s"}\n' \
+  "$INTO" "$BASE" "${#PICKS[@]}" "$(git rev-parse "$INTO")"
