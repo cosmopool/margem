@@ -1,0 +1,25 @@
+{
+  "slug": "new-leitura-page",
+  "branch": "refac/new-leitura-page",
+  "jira": "",
+  "base": "a5980d613849e903e248650a2c9d0896011b999e",
+  "stage": "open",
+  "step": "approved",
+  "round": null,
+  "commit": "ea1e0f97a637340f79e0e164877e484734d1c2a4",
+  "budget": {
+    "added": 4200,
+    "newFiles": 0,
+    "newSymbols": 21
+  },
+  "api": "exploratory",
+  "pending": null,
+  "history": [
+    {
+      "stage": "open",
+      "step": "approved",
+      "round": null,
+      "commit": "ea1e0f97a637340f79e0e164877e484734d1c2a4"
+    }
+  ]
+}
