@@ -1,0 +1,2220 @@
+diff --git a/androidApp/src/main/kotlin/com/kaiodelphino/margem/ui/Insights.kt b/androidApp/src/main/kotlin/com/kaiodelphino/margem/ui/Insights.kt
+index d8f316a..f93b303 100644
+--- a/androidApp/src/main/kotlin/com/kaiodelphino/margem/ui/Insights.kt
++++ b/androidApp/src/main/kotlin/com/kaiodelphino/margem/ui/Insights.kt
+@@ -3,31 +3,42 @@ package com.kaiodelphino.margem.ui
+ import androidx.compose.foundation.Canvas
+ import androidx.compose.foundation.background
+ import androidx.compose.foundation.clickable
++import androidx.compose.foundation.interaction.MutableInteractionSource
++import androidx.compose.foundation.interaction.collectIsPressedAsState
+ import androidx.compose.foundation.layout.Arrangement
+ import androidx.compose.foundation.layout.Box
+ import androidx.compose.foundation.layout.Column
++import androidx.compose.foundation.layout.ExperimentalLayoutApi
++import androidx.compose.foundation.layout.FlowRow
++import androidx.compose.foundation.layout.IntrinsicSize
+ import androidx.compose.foundation.layout.Row
++import androidx.compose.foundation.layout.Spacer
+ import androidx.compose.foundation.layout.aspectRatio
++import androidx.compose.foundation.layout.fillMaxHeight
+ import androidx.compose.foundation.layout.fillMaxSize
+ import androidx.compose.foundation.layout.fillMaxWidth
+ import androidx.compose.foundation.layout.height
+ import androidx.compose.foundation.layout.heightIn
++import androidx.compose.foundation.layout.offset
+ import androidx.compose.foundation.layout.padding
+ import androidx.compose.foundation.layout.size
+ import androidx.compose.foundation.layout.widthIn
+ import androidx.compose.foundation.rememberScrollState
+ import androidx.compose.foundation.shape.CircleShape
+-import androidx.compose.foundation.shape.RoundedCornerShape
+ import androidx.compose.foundation.verticalScroll
+ import androidx.compose.runtime.Composable
++import androidx.compose.runtime.LaunchedEffect
+ import androidx.compose.runtime.getValue
+-import androidx.compose.runtime.mutableLongStateOf
++import androidx.compose.runtime.mutableIntStateOf
++import androidx.compose.runtime.mutableStateMapOf
+ import androidx.compose.runtime.mutableStateOf
++import androidx.compose.runtime.remember
+ import androidx.compose.runtime.saveable.rememberSaveable
+ import androidx.compose.runtime.setValue
++import androidx.compose.runtime.snapshotFlow
+ import androidx.compose.ui.Alignment
+ import androidx.compose.ui.Modifier
+-import androidx.compose.ui.draw.shadow
++import androidx.compose.ui.draw.drawBehind
+ import androidx.compose.ui.geometry.Offset
+ import androidx.compose.ui.geometry.Size
+ import androidx.compose.ui.graphics.Color
+@@ -36,40 +47,57 @@ import androidx.compose.ui.graphics.PathEffect
+ import androidx.compose.ui.graphics.StrokeCap
+ import androidx.compose.ui.graphics.drawscope.DrawScope
+ import androidx.compose.ui.graphics.drawscope.Stroke
++import androidx.compose.ui.layout.onPlaced
++import androidx.compose.ui.layout.onSizeChanged
++import androidx.compose.ui.layout.positionInParent
++import androidx.compose.ui.platform.LocalDensity
+ import androidx.compose.ui.platform.testTag
+ import androidx.compose.ui.semantics.clearAndSetSemantics
+ import androidx.compose.ui.semantics.contentDescription
+ import androidx.compose.ui.semantics.semantics
+-import androidx.compose.ui.semantics.stateDescription
+ import androidx.compose.ui.semantics.testTag
+ import androidx.compose.ui.text.TextMeasurer
+ import androidx.compose.ui.text.TextStyle
+ import androidx.compose.ui.text.drawText
+ import androidx.compose.ui.text.rememberTextMeasurer
+ import androidx.compose.ui.unit.dp
+-import androidx.compose.ui.window.Dialog
+-import androidx.compose.ui.window.DialogProperties
+-import com.kaiodelphino.margem.BudgetDetail
+-import com.kaiodelphino.margem.BudgetId
++import com.kaiodelphino.margem.BudgetMonth
+ import com.kaiodelphino.margem.BudgetOrder
+-import com.kaiodelphino.margem.BudgetSummary
+ import com.kaiodelphino.margem.Cents
++import com.kaiodelphino.margem.Chip
++import com.kaiodelphino.margem.ChipKind
+ import com.kaiodelphino.margem.Db
+-import com.kaiodelphino.margem.HistoryRow
++import com.kaiodelphino.margem.LeituraQuery
++import com.kaiodelphino.margem.LeituraRow
++import com.kaiodelphino.margem.MerchantKey
++import com.kaiodelphino.margem.NO_DATE
++import com.kaiodelphino.margem.PaceStatus
+ import com.kaiodelphino.margem.R
+-import com.kaiodelphino.margem.RankRow
++import com.kaiodelphino.margem.Repeats
++import com.kaiodelphino.margem.fold
++import com.kaiodelphino.margem.widgets.BottomSheet
++import com.kaiodelphino.margem.widgets.Button
++import com.kaiodelphino.margem.widgets.ButtonKind
++import com.kaiodelphino.margem.widgets.Check
++import com.kaiodelphino.margem.widgets.DayHeader
+ import com.kaiodelphino.margem.widgets.EmptyState
+-import com.kaiodelphino.margem.widgets.dashedBox
+ import com.kaiodelphino.margem.widgets.Icon
++import com.kaiodelphino.margem.widgets.IconButton
++import com.kaiodelphino.margem.widgets.ListRow
+ import com.kaiodelphino.margem.widgets.Margem
+-import com.kaiodelphino.margem.widgets.NNBSP
++import com.kaiodelphino.margem.widgets.Meter
+ import com.kaiodelphino.margem.widgets.MonthPicker
++import com.kaiodelphino.margem.widgets.NNBSP
+ import com.kaiodelphino.margem.widgets.OptionPicker
++import com.kaiodelphino.margem.widgets.PageHeader
++import com.kaiodelphino.margem.widgets.SearchLine
+ import com.kaiodelphino.margem.widgets.SectionLine
+ import com.kaiodelphino.margem.widgets.SeriesMark
++import com.kaiodelphino.margem.widgets.TagChip
+ import com.kaiodelphino.margem.widgets.Text
+ import com.kaiodelphino.margem.widgets.TopBar
+-import com.kaiodelphino.margem.widgets.hatch
++import com.kaiodelphino.margem.widgets.dashedBox
++import com.kaiodelphino.margem.widgets.dateShort
+ import com.kaiodelphino.margem.widgets.money
+ import com.kaiodelphino.margem.widgets.moneyParts
+ import com.kaiodelphino.margem.widgets.moneyPlain
+@@ -78,17 +106,22 @@ import com.kaiodelphino.margem.widgets.monthShort
+ import com.kaiodelphino.margem.widgets.sans
+ import com.kaiodelphino.margem.widgets.serif
+ import com.kaiodelphino.margem.widgets.weekdayShort
++import kotlinx.coroutines.flow.first
++import kotlinx.datetime.DateTimeUnit
+ import kotlinx.datetime.DayOfWeek
+ import kotlinx.datetime.LocalDate
+-import kotlinx.datetime.YearMonth
+ import kotlinx.datetime.daysUntil
++import kotlinx.datetime.minus
+ import kotlinx.datetime.minusMonth
++import kotlinx.datetime.onDay
++import kotlinx.datetime.plus
+ import kotlinx.datetime.plusMonth
++import kotlinx.datetime.yearMonth
++import kotlin.math.abs
+ 
+ /**
+- * Leitura's elements for UI tests (D35, spec §7.5, book 10.6). Money: `money` ("R$ 231,10") and
+- * `moneyPlain` ("231,10") of widgets/Theme.kt; "R$ 796" = whole reais, rounded half up, thousands dot.
+- * The month of the page is "the month" below; today comes from LocalToday.
++ * Leitura's elements for UI tests (D35, spec §7.5 v2). Money: `money` ("R$ 231,10") and `moneyPlain` ("231,10") of
++ * widgets/Theme.kt. "The interval" is the query's from..to; "the lines" are its installments (Db.leituraLines).
+  */
+ object InsightsTags {
+     /**
+@@ -97,265 +130,750 @@ object InsightsTags {
+      */
+     const val EMPTY = "insights.empty"
+ 
+-    // ---- The month (spec §7.5: one month for the whole page) ----
++    // ---- The filter (R1–R5), on the grid and at the top of every page ----
++
++    /** The interval ("1 a 30 nov"); click opens the sheet: "este mês", "mês passado", "3 meses", "6 meses" and the calendar. */
++    const val RANGE = "insights.range"
++
++    /** The one field: "Buscar verba, marcador, estabelecimento ou recado". */
++    const val SEARCH = "insights.search"
+ 
+     /**
+-     * "outubro de 2026", with "1 a 31 · até sex, 9" (uppercase) on the current month and "1 a 31" on a
+-     * past one (the month window, like the budget detail). Opens on the current month.
++     * Prefix: SECTION + ChipKind.name: the suggestions of that kind for the text typed, in the order Verbas ·
++     * Marcadores · Estabelecimentos · Recados, each with "2 lançamentos" and moneyPlain of its sum in the interval.
++     * Case and accents don't count; an estabelecimento matches by alias or bank text, never by legenda. Click: a chip.
+      */
+-    const val MONTH_LABEL = "insights.month.label"
++    const val SECTION = "insights.section."
+ 
+-    /** One month back; disabled on the earliest month with a limit row of any existing budget. */
+-    const val MONTH_PREV = "insights.month.prev"
++    /** The chips, "ou" between them; a click on one takes it off. */
++    const val CHIPS = "insights.chips"
+ 
+-    /** One month forward; disabled on the current month. */
+-    const val MONTH_NEXT = "insights.month.next"
++    /** "R$ 130,00 · 5 lançamentos · até hoje" ("até hoje" while the interval holds today). */
++    const val SUMMARY = "insights.summary"
+ 
+-    // ---- Ritmo do mês (book Fig. 9.2) ----
+-    // Ritmo and Verbas por mês are absent when no budget has a limit row in the month.
++    /** "Separar", with 2 chips or more: one series per chip, "a + b" for a line that matches both (R5). */
++    const val SEPARATE = "insights.separate"
+ 
+-    /**
+-     * The chosen budget's name next to "Ritmo do mês", with its series mark; clickable, opens
+-     * [BUDGET_CHOICE]. Default: the riskiest budget of the month (spec §8.1 order). The choice stays
+-     * while the screen is open; on a month where that budget has no limit row, the default again.
+-     */
+-    const val PACE_BUDGET = "insights.pace.budget"
++    // ---- The grid (R7–R10) ----
+ 
+-    /** Dialog listing the budgets with a limit row in the month, in the risk order. */
+-    const val BUDGET_CHOICE = "insights.budgetChoice"
++    /** The grid that scrolls. */
++    const val GRID = "insights.grid"
+ 
+-    /** Prefix: BUDGET_OPTION + budget id ("insights.budgetChoice.3"): its name; click chooses it and closes. */
+-    const val BUDGET_OPTION = "insights.budgetChoice."
++    /** Prefix: CONTEXT + "quanto" | "para-onde" | "quando": the context titles, in that order. */
++    const val CONTEXT = "insights.context."
+ 
+-    /**
+-     * The conclusion (margem honesta, spec §7.5, D68). Current month, by the chosen budget's BudgetMonth:
+-     * - remaining < 0: "R$ 12,00 além da cota." (−remaining);
+-     * - else variable > ideal: "+ R$ 51,10 sobre o ritmo ideal." (variable − ideal);
+-     * - else variable < ideal: "R$ 20,00 abaixo do ritmo ideal." (ideal − variable);
+-     * - else: "No ritmo ideal.";
+-     * then, when ideal > 0 and spent > 0, " No passo atual, o mês fecharia em R$ 796." (projection, M6, whole reais).
+-     * Past month: "Fechou em R$ 1.180,00, R$ 60,00 dentro da cota." (spent, remaining),
+-     * "Fechou em R$ 477,00, R$ 12,00 além da cota." (spent, −remaining), or
+-     * "Fechou em R$ 620,00, exatamente a cota." when remaining == 0.
+-     */
+-    const val PACE_SENTENCE = "insights.pace.sentence"
++    /** The bar under the TopBar with the name of the context whose title went off the top. */
++    const val PINNED = "insights.pinned"
++
++    /** The lupa in the TopBar once the filter collapsed (its badge: the number of chips); click reopens the filter. */
++    const val LENS = "insights.lens"
+ 
+     /**
+-     * The chart: cumulative gasto variável by day (installments on their date, refunds and TransactionRow.fixed
+-     * lines out, D68), BudgetMonth.idealByDay (of the cota livre)
+-     * dashed, projection dotted (current month, when there is a projection), the rest of the month shaded (current month only).
+-     * Content description, current month (the gasto variável up to today): "Ritmo do mês de Restaurantes: R$ 231,10 até o dia 9, contra
+-     * ritmo ideal de R$ 180,00; no passo atual, R$ 796 no fim do mês, para uma cota de R$ 620,00"
+-     * (the "; no passo atual, … no fim do mês" part only when ideal > 0 and spent > 0). Past month: "Ritmo do mês de
+-     * Restaurantes: R$ 1.180,00 no mês, para uma cota de R$ 1.240,00".
++     * Prefix: WIDGET + id: a widget of the grid, with its sentence; click opens its page. Ids: margem, total, ritmo,
++     * previstos, historia, fora (only with something left out), retrato (only with one estabelecimento chip, which
++     * takes out voltam, cresceu and primeira-vez), fluxo, para-onde-foi, cresceu, voltam, primeira-vez (only with
++     * something new), tamanho, calendario, dia-da-semana, semanas, mes-a-mes, meses-a-frente, volta-todo-mes, dia-e-hora.
+      */
+-    const val PACE_CHART = "insights.pace.chart"
++    const val WIDGET = "insights.widget."
+ 
+-    // ---- Verbas por mês (book Fig. 9.6) ----
++    // ---- The widget's page (R12–R14) ----
+ 
+-    /**
+-     * Months of the 6 ending at the month in which the chosen budget spent more than that month's
+-     * limit: "Nenhum mês fora da margem.", "Um mês fora da margem.", "Dois meses fora da margem.",
+-     * "Três …", "Quatro …", "Cinco …", "Seis meses fora da margem."
+-     */
+-    const val HISTORY_SENTENCE = "insights.history.sentence"
++    /** Prefix: PAGE + id: the page of that widget (filter, sentence, options as OptionPicker, chart, piece, list). */
++    const val PAGE = "insights.page."
+ 
+-    /**
+-     * The bars of the chosen budget, 6 slots, oldest first, ending at the month. Content description:
+-     * "Verbas por mês de Lazer: mai sem cota; jun 431,00 de 400,00; …; out 477,00 de 465,00" — one
+-     * "<monthShort> <moneyPlain spent> de <moneyPlain limit>" per month with a limit row, "<monthShort>
+-     * sem cota" for a month without one (before the budget's first month), joined by "; ".
+-     */
+-    const val HISTORY_CHART = "insights.history.chart"
++    /** Prefix: LIST_ROW + index from 0: the page's list, Maiores (numbered, with each one's share) or Recentes (by day). */
++    const val LIST_ROW = "insights.list."
+ 
+-    // ---- Marcadores e estabelecimentos (book Fig. 9.4) ----
++    /** Prefix: DAY + ISO date: a day of the Calendário; click makes it the piece. */
++    const val DAY = "insights.day."
+ 
+-    /** Options "Marcadores" (default) · "Estabelecimentos"; the chosen one is `selected`. Kept while the screen is open. */
++    /** "Só X": the Leitura gets only the piece's chip, back on the grid, with Desfazer. */
++    const val ONLY = "insights.only"
++
++    /** "+ ou X": the piece's chip joins the Leitura's, back on the grid, with Desfazer. */
++    const val OR = "insights.or"
++
++    /** "Usar como intervalo": the piece's days become the Leitura's interval, back on the grid, with Desfazer. */
++    const val AS_RANGE = "insights.asRange"
++
++    /** On O que cresceu, "Mês a mês de X": opens the Mês a mês page with only that chip. */
++    const val MONTHS_OF = "insights.monthsOf"
++
++    /** The Ritmo's sentence and chart (the ritmo ideal, cota and "no passo atual" only with a whole month, R17). */
++    const val PACE_SENTENCE = "insights.pace.sentence"
++    const val PACE_CHART = "insights.pace.chart"
++
++    // ---- Leitura v1, kept until the tests of that screen are rewritten (manifest); nothing shows them ----
++    const val MONTH_LABEL = "insights.month.label"
++    const val MONTH_PREV = "insights.month.prev"
++    const val MONTH_NEXT = "insights.month.next"
++    const val PACE_BUDGET = "insights.pace.budget"
++    const val BUDGET_CHOICE = "insights.budgetChoice"
++    const val BUDGET_OPTION = "insights.budgetChoice."
++    const val HISTORY_SENTENCE = "insights.history.sentence"
++    const val HISTORY_CHART = "insights.history.chart"
+     const val RANK_TAGS = "insights.rank.tags"
+     const val RANK_MERCHANTS = "insights.rank.merchants"
+-
+-    /** "feira puxa a fila." — the first row's name. Absent when the ranking is empty. */
+     const val RANK_SENTENCE = "insights.rank.sentence"
+-
+-    /**
+-     * Prefix: RANK_ROW + index from 0 ("insights.rank.row.0"), in Db.tagRanking / Db.merchantRanking
+-     * order for the month window: name, "3 lançamentos" ("1 lançamento") and moneyPlain of the total.
+-     * Rows 0–5 only until [RANK_MORE] is clicked; then all.
+-     */
+     const val RANK_ROW = "insights.rank.row."
+-
+-    /** "Ver todos (9)" (row count). Present only with more than 6 rows and until clicked. */
+     const val RANK_MORE = "insights.rank.more"
+-
+-    /**
+-     * Under Marcadores only, when there are rows: "Com vários marcadores, o lançamento conta inteiro
+-     * em cada um: a soma pode passar do total."
+-     */
+     const val RANK_NOTE = "insights.rank.note"
+-
+-    /** Instead of the rows when the ranking is empty: "Nada lançado em outubro." (monthLong of the month). */
+     const val RANK_EMPTY = "insights.rank.empty"
+-
+-    // ---- Calendário de gastos (book Fig. 9.5) ----
+-
+-    /**
+-     * The weekday with the highest mean per occurrence over the days so far (the whole window in a past
+-     * month), when it had spending on at least two of them and no other weekday ties it: "Os sábados
+-     * pesam." / "As sextas pesam." (plural, lowercase weekday; article "As" for segunda–sexta, "Os" for
+-     * sábado and domingo); otherwise "Nenhum dia da semana pesa." (spec §7.5, 2026-11-04). Absent when
+-     * nothing was spent.
+-     */
+     const val CAL_SENTENCE = "insights.cal.sentence"
+-
+-    /**
+-     * "31% do mês em quatro sábados": that weekday's share of the spending so far (rounded half up)
+-     * and how many of that weekday the days so far have, in words ("um sábado", "uma sexta",
+-     * "dois sábados", "duas sextas", "três", "quatro", "cinco"). Only with a weekday that weighs.
+-     */
+     const val CAL_SHARE = "insights.cal.share"
+-
+-    /**
+-     * Prefix: CAL_DAY + ISO date ("insights.cal.day.2026-10-04"), one per day of the month window,
+-     * in a grid whose columns start at the Ajustes week start. Content description "4: R$ 286,40"
+-     * or "4: sem gasto"; state description "degrau 0".."degrau 4" (spec §7.5: step = highest day ÷ 4
+-     * rounded up to R$ 10; level = ⌈spent ÷ step⌉; 0 = no spending).
+-     */
+     const val CAL_DAY = "insights.cal.day."
+-
+-    /** "cada degrau ≈ R$ 60" (the step, whole reais). Absent when nothing was spent. */
+     const val CAL_LEGEND = "insights.cal.legend"
+-
+-    /** Instead of the grid when nothing was spent in the month: "Nada lançado em outubro." */
+     const val CAL_EMPTY = "insights.cal.empty"
+ }
+ 
+-/** Everything the page shows for one month, read in one go. */
+-private class InsightsData(
+-    val month: YearMonth,
+-    val current: YearMonth,
+-    val first: YearMonth,
+-    val weekStart: DayOfWeek,
+-    /** Budgets with a limit row in the month, riskiest first (spec §8.1). */
+-    val budgets: List<BudgetSummary>,
+-    /** Every existing budget's id, oldest first: the series color is the index (spec §7.5). */
+-    val ids: List<Long>,
+-    /** The chosen budget, or zero when [budgets] is empty. */
+-    val detail: BudgetDetail,
+-    /** The chosen budget's rows of the 6 months ending at [month]. */
+-    val history: List<HistoryRow>,
+-    val start: LocalDate,
+-    val end: LocalDate,
+-    val tags: List<RankRow>,
+-    val merchants: List<RankRow>,
+-    val byDay: Map<LocalDate, Cents>,
+-    /** The part of [byDay] from lançamentos of previstos (spec §7.5, 2026-11-04). */
+-    val fixedByDay: Map<LocalDate, Cents>,
++/** The grid (R7, §5): each context's id, name and question (R8), then its widgets' ids and titles, in order. */
++private val CONTEXTS = listOf(
++    Triple("quanto", "Quanto", "Cabe no que planejei?") to listOf(
++        "margem" to "Margem", "total" to "Total e costume", "ritmo" to "Ritmo acumulado", "previstos" to "Previstos do mês",
++        "historia" to "História", "fora" to "O que ficou fora",
++    ),
++    Triple("para-onde", "Para onde", "Verba, marcador, estabelecimento.") to listOf(
++        "retrato" to "Retrato do estabelecimento", "fluxo" to "Fluxo verba → marcador", "para-onde-foi" to "Para onde foi",
++        "cresceu" to "O que cresceu", "voltam" to "Estabelecimentos que voltam", "primeira-vez" to "Primeira vez", "tamanho" to "Tamanho",
++    ),
++    Triple("quando", "Quando", "Dias, semanas e meses.") to listOf(
++        "calendario" to "Calendário", "dia-da-semana" to "Dia da semana", "semanas" to "Semanas", "mes-a-mes" to "Mês a mês",
++        "meses-a-frente" to "Meses à frente", "volta-todo-mes" to "Volta todo mês", "dia-e-hora" to "Dia e hora",
++    ),
+ )
+ 
+-/** The query's result: [data] null = no budgets (null from query() itself = still loading). */
+-private class Page(val data: InsightsData?)
+-
+-private enum class Rank { TAGS, MERCHANTS }
+-
+-private const val RANK_ROWS = 6
+-
+-/** Leitura (spec §7.5, book 10.6): one month for the whole page; Ritmo, Verbas por mês, ranking, calendar. */
+-@Composable
+-fun Insights(db: Db) {
+-    val today = LocalToday.current()
+-    // "" = the current month; the chosen budget 0 = the riskiest. Both kept while the screen is open.
+-    var picked by rememberSaveable { mutableStateOf("") }
+-    var chosen by rememberSaveable { mutableLongStateOf(0L) }
+-    var rank by rememberSaveable { mutableStateOf(Rank.TAGS) }
+-    var all by rememberSaveable { mutableStateOf(false) }
+-    var choosing by rememberSaveable { mutableStateOf(false) }
+-    val page = query(db, picked, chosen, today) { d ->
+-        val current = d.monthOf(today)
+-        d.ensureMonths(current)
+-        val rows = d.history(YearMonth(1, 1), current)
+-        if (rows.isEmpty()) return@query Page(null)
+-        val first = rows.minOf { it.month }
+-        val month = (if (picked.isEmpty()) current else YearMonth.parse(picked)).coerceIn(first, current)
+-        d.ensureMonths(month)
+-        val budgets = d.budgetsOverview(month, today, BudgetOrder.RISK)
+-        val pick = budgets.firstOrNull { it.id.v == chosen } ?: budgets.firstOrNull()
+-        val detail = if (pick == null) BudgetDetail() else d.budgetDetail(pick.id, month, today)
+-        val from = month.minusMonth().minusMonth().minusMonth().minusMonth().minusMonth()
+-        val start = budgets.firstOrNull()?.month?.start ?: LocalDate(month.year, month.month, 1)
+-        val end = budgets.firstOrNull()?.month?.end ?: start
+-        Page(InsightsData(
+-            month, current, first, d.settings().weekStart, budgets,
+-            rows.map { it.budget.v }.distinct().sorted(), detail,
+-            rows.filter { it.budget == detail.id && it.month in from..month },
+-            start, end, d.tagRanking(start, end), d.merchantRanking(start, end), d.spentByDay(start, end),
+-            d.spentByDay(start, end, fixedOnly = true),
+-        ))
+-    }
+-    val data = page?.data
++/** Widgets of the whole width; the others are halves, in pairs (a half left alone takes the line, AC-36). */
++private val WHOLE = setOf("ritmo", "fora", "retrato", "fluxo", "voltam", "calendario")
++
++private fun titleOf(id: String) = CONTEXTS.flatMap { it.second }.firstOrNull { it.first == id }?.second ?: ""
++
++/**
++ * Leitura (spec §7.5 v2): the filter, then the grid in three contexts. [leitura] is the query of the whole Leitura,
++ * kept by the App while the tab is open (D-5); [onLeitura] changes it.
++ */
++@Composable
++fun Insights(db: Db, leitura: LeituraQuery, onLeitura: (LeituraQuery) -> Unit, go: (Screen) -> Unit) {
++    val c = Margem.colors
++    val todayOf = LocalToday.current
++    // Today is read with the lines, so a day that turns with the screen open is seen at the next write (AC-F2).
++    val data = query(db, leitura) { d -> load(d, leitura, todayOf()) }
++    val scroll = rememberScrollState()
++    val density = LocalDensity.current
++    // Saved, so the way back from a page lays the grid out at once, the filter's place kept while it reloads.
++    var filterHeight by rememberSaveable { mutableIntStateOf(0) }
++    var open by remember { mutableStateOf(false) }
++    val tops = remember { mutableStateMapOf<String, Int>() }
++    // R10: past the filter's height it collapses into the lupa; the lupa reopens it where it is, and scrolling 12 dp closes it.
++    val collapsed = filterHeight > 0 && scroll.value > filterHeight
++    // A new query, or the way back from a widget's page, reopens the filter at the top (R10).
++    LaunchedEffect(leitura) { scroll.scrollTo(0) }
++    LaunchedEffect(open) {
++        if (!open) return@LaunchedEffect
++        val at = scroll.value
++        snapshotFlow { scroll.value }.first { abs(it - at) > with(density) { 12.dp.toPx() } }
++        open = false
++    }
+     Column(Modifier.fillMaxSize()) {
+-        TopBar("Leitura")
+-        if (data == null) {
+-            if (page != null) EmptyState(
++        TopBar("Leitura") {
++            val q = data?.first
++            if (collapsed && q != null) {
++                Text(span(q.from, q.to), sans(13f, 500, 16f), color = c.inkTertiary)
++                Box {
++                    IconButton(R.drawable.i_lupa, { open = true }, Modifier.testTag(InsightsTags.LENS))
++                    if (q.chips.isNotEmpty()) Text(
++                        q.chips.size.toString(), sans(11f, 700, 16f, tabular = true),
++                        Modifier.align(Alignment.TopEnd).offset((-4).dp, 6.dp).widthIn(min = 16.dp).background(c.brand, CircleShape).padding(horizontal = 4.dp),
++                        c.surface,
++                    )
++                }
++            }
++        }
++        if (data?.first?.from == NO_DATE) {
++            EmptyState(
+                 R.drawable.i_leitura, "Nada para ler ainda.",
+                 "A Leitura mostra para onde o dinheiro vai: verbas mês a mês, o ritmo do mês, marcadores e estabelecimentos.",
+                 Modifier.padding(horizontal = Margem.space.page).testTag(InsightsTags.EMPTY).semantics(mergeDescendants = true) {},
+             )
+             return@Column
+         }
+-        val isCurrent = data.month == data.current
+-        Column(Modifier.weight(1f).verticalScroll(rememberScrollState()).padding(start = Margem.space.page, end = Margem.space.page, bottom = 32.dp)) {
+-            val span = if (data.start.month == data.end.month) "${data.start.day} a ${data.end.day}"
+-            else "${data.start.day} ${monthShort(data.start.month)} a ${data.end.day} ${monthShort(data.end.month)}"
+-            // The arrows move from the month asked for, not the one last read: quick taps don't repeat a month.
+-            val asked = (if (picked.isEmpty()) data.current else YearMonth.parse(picked)).coerceIn(data.first, data.current)
+-            MonthPicker(
+-                data.month, if (isCurrent) "$span · até ${weekdayShort(today.dayOfWeek)}, ${today.day}" else span,
+-                { picked = asked.minusMonth().toString() }, { picked = asked.plusMonth().toString() },
+-                canNext = asked < data.current, canPrev = asked > data.first, tag = "insights.month",
+-            )
+-            if (data.detail.id.v != 0L) {
+-                val color = seriesColor(data.ids, data.detail.id.v)
+-                Pace(data, today, isCurrent, color) { choosing = true }
+-                History(data, color)
++        // Widgets that come and go (§5): the grid knows before laying out its pairs.
++        val extra = data?.let { (q, lines) -> query(db, q, lines) { d -> firstTimers(d, q, lines).isNotEmpty() to leftOut(d, q).isNotEmpty() } }
++        val portrait = leitura.chips.singleOrNull()?.kind == ChipKind.MERCHANT
++        val gone = buildSet {
++            if (portrait) addAll(listOf("voltam", "cresceu", "primeira-vez")) else add("retrato")
++            if (extra?.first != true) add("primeira-vez")
++            if (extra?.second != true) add("fora")
++        }
++        Box(Modifier.weight(1f)) {
++            Column(Modifier.fillMaxSize().testTag(InsightsTags.GRID).verticalScroll(scroll).padding(start = Margem.space.page, end = Margem.space.page, bottom = 32.dp)) {
++                if (collapsed || data == null) Spacer(Modifier.height(with(density) { filterHeight.toDp() }))
++                else Box(Modifier.onSizeChanged { filterHeight = it.height }) { Filter(db, leitura, data.first, data.second, data.third, onLeitura) }
++                for ((context, widgets) in CONTEXTS) {
++                    PageHeader(
++                        "Contexto", context.second,
++                        Modifier.padding(top = 32.dp).testTag(InsightsTags.CONTEXT + context.first).onPlaced { tops[context.first] = it.positionInParent().y.toInt() },
++                        context.third,
++                    )
++                    val ids = widgets.map { it.first }.filter { it !in gone }
++                    val rows = mutableListOf<List<String>>()
++                    for (id in ids) {
++                        val last = rows.lastOrNull()
++                        if (last != null && last.size == 1 && last[0] !in WHOLE && id !in WHOLE) rows[rows.lastIndex] = last + id else rows += listOf(id)
++                    }
++                    for (row in rows) Row(Modifier.fillMaxWidth().padding(top = 20.dp).height(IntrinsicSize.Min)) {
++                        for (id in row) Frame(id, Modifier.weight(1f), { go(Screen.LeituraWidget(id, leitura)) }) {
++                            if (data != null) Widget(db, id, data.first, data.second, data.third, false, {}, go)
++                        }
++                    }
++                }
++            }
++            // R8: the context whose title went off the top stays pinned until the next one's does.
++            val pinned = CONTEXTS.lastOrNull { (tops[it.first.first] ?: Int.MAX_VALUE) < scroll.value }?.first
++            if (pinned != null) Box(
++                Modifier.fillMaxWidth().height(44.dp).background(c.paper).drawBehind { drawLine(c.ink, Offset(0f, size.height - 0.5f), Offset(size.width, size.height - 0.5f), 1.dp.toPx()) }
++                    .testTag(InsightsTags.PINNED).padding(horizontal = Margem.space.page),
++                contentAlignment = Alignment.CenterStart,
++            ) { Text(pinned.second, serif(19, 500, 24)) }
++            if (open && collapsed && data != null) {
++                Box(Modifier.fillMaxSize().background(c.ink.copy(alpha = 0.25f)).clickable { open = false })
++                Column(Modifier.fillMaxWidth().background(c.paper).padding(start = Margem.space.page, end = Margem.space.page, bottom = 12.dp)) {
++                    Filter(db, leitura, data.first, data.second, data.third, onLeitura)
++                }
+             }
+-            Ranking(data, rank, all, { rank = it }, { all = true })
+-            Calendar(data, if (isCurrent) today else data.end)
+         }
+     }
+-    if (choosing && data != null) BudgetChoice(data, { chosen = it; choosing = false }) { choosing = false }
+ }
+ 
++/**
++ * A widget's whole page (R12): pushed on the stack, opened on [start]. Its filter changes only the page; the piece
++ * touched offers Só, + ou and Usar como intervalo, which change the whole Leitura through [leituraTo] (R14).
++ */
++@OptIn(ExperimentalLayoutApi::class)
+ @Composable
+-private fun seriesColor(ids: List<Long>, id: Long): Color {
+-    val series = Margem.colors.series
+-    val i = ids.indexOf(id)
+-    return if (i in 0..5) series[i] else series[6]
++fun LeituraWidgetPage(db: Db, id: String, start: LeituraQuery, go: (Screen) -> Unit, back: () -> Unit, leituraTo: (LeituraQuery, String) -> Unit) {
++    val todayOf = LocalToday.current
++    var raw by rememberSaveable(stateSaver = QuerySaver) { mutableStateOf(start) }
++    // The piece touched: one chip, or a from..to of days.
++    var piece by rememberSaveable(stateSaver = QuerySaver) { mutableStateOf(LeituraQuery()) }
++    val data = query(db, raw) { d -> load(d, raw, todayOf()) }
++    Column(Modifier.fillMaxSize()) {
++        TopBar(titleOf(id), onBack = back)
++        val (q, lines, today) = data ?: return@Column
++        if (q.from == NO_DATE) return@Column
++        Column(Modifier.weight(1f).testTag(InsightsTags.PAGE + id).verticalScroll(rememberScrollState()).padding(start = Margem.space.page, end = Margem.space.page, bottom = 32.dp)) {
++            Filter(db, raw, q, lines, today) { raw = it }
++            Gap()
++            Widget(db, id, q, lines, today, true, { piece = it }, go)
++            val chip = piece.chips.firstOrNull()
++            if (chip != null || piece.from != NO_DATE) SectionLine(chip?.label ?: span(piece.from, piece.to), aside = "o pedaço tocado")
++            if (chip != null) FlowRow(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
++                Button("Só ${chip.label}", { leituraTo(raw.copy(chips = listOf(chip)), "Leitura só com ${chip.label}.") }, Modifier.testTag(InsightsTags.ONLY), ButtonKind.SECONDARY, small = true)
++                Button("+ ou ${chip.label}", { leituraTo(raw.copy(chips = (raw.chips + chip).distinct()), "${chip.label} somado à Leitura.") }, Modifier.testTag(InsightsTags.OR), ButtonKind.SECONDARY, small = true)
++                if (id == "cresceu") Button(
++                    "Mês a mês de ${chip.label}", { go(Screen.LeituraWidget("mes-a-mes", raw.copy(chips = listOf(chip)))) },
++                    Modifier.testTag(InsightsTags.MONTHS_OF), ButtonKind.SECONDARY, small = true,
++                )
++            }
++            if (piece.from != NO_DATE) Button(
++                "Usar como intervalo", { leituraTo(raw.copy(from = piece.from, to = piece.to), "Intervalo: ${span(piece.from, piece.to)}.") },
++                Modifier.testTag(InsightsTags.AS_RANGE), ButtonKind.SECONDARY, small = true,
++            )
++            if (id !in setOf("historia", "fora", "retrato")) Lines(lines)
++        }
++    }
++}
++
++// ---- Reads ----
++
++/** [raw] with its interval resolved (NO_DATE: today's budget month), its lines and today; from NO_DATE: no budgets yet. */
++private suspend fun load(d: Db, raw: LeituraQuery, today: LocalDate): Triple<LeituraQuery, List<LeituraRow>, LocalDate> {
++    val current = d.monthOf(today)
++    d.ensureMonths(current)
++    if (d.history(current, current).isEmpty()) return Triple(LeituraQuery(), emptyList(), today)
++    val w = d.window(current)
++    val q = if (raw.from == NO_DATE) raw.copy(from = w.start, to = w.endInclusive) else raw
++    return Triple(q, d.leituraLines(q), today)
++}
++
++/**
++ * The interval [n] steps before [q] (R18, AC-23): whole budget months go back as many months, cut at the same day
++ * when [q] holds today; any other interval goes back its own length in days.
++ */
++private suspend fun earlier(d: Db, q: LeituraQuery, today: LocalDate, n: Int): LeituraQuery {
++    val first = d.monthOf(q.from)
++    val last = d.monthOf(q.to)
++    if (d.window(first).start != q.from || d.window(last).endInclusive != q.to) {
++        val days = q.from.daysUntil(q.to) + 1
++        return q.copy(from = q.from.minus(days * n, DateTimeUnit.DAY), to = q.to.minus(days * n, DateTimeUnit.DAY))
++    }
++    val months = (last.year * 12 + last.month.ordinal) - (first.year * 12 + first.month.ordinal) + 1
++    val from = d.window(first.minus(months * n, DateTimeUnit.MONTH)).start
++    val to = if (today in q.from..q.to) from.plus(q.from.daysUntil(today), DateTimeUnit.DAY) else d.window(last.minus(months * n, DateTimeUnit.MONTH)).endInclusive
++    return q.copy(from = from, to = to)
++}
++
++/**
++ * The verbas' month behind the ritmo ideal, cota and projection (R17): the budgets of [q]'s chips (all without chips)
++ * as one, when [q] is one whole budget month and every chip is a verba; zero otherwise.
++ */
++private suspend fun plan(d: Db, q: LeituraQuery, today: LocalDate): BudgetMonth {
++    val m = d.monthOf(q.from)
++    val w = d.window(m)
++    if (w.start != q.from || w.endInclusive != q.to || q.chips.any { it.kind != ChipKind.BUDGET }) return BudgetMonth()
++    d.ensureMonths(m)
++    val keys = q.chips.map { it.key }
++    return sum(d.budgetsOverview(m, today, BudgetOrder.MANUAL).filter { keys.isEmpty() || it.id.v.toString() in keys }.map { it.month })
++}
++
++/** Budgets of one month as one (the régua of the total, the Ritmo of several verbas): sums, idealByDay and weeks by index. */
++private fun sum(months: List<BudgetMonth>): BudgetMonth = months.fold(BudgetMonth()) { a, m ->
++    val remaining = a.remaining + m.remaining
++    val variable = a.variable + m.variable
++    val ideal = a.ideal + m.ideal
++    BudgetMonth(
++        m.month, m.start, m.end, a.limit + m.limit, a.spent + m.spent, remaining,
++        if (a.weeks.isEmpty()) m.weeks else a.weeks.zip(m.weeks) { x, y -> x.copy(step = x.step + y.step, spent = x.spent + y.spent) },
++        ideal, if (remaining.v < 0) PaceStatus.OVERRUN else if (variable > ideal) PaceStatus.AHEAD else PaceStatus.ON_PACE,
++        a.projection + m.projection, if (a.idealByDay.isEmpty()) m.idealByDay else a.idealByDay.zip(m.idealByDay) { x, y -> x + y },
++        a.open + m.open, a.fixed + m.fixed, a.freeLimit + m.freeLimit, variable,
++    )
++}
++
++/** What the interval's counts leave out (R20, AC-25): estornos, recados riscados and recados still in the Pauta. */
++private suspend fun leftOut(d: Db, q: LeituraQuery): List<String> {
++    val refunded = d.transactions().filter { it.refunded && it.date in q.from..q.to }
++    val dismissed = d.dismissed().filter { it.parsed.date in q.from..q.to }
++    val pending = d.pending().filter { it.parsed.date in q.from..q.to }
++    return listOfNotNull(
++        if (refunded.isEmpty()) null else "${count(refunded.size, "estorno", "estornos")}: ${money(Cents(refunded.sumOf { it.total.v }))} estornados.",
++        if (dismissed.isEmpty()) null else "${count(dismissed.size, "recado riscado", "recados riscados")}: ${money(Cents(dismissed.sumOf { it.parsed.cents.v }))}.",
++        if (pending.isEmpty()) null else "${count(pending.size, "recado", "recados")} na Pauta: ${money(Cents(pending.sumOf { it.parsed.cents.v }))}.",
++    )
++}
++
++/** Estabelecimentos and marcadores of [lines] whose first date in the whole history falls in [q]'s interval (AC-36). */
++private suspend fun firstTimers(d: Db, q: LeituraQuery, lines: List<LeituraRow>): List<Chip> {
++    val seen = (groups(lines, ChipKind.MERCHANT) + groups(lines, ChipKind.TAG)).map { it.first }
++    if (seen.isEmpty()) return seen
++    val before = d.leituraLines(LeituraQuery(LocalDate(1, 1, 1), q.from.minus(1, DateTimeUnit.DAY), seen))
++    val old = (groups(before, ChipKind.MERCHANT) + groups(before, ChipKind.TAG)).map { it.first.kind to it.first.key }.toSet()
++    return seen.filter { (it.kind to it.key) !in old }
++}
++
++/** The chips a line matches in [kind] (key, label): one budget, each of its tags, its estabelecimento, its fonte. */
++private fun keysOf(r: LeituraRow, kind: ChipKind): List<Pair<String, String>> = when (kind) {
++    ChipKind.BUDGET -> listOf(r.budget.v.toString() to r.budgetName)
++    ChipKind.TAG -> r.tags.map { it to it }
++    ChipKind.MERCHANT -> listOf(r.merchantKey to r.merchant)
++    ChipKind.NOTICE -> if (r.source.isEmpty()) emptyList() else listOf(r.source to r.sourceName)
++}
++
++private fun hits(r: LeituraRow, chip: Chip) = keysOf(r, chip.kind).any { it.first == chip.key }
++
++/** [lines] by chip of [kind], largest sum first; a line with two tags is in both, whole (regra C, R16). */
++private fun groups(lines: List<LeituraRow>, kind: ChipKind): List<Pair<Chip, List<LeituraRow>>> =
++    lines.flatMap { r -> keysOf(r, kind).map { (k, label) -> Chip(kind, k, label) to r } }
++        .groupBy { it.first.key }.values.map { g -> g[0].first to g.map { it.second } }
++        .sortedByDescending { (_, rs) -> rs.sumOf { it.cents.v } }
++
++private fun total(lines: List<LeituraRow>) = Cents(lines.sumOf { it.cents.v })
++
++private fun transactions(lines: List<LeituraRow>) = lines.distinctBy { it.transaction }.size
++
++private fun count(n: Int, one: String, many: String) = "$n ${if (n == 1) one else many}"
++
++private fun median(v: List<Long>) = v.sorted().let { if (it.isEmpty()) 0L else it[it.size / 2] }
++
++/** "2 nov", "1 a 30 nov", "1 out a 30 nov". */
++private fun span(a: LocalDate, b: LocalDate) = when {
++    a == b -> "${a.day} ${monthShort(a.month)}"
++    a.yearMonth == b.yearMonth -> "${a.day} a ${b.day} ${monthShort(b.month)}"
++    else -> "${a.day} ${monthShort(a.month)} a ${b.day} ${monthShort(b.month)}"
+ }
+ 
+ /** "R$ 796": whole reais, rounded half up. */
+ private fun reais(c: Cents) = "R$$NNBSP${moneyParts(Cents((c.v + 50) / 100 * 100)).first}"
+ 
+-// ---- Ritmo do mês ----
++// ---- The filter (R1–R5) ----
++
++@OptIn(ExperimentalLayoutApi::class)
++@Composable
++private fun Filter(db: Db, raw: LeituraQuery, q: LeituraQuery, lines: List<LeituraRow>, today: LocalDate, onQuery: (LeituraQuery) -> Unit) {
++    val c = Margem.colors
++    var text by rememberSaveable { mutableStateOf("") }
++    var ranging by rememberSaveable { mutableStateOf(false) }
++    Column {
++        Row(
++            Modifier.heightIn(min = 48.dp).testTag(InsightsTags.RANGE).clickable { ranging = true }.semantics(mergeDescendants = true) {},
++            verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(8.dp),
++        ) {
++            Icon(R.drawable.i_periodo, tint = c.inkSecondary, size = 20.dp)
++            Text(span(q.from, q.to), serif(17, 500, 22))
++        }
++        SearchLine(text, { text = it }, "Buscar verba, marcador, estabelecimento ou recado", InsightsTags.SEARCH)
++        if (text.isNotBlank()) Suggestions(db, q, text) {
++            text = ""
++            onQuery(raw.copy(chips = (raw.chips + it).distinct()))
++        }
++        if (raw.chips.isNotEmpty()) FlowRow(
++            Modifier.padding(top = 6.dp).testTag(InsightsTags.CHIPS), horizontalArrangement = Arrangement.spacedBy(8.dp), verticalArrangement = Arrangement.Center,
++        ) {
++            for ((i, chip) in raw.chips.withIndex()) {
++                if (i > 0) Text("ou", serif(15, 400, 20, italic = true), Modifier.align(Alignment.CenterVertically), c.inkTertiary)
++                TagChip(chip.label, removable = true) { onQuery(raw.copy(chips = raw.chips - chip, separate = raw.separate && raw.chips.size > 2)) }
++            }
++        }
++        val n = transactions(lines)
++        Text(
++            "${money(total(lines))} · ${count(n, "lançamento", "lançamentos")}" + if (today in q.from..q.to) " · até hoje" else "",
++            sans(14f, 500, 20f, tabular = true), Modifier.padding(top = 8.dp).testTag(InsightsTags.SUMMARY), c.inkSecondary,
++        )
++        if (raw.chips.size >= 2) Row(
++            Modifier.heightIn(min = 48.dp).testTag(InsightsTags.SEPARATE).clickable { onQuery(raw.copy(separate = !raw.separate)) }.semantics(mergeDescendants = true) {},
++            verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(10.dp),
++        ) {
++            Check(raw.separate)
++            Text("Separar", sans(15f, 500, 20f))
++        }
++        if (ranging) RangeSheet(db, today, { a, b ->
++            ranging = false
++            onQuery(raw.copy(from = a, to = b))
++        }) { ranging = false }
++    }
++}
++
++/** R2: the suggestions for [text] in fixed sections, with count and sum in the interval (chips not applied). */
++@Composable
++private fun Suggestions(db: Db, q: LeituraQuery, text: String, pick: (Chip) -> Unit) {
++    val c = Margem.colors
++    val all = query(db, q.from, q.to) { d -> d.leituraLines(LeituraQuery(q.from, q.to)) } ?: return
++    val word = fold(text.trim())
++    val key = MerchantKey.of(text).v
++    for ((kind, title) in listOf(ChipKind.BUDGET to "Verbas", ChipKind.TAG to "Marcadores", ChipKind.MERCHANT to "Estabelecimentos", ChipKind.NOTICE to "Recados")) {
++        val found = groups(all, kind).filter { (chip, rs) ->
++            if (kind == ChipKind.MERCHANT) MerchantKey.of(chip.label).v.contains(key) || rs.any { MerchantKey.of(it.bank).v.contains(key) }
++            else fold(chip.label).contains(word)
++        }.take(5)
++        if (found.isNotEmpty()) Column(Modifier.fillMaxWidth().testTag(InsightsTags.SECTION + kind.name)) {
++            Text(title.uppercase(), sans(11f, 600, 14f, 0.12f), Modifier.padding(top = 10.dp), c.inkTertiary)
++            for ((chip, rs) in found) Row(
++                Modifier.fillMaxWidth().heightIn(min = 48.dp).clickable { pick(chip) },
++                verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(10.dp),
++            ) {
++                Text(chip.label, sans(16f, 500, 20f), Modifier.weight(1f), maxLines = 1)
++                Text(count(transactions(rs), "lançamento", "lançamentos"), sans(13f, 400, 16f), color = c.inkTertiary)
++                Text(moneyPlain(total(rs)), sans(14f, 600, 18f, tabular = true))
++            }
++        }
++    }
++}
++
++/** R1: the interval's one sheet — the shortcuts by budget month, then a calendar: the first touch the start, the second the end. */
++@Composable
++private fun RangeSheet(db: Db, today: LocalDate, onPick: (LocalDate, LocalDate) -> Unit, close: () -> Unit) {
++    val c = Margem.colors
++    val shortcuts = query(db, today) { d ->
++        val cur = d.monthOf(today)
++        listOf("este mês" to 0, "mês passado" to 1, "3 meses" to 2, "6 meses" to 5).map { (label, back) ->
++            Triple(label, d.window(cur.minus(back, DateTimeUnit.MONTH)).start, d.window(if (back == 1) cur.minusMonth() else cur).endInclusive)
++        }
++    }
++    var month by remember { mutableStateOf(today.yearMonth) }
++    var first by remember { mutableStateOf(NO_DATE) }
++    BottomSheet(close) {
++        Text("INTERVALO", sans(11f, 600, 14f, 0.12f), color = c.inkTertiary)
++        for ((label, a, b) in shortcuts.orEmpty()) ListRow(label, sub = span(a, b), onClick = { onPick(a, b) })
++        Text(
++            if (first == NO_DATE) "Personalizado: toque no início e no fim." else "Do dia ${first.day} ${monthShort(first.month)} até…",
++            sans(14f, 400, 20f), Modifier.padding(top = 12.dp), c.inkSecondary,
++        )
++        MonthPicker(month, "", { month = month.minusMonth() }, { month = month.plusMonth() })
++        val lead = month.onDay(1).dayOfWeek.ordinal
++        val cells = List(lead) { NO_DATE } + (1..month.numberOfDays).map { month.onDay(it) }
++        for (week in cells.chunked(7)) Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.spacedBy(4.dp)) {
++            for (i in 0 until 7) {
++                val day = week.getOrElse(i) { NO_DATE }
++                if (day == NO_DATE) Box(Modifier.weight(1f)) else Box(
++                    Modifier.weight(1f).aspectRatio(1f).background(if (day == first) c.ink else c.surfaceSunken)
++                        .clickable { if (first == NO_DATE) first = day else onPick(minOf(first, day), maxOf(first, day)) },
++                    contentAlignment = Alignment.Center,
++                ) { Text(day.day.toString(), sans(13f, 500, 16f, tabular = true), color = if (day == first) c.paper else c.ink) }
++            }
++        }
++    }
++}
++
++// ---- The grid's pieces ----
++
++/** R9: a widget hangs from a 2 dp vertical rule, no card; the Fluxo from the argila double rule. Pressed, the rule turns ink. */
++@Composable
++private fun Frame(id: String, modifier: Modifier, onOpen: () -> Unit, content: @Composable () -> Unit) {
++    val c = Margem.colors
++    val interaction = remember { MutableInteractionSource() }
++    val pressed by interaction.collectIsPressedAsState()
++    Column(
++        modifier.fillMaxHeight().testTag(InsightsTags.WIDGET + id).clickable(interaction, null, onClick = onOpen)
++            .background(if (pressed) c.surfaceSunken else Color.Transparent)
++            .drawBehind {
++                if (id == "fluxo") for (x in listOf(0.5f, 3.5f)) drawLine(c.brand, Offset(x.dp.toPx(), 0f), Offset(x.dp.toPx(), size.height), 1.dp.toPx())
++                else drawLine(if (pressed) c.ink else c.rule, Offset(1.dp.toPx(), 0f), Offset(1.dp.toPx(), size.height), 2.dp.toPx())
++            }
++            .padding(start = 14.dp, end = 8.dp, bottom = 4.dp),
++    ) {
++        Text(titleOf(id).uppercase(), sans(11f, 600, 14f, 0.12f), color = c.inkTertiary)
++        content()
++    }
++}
++
++/** One widget, small on the grid or [big] on its page with its options; a touched piece goes to [onPiece]. */
++@Composable
++private fun Widget(db: Db, id: String, q: LeituraQuery, lines: List<LeituraRow>, today: LocalDate, big: Boolean, onPiece: (LeituraQuery) -> Unit, go: (Screen) -> Unit) {
++    val chip: (Chip) -> Unit = { onPiece(LeituraQuery(chips = listOf(it))) }
++    val days: (LocalDate, LocalDate) -> Unit = { a, b -> onPiece(LeituraQuery(a, b)) }
++    when (id) {
++        "margem" -> MargemWidget(db, q, lines, today, big)
++        "total" -> TotalWidget(db, q, lines, today, big)
++        "ritmo" -> RitmoWidget(db, q, lines, today, big)
++        "previstos" -> PlannedWidget(db, q, today, big)
++        "historia" -> HistoryWidget(q, lines, big, go)
++        "fora" -> LeftOutWidget(db, q)
++        "retrato" -> PortraitWidget(lines)
++        "fluxo" -> FlowWidget(lines, big, chip)
++        "para-onde-foi" -> WhereWidget(db, q, lines, big, chip)
++        "cresceu" -> GrewWidget(db, q, lines, today, big, chip)
++        "voltam" -> ReturnWidget(db, q, lines, big, chip)
++        "primeira-vez" -> FirstWidget(db, q, lines, big, chip)
++        "tamanho" -> SizeWidget(lines, big)
++        "calendario" -> CalendarWidget(q, lines, big, days)
++        "dia-da-semana" -> WeekdayWidget(db, q, lines, today, big)
++        "semanas" -> WeeksWidget(db, q, lines, today, big, days)
++        "mes-a-mes" -> MonthsWidget(db, q, big, days)
++        "meses-a-frente" -> AheadWidget(db, q, today, big)
++        "volta-todo-mes" -> MonthlyWidget(db, q, today, big)
++        "dia-e-hora" -> HourWidget(q, lines, big)
++    }
++}
++
++@Composable
++private fun Sentence(text: String, modifier: Modifier = Modifier) =
++    Text(text, serif(15, 400, 21, italic = true), modifier.padding(top = 2.dp), Margem.colors.inkSecondary)
++
++@Composable
++private fun Note(text: String) = Text(text, sans(13f, 400, 18f), Modifier.padding(top = 8.dp), Margem.colors.inkTertiary)
++
++@Composable
++private fun Gap() = Spacer(Modifier.height(12.dp))
++
++/** R5: with Separar, one series per chip with the chip's color (not its place), "a + b" for a line that matches both. */
++@Composable
++private fun Series(q: LeituraQuery, lines: List<LeituraRow>) {
++    if (!q.separate || q.chips.size < 2) return
++    val palette = Margem.colors.series
++    val series = lines.groupBy { r -> q.chips.filter { hits(r, it) } }.map { (chips, rs) -> chips to total(rs) }.sortedByDescending { it.second.v }
++    for ((chips, cents) in series) Row(Modifier.fillMaxWidth().padding(top = 6.dp), verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(8.dp)) {
++        SeriesMark(if (chips.size == 1) palette[(chips[0].kind.ordinal * 31 + chips[0].key.hashCode()).mod(6)] else palette[6])
++        Text(chips.joinToString(" + ") { it.label }, sans(13f, 500, 17f), Modifier.weight(1f))
++        Text(moneyPlain(cents), sans(13f, 600, 17f, tabular = true))
++    }
++}
+ 
++/**
++ * Columns with straight ends (R11), labels under: each bar's parts stack in [colors]' order; [mark] a dashed rule (the
++ * passo semanal); a click on a column goes to [onBar].
++ */
+ @Composable
+-private fun Pace(data: InsightsData, today: LocalDate, isCurrent: Boolean, color: Color, onChoose: () -> Unit) {
++private fun Columns(bars: List<Pair<String, List<Long>>>, colors: List<Color>, onBar: ((Int) -> Unit)? = null, mark: Long = 0) {
+     val c = Margem.colors
+-    val d = data.detail
+-    val bm = d.month
+-    Row(
+-        Modifier.fillMaxWidth().padding(top = 18.dp),
+-        verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.SpaceBetween,
++    val measurer = rememberTextMeasurer()
++    val label = Margem.type.axis.copy(color = c.inkTertiary)
++    val top = maxOf(bars.maxOfOrNull { it.second.sum() } ?: 0L, mark, 1L)
++    Box(Modifier.fillMaxWidth().height(120.dp).padding(top = 8.dp)) {
++        Canvas(Modifier.fillMaxSize()) {
++            val bottom = size.height - 16.dp.toPx()
++            val slot = size.width / maxOf(bars.size, 1)
++            val y = { v: Long -> bottom - (bottom - 4.dp.toPx()) * v / top }
++            for ((i, bar) in bars.withIndex()) {
++                var base = 0L
++                for ((p, v) in bar.second.withIndex()) {
++                    drawRect(colors[p % colors.size], Offset(slot * i + slot * 0.18f, y(base + v)), Size(slot * 0.64f, y(base) - y(base + v)))
++                    base += v
++                }
++                val t = measurer.measure(bar.first, label)
++                if (t.size.width < slot || i % 2 == 0) drawText(t, topLeft = Offset(slot * i + slot / 2 - t.size.width / 2, bottom + 3.dp.toPx()))
++            }
++            if (mark > 0) drawLine(c.brand, Offset(0f, y(mark)), Offset(size.width, y(mark)), 1.dp.toPx(), pathEffect = PathEffect.dashPathEffect(floatArrayOf(4.dp.toPx(), 3.dp.toPx())))
++            drawLine(label.color.copy(alpha = 0.9f), Offset(0f, bottom), Offset(size.width, bottom), 1.dp.toPx())
++        }
++        if (onBar != null) Row(Modifier.fillMaxSize()) { for (i in bars.indices) Box(Modifier.weight(1f).fillMaxHeight().clickable { onBar(i) }) }
++    }
++}
++
++/** Ranking rows (book Fig. 9.4): name, a note, the value, a thin bar from the largest (both ways when some are negative). */
++@Composable
++private fun Ranks(rows: List<Triple<Chip, Long, String>>, onRow: ((Chip) -> Unit)?, note: (Chip) -> String = { "" }) {
++    val c = Margem.colors
++    val top = maxOf(rows.maxOfOrNull { abs(it.second) } ?: 0L, 1L)
++    val twoWays = rows.any { it.second < 0 }
++    for ((chip, value, text) in rows) Column(
++        Modifier.fillMaxWidth().then(if (onRow == null) Modifier else Modifier.heightIn(min = 48.dp).clickable { onRow(chip) }).padding(top = 8.dp),
+     ) {
+-        Text("RITMO DO MÊS", sans(11f, 600, 14f, 0.12f))
++        Row(verticalAlignment = Alignment.Bottom) {
++            Text(chip.label, serif(16, 500, 21), Modifier.weight(1f, fill = false), maxLines = 1)
++            Text(note(chip), sans(12f, 500, 16f), Modifier.weight(1f).padding(horizontal = 8.dp), c.inkTertiary, maxLines = 1)
++            Text(text, sans(14f, 600, 18f, tabular = true))
++        }
++        Canvas(Modifier.fillMaxWidth().height(6.dp).padding(top = 3.dp)) {
++            val w = (if (twoWays) size.width / 2 else size.width) * abs(value) / top
++            val x = if (!twoWays) 0f else if (value < 0) size.width / 2 - w else size.width / 2
++            drawRect(if (value < 0) c.onPace else c.inkTertiary, Offset(x, 0f), Size(w, size.height))
++        }
++    }
++}
++
++/** R13: the page's list — Maiores, numbered with each one's share, or Recentes, by day with the day's total. */
++@Composable
++private fun Lines(lines: List<LeituraRow>) {
++    val c = Margem.colors
++    var recent by rememberSaveable { mutableStateOf(false) }
++    SectionLine("Lançamentos", aside = count(lines.size, "parcela", "parcelas").takeIf { lines.any { it.k > 1 } } ?: "")
++    OptionPicker(listOf(false to "Maiores", true to "Recentes"), recent, { recent = it }, tag = "insights.list.recent.")
++    val sum = maxOf(total(lines).v, 1L)
++    val shown = if (recent) lines.sortedWith(compareByDescending<LeituraRow> { it.date }.thenByDescending { it.time }) else lines.sortedByDescending { it.cents.v }
++    for ((i, r) in shown.withIndex()) {
++        if (recent && (i == 0 || shown[i - 1].date != r.date)) DayHeader("${dateShort(r.date)} · ${money(total(shown.filter { it.date == r.date }))}")
+         Row(
+-            Modifier.heightIn(min = 48.dp).testTag(InsightsTags.PACE_BUDGET).clickable(onClick = onChoose).semantics(mergeDescendants = true) {},
+-            verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(6.dp),
++            Modifier.fillMaxWidth().testTag(InsightsTags.LIST_ROW + i).semantics(mergeDescendants = true) {},
++            verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(10.dp),
+         ) {
+-            SeriesMark(color)
+-            Text(d.name, serif(15, 500, 20))
+-            Icon(R.drawable.i_avancar, tint = c.inkTertiary, size = 16.dp)
++            if (!recent) Text("${i + 1}", sans(13f, 600, 17f, tabular = true), Modifier.widthIn(min = 20.dp), c.inkTertiary)
++            ListRow(
++                r.merchant, Modifier.weight(1f), (listOf(r.budgetName, r.tags.joinToString(", ")) + if (r.k > 1) listOf("parcela ${r.k}") else emptyList())
++                    .filter(String::isNotEmpty).joinToString(" · "),
++            ) {
++                Column(horizontalAlignment = Alignment.End) {
++                    Text(moneyPlain(r.cents), sans(15f, 600, 20f, tabular = true))
++                    if (!recent) Text("${(200 * r.cents.v + sum) / (2 * sum)}%", sans(12f, 500, 16f), color = c.inkTertiary)
++                }
++            }
+         }
+     }
++}
++
++// ---- Quanto ----
++
++/** Margem of the month the interval ends in (D-10): the régua of the total; on the page one per verba, ordered. */
++@Composable
++private fun MargemWidget(db: Db, q: LeituraQuery, lines: List<LeituraRow>, today: LocalDate, big: Boolean) {
++    var order by rememberSaveable { mutableStateOf("risco") }
++    val read = query(db, q.to, today) { d ->
++        val m = d.monthOf(q.to)
++        d.ensureMonths(m)
++        m to d.budgetsOverview(m, today, BudgetOrder.RISK)
++    } ?: return
++    val keys = q.chips.filter { it.kind == ChipKind.BUDGET }.map { it.key }
++    val budgets = read.second.filter { keys.isEmpty() || it.id.v.toString() in keys }
++    val all = sum(budgets.map { it.month })
++    val month = monthLong(read.first.month)
++    Sentence(if (all.remaining.v >= 0) "Em $month, cabem ${money(all.remaining)}." else "Em $month, ${money(Cents(-all.remaining.v))} além da cota.")
++    Meter(all, Modifier.padding(top = 10.dp))
++    val places = q.chips.filter { it.kind == ChipKind.TAG || it.kind == ChipKind.MERCHANT }
++    if (places.isNotEmpty()) Note("${places.joinToString(" ou ") { it.label }} cai em ${lines.map { it.budgetName }.distinct().joinToString(", ").ifEmpty { "nenhuma verba" }}.")
++    if (!big) return
++    OptionPicker(listOf("risco" to "risco", "margem" to "margem", "az" to "A–Z"), order, { order = it })
++    val sorted = when (order) {
++        "margem" -> budgets.sortedBy { it.month.remaining.v }
++        "az" -> budgets.sortedBy { it.name.lowercase() }
++        else -> budgets
++    }
++    for (b in sorted) Column(Modifier.padding(top = 12.dp)) {
++        Row {
++            Text(b.name, serif(16, 500, 21), Modifier.weight(1f))
++            Text(if (b.month.remaining.v >= 0) money(b.month.remaining) else "${money(Cents(-b.month.remaining.v))} além", sans(14f, 600, 18f, tabular = true))
++        }
++        Meter(b.month, Modifier.padding(top = 4.dp))
++    }
++}
++
++/** Total e costume (AC-28): the interval's total against the mean of the same stretch before; Somar tudo · variável · previstos. */
++@Composable
++private fun TotalWidget(db: Db, q: LeituraQuery, lines: List<LeituraRow>, today: LocalDate, big: Boolean) {
++    var back by rememberSaveable { mutableIntStateOf(6) }
++    var add by rememberSaveable { mutableStateOf("tudo") }
++    val keep = { r: LeituraRow -> add == "tudo" || r.fixed == (add == "previstos") }
++    val before = query(db, q, back, add) { d -> (1..back).map { total(d.leituraLines(earlier(d, q, today, it)).filter(keep)).v } } ?: return
++    val now = total(lines.filter(keep))
++    val usual = Cents(before.sum() / back)
++    Sentence(
++        when {
++            usual.v == 0L -> "${money(now)}; sem costume para comparar."
++            now > usual -> "${money(now)}, ${money(now - usual)} acima do costume."
++            now < usual -> "${money(now)}, ${money(usual - now)} abaixo do costume."
++            else -> "${money(now)}, igual ao costume."
++        },
++    )
++    val c = Margem.colors
++    Columns(before.reversed().mapIndexed { i, v -> "−${before.size - i}" to listOf(v) } + ("agora" to listOf(now.v)), listOf(c.inkTertiary))
++    if (!big) return
++    OptionPicker(listOf(6 to "média de 6", 3 to "média de 3", 1 to "o anterior"), back, { back = it })
++    OptionPicker(listOf("tudo" to "tudo", "variavel" to "só variável", "previstos" to "só previstos"), add, { add = it })
++}
++
++/**
++ * Ritmo acumulado (AC-22, AC-29): with one whole month and no chip but verbas, the ritmo ideal, the cota and "no passo
++ * atual"; otherwise against the interval before or the costume, with the ritmo option dimmed and why.
++ */
++@Composable
++private fun RitmoWidget(db: Db, q: LeituraQuery, lines: List<LeituraRow>, today: LocalDate, big: Boolean) {
++    var compare by rememberSaveable { mutableStateOf("") }
++    val bm = query(db, q, today) { d -> plan(d, q, today) } ?: return
++    val whole = bm.limit.v > 0
++    val mode = if (compare == "" || (compare == "ritmo" && !whole)) (if (whole) "ritmo" else "anterior") else compare
++    if (mode == "ritmo") Pace(bm, lines, today)
++    else {
++        val n = if (mode == "costume") 3 else 1
++        val before = query(db, q, n, today) { d -> (1..n).map { earlier(d, q, today, it) }.map { it.from to d.leituraLines(it) } } ?: return
++        Versus(q, lines, before, today, if (n == 1) "no intervalo anterior" else "de costume")
++    }
++    if (!big) return
++    OptionPicker(
++        listOf("ritmo" to "ritmo", "anterior" to "intervalo anterior", "costume" to "costume"), mode, { compare = it },
++        disabled = if (whole) emptySet() else setOf("ritmo"),
++    )
++    if (!whole) Note("Ritmo ideal, cota e passo atual só com um mês inteiro e sem chip além de verbas: a cota é da verba.")
++}
++
++/** The interval's cumulative spending against [before] (each from its own first day; several: their mean). */
++@Composable
++private fun Versus(q: LeituraQuery, lines: List<LeituraRow>, before: List<Pair<LocalDate, List<LeituraRow>>>, today: LocalDate, against: String) {
++    val c = Margem.colors
++    val days = q.from.daysUntil(q.to) + 1
++    val now = LongArray(days)
++    for (r in lines) now[q.from.daysUntil(r.date)] += r.cents.v
++    val was = LongArray(days)
++    for ((from, rs) in before) for (r in rs) from.daysUntil(r.date).takeIf { it in 0 until days }?.let { was[it] += r.cents.v / before.size }
++    for (i in 1 until days) {
++        now[i] += now[i - 1]
++        was[i] += was[i - 1]
++    }
++    val last = if (today in q.from..q.to) q.from.daysUntil(today) else days - 1
++    Sentence("${money(Cents(now[last]))} neste intervalo, contra ${money(Cents(was[last]))} $against.", Modifier.testTag(InsightsTags.PACE_SENTENCE))
++    val top = maxOf(now.max(), was.max(), 1L)
++    Canvas(Modifier.fillMaxWidth().height(120.dp).padding(top = 8.dp).testTag(InsightsTags.PACE_CHART)) {
++        val bottom = size.height
++        val x = { i: Int -> size.width * (i + 0.5f) / days }
++        val y = { v: Long -> bottom - bottom * 0.94f * v / top }
++        val path = { a: LongArray, upTo: Int -> Path().apply { for (i in 0..upTo) if (i == 0) moveTo(x(i), y(a[i])) else lineTo(x(i), y(a[i])) } }
++        drawPath(path(was, days - 1), c.inkTertiary, style = Stroke(1.25f.dp.toPx(), pathEffect = PathEffect.dashPathEffect(floatArrayOf(4.dp.toPx(), 3.dp.toPx()))))
++        drawPath(path(now, last), c.inkSecondary, style = Stroke(2.dp.toPx()))
++        drawLine(c.inkTertiary, Offset(0f, bottom), Offset(size.width, bottom), 1.dp.toPx())
++    }
++}
++
++/** Ritmo do mês of [bm] (book Fig. 9.2): previstos band at the base, cota double rule, dashed ritmo ideal, dotted projection. */
++@Composable
++private fun Pace(bm: BudgetMonth, lines: List<LeituraRow>, today: LocalDate) {
++    val c = Margem.colors
++    val isCurrent = today in bm.start..bm.end
+     // No projection without ideal (spec §5) or without spending: "fecharia em R$ 0" says nothing (spec §7.5).
+     val projects = bm.ideal.v > 0 && bm.spent.v > 0
+     // Margem honesta (D68): the ritmo is the gasto variável against the ideal of the cota livre; "além" and "dentro"
+@@ -373,12 +891,12 @@ private fun Pace(data: InsightsData, today: LocalDate, isCurrent: Boolean, color
+         bm.remaining.v < 0 -> "Fechou em ${money(bm.spent)}, ${money(Cents(-bm.remaining.v))} além da cota."
+         else -> "Fechou em ${money(bm.spent)}, exatamente a cota."
+     }
+-    Text(sentence, serif(15, 400, 21, italic = true), Modifier.padding(top = 2.dp).testTag(InsightsTags.PACE_SENTENCE), c.inkSecondary)
++    Sentence(sentence, Modifier.testTag(InsightsTags.PACE_SENTENCE))
+     val description = if (isCurrent) {
+-        "Ritmo do mês de ${d.name}: ${money(bm.variable)} até o dia ${today.day}, contra ritmo ideal de ${money(bm.ideal)}" +
++        "Ritmo do mês: ${money(bm.variable)} até o dia ${today.day}, contra ritmo ideal de ${money(bm.ideal)}" +
+             (if (projects) "; no passo atual, ${reais(bm.projection)} no fim do mês" else "") +
+             ", para uma cota de ${money(bm.limit)}" + (if (bm.planned.v > 0) ", com ${money(bm.planned)} em previstos" else "")
+-    } else "Ritmo do mês de ${d.name}: ${money(bm.spent)} no mês, para uma cota de ${money(bm.limit)}" +
++    } else "Ritmo do mês: ${money(bm.spent)} no mês, para uma cota de ${money(bm.limit)}" +
+         (if (bm.open.v > 0) ", com ${money(bm.open)} em previstos em aberto" else "")
+ 
+     // Spec §7.5 (2026-11-04): the previstos do mês (lançados at their value, open at the previsto's) are a band at the
+@@ -387,7 +905,7 @@ private fun Pace(data: InsightsData, today: LocalDate, isCurrent: Boolean, color
+     val base = bm.planned.v
+     val days = bm.start.daysUntil(bm.end) + 1
+     val cumulative = LongArray(days)
+-    for (line in d.lines) if (!line.row.refunded && !line.row.fixed) {
++    for (line in lines) if (!line.fixed) {
+         val i = bm.start.daysUntil(line.date)
+         if (i in 0 until days) cumulative[i] += line.cents.v
+     }
+@@ -404,9 +922,9 @@ private fun Pace(data: InsightsData, today: LocalDate, isCurrent: Boolean, color
+         val bottom = size.height - 18.dp.toPx()
+         val ceil = axis * ((top + axis - 1) / axis).coerceAtLeast(1)
+         val w = size.width - left
+-        fun x(i: Int) = left + w * (i + 0.5f) / days
+-        fun y(v: Long) = bottom - bottom * 0.94f * v / ceil
+-        grid(measurer, label, left, bottom, axis, ceil, ::y)
++        val x = { i: Int -> left + w * (i + 0.5f) / days }
++        val y = { v: Long -> bottom - bottom * 0.94f * v / ceil }
++        grid(measurer, label, left, bottom, axis, ceil, y)
+         if (isCurrent && last < days - 1) {
+             val from = x(last.coerceAtLeast(0)) + w / days / 2
+             drawRect(c.surfaceSunken.copy(alpha = 0.6f), Offset(from, 0f), Size(size.width - from, bottom))
+@@ -442,14 +960,12 @@ private fun Pace(data: InsightsData, today: LocalDate, isCurrent: Boolean, color
+             if (days - 1 !in this) add(days - 1)
+         }
+         for (i in marks) {
+-            val t = measurer.measure(bm.start.plusDays(i).day.toString(), label)
++            val t = measurer.measure(bm.start.plus(i, DateTimeUnit.DAY).day.toString(), label)
+             drawText(t, topLeft = Offset(x(i) - t.size.width / 2, bottom + 4.dp.toPx()))
+         }
+     }
+ }
+ 
+-private fun LocalDate.plusDays(n: Int) = LocalDate.fromEpochDays(toEpochDays() + n)
+-
+ /** Gridline step: 1, 2 or 5 × 10ⁿ reais, at most 4 lines up to [top]. */
+ private fun axisStep(top: Long): Long {
+     var unit = 100L
+@@ -471,211 +987,412 @@ private fun DrawScope.grid(measurer: TextMeasurer, label: TextStyle, left: Float
+     drawLine(label.color.copy(alpha = 0.9f), Offset(left, bottom), Offset(size.width, bottom), 1.dp.toPx())
+ }
+ 
+-/** The budget choice: budgets with a limit row in the month, riskiest first. */
++/** Previstos do mês the interval ends in (D-10, AC-30): Vieram, with the difference from the previsto, and A caminho. */
+ @Composable
+-private fun BudgetChoice(data: InsightsData, onPick: (Long) -> Unit, close: () -> Unit) {
++private fun PlannedWidget(db: Db, q: LeituraQuery, today: LocalDate, big: Boolean) {
+     val c = Margem.colors
+-    Dialog(close, DialogProperties(usePlatformDefaultWidth = false)) {
+-        val shape = RoundedCornerShape(8.dp)
+-        Column(
+-            Modifier.testTag(InsightsTags.BUDGET_CHOICE).padding(horizontal = 32.dp).widthIn(max = 340.dp).fillMaxWidth()
+-                .shadow(14.dp, shape, ambientColor = c.shadow, spotColor = c.shadow).background(c.surface, shape)
+-                .padding(start = 24.dp, end = 24.dp, top = 24.dp, bottom = 12.dp),
+-        ) {
+-            Text("Qual verba?", serif(22, 500, 28), Modifier.padding(bottom = 8.dp))
+-            for (b in data.budgets) Row(
+-                Modifier.fillMaxWidth().heightIn(min = 48.dp).testTag(InsightsTags.BUDGET_OPTION + b.id.v)
+-                    .clickable { onPick(b.id.v) }.semantics(mergeDescendants = true) {},
+-                verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(10.dp),
+-            ) {
+-                SeriesMark(seriesColor(data.ids, b.id.v))
+-                Text(b.name, serif(17, if (b.id == data.detail.id) 600 else 400, 22))
++    val read = query(db, q.to, today) { d ->
++        val m = d.monthOf(q.to)
++        d.ensureMonths(m)
++        m to d.budgetsOverview(m, today, BudgetOrder.MANUAL).flatMap { d.budgetDetail(it.id, m, today).plannedLines }.sortedBy { it.planned.date }
++    } ?: return
++    // R19: a previsto has no estabelecimento nor fonte; it enters by its verba or its marcadores.
++    val lines = read.second.filter { p ->
++        q.chips.isEmpty() || q.chips.any { (it.kind == ChipKind.BUDGET && it.key == p.planned.budget.v.toString()) || (it.kind == ChipKind.TAG && it.key in p.planned.tags) }
++    }
++    val came = lines.filter { !it.open }
++    val coming = lines.filter { it.open }
++    val month = monthLong(read.first.month)
++    Sentence(if (lines.isEmpty()) "Nenhum previsto em $month." else "Em $month, ${count(came.size, "veio", "vieram")} e ${coming.size} a caminho.")
++    for ((title, group) in listOf("Vieram" to came, "A caminho" to coming)) {
++        if (group.isEmpty() || (!big && title == "Vieram")) continue
++        if (big) SectionLine(title)
++        for (p in if (big) group else group.take(3)) Row(Modifier.fillMaxWidth().padding(top = 6.dp), horizontalArrangement = Arrangement.spacedBy(8.dp)) {
++            Column(Modifier.weight(1f)) {
++                Text(p.planned.name, sans(14f, 500, 18f), maxLines = 1)
++                Text(
++                    when {
++                        !p.open -> "lançado em ${p.launched.day} ${monthShort(p.launched.month)}" +
++                            if (p.cents != p.planned.cents) ", ${money(Cents(abs((p.cents - p.planned.cents).v)))} ${if (p.cents > p.planned.cents) "acima" else "abaixo"} do previsto" else ""
++                        p.planned.late -> "esperando desde ${p.planned.date.day} ${monthShort(p.planned.date.month)}"
++                        else -> "dia ${p.planned.date.day}"
++                    },
++                    sans(12f, 400, 16f), color = c.inkTertiary,
++                )
+             }
++            Text(moneyPlain(p.cents), sans(14f, 600, 18f, tabular = true), color = if (p.open) c.inkTertiary else c.ink)
+         }
+     }
+ }
+ 
+-// ---- Verbas por mês ----
++/** História (AC-31): up to 3 sentences on the grid; on its page all of them, each opening its widget's page. */
++@Composable
++private fun HistoryWidget(q: LeituraQuery, lines: List<LeituraRow>, big: Boolean, go: (Screen) -> Unit) {
++    val days = lines.groupBy { it.date }.mapValues { total(it.value) }
++    val stories = buildList {
++        if (lines.isNotEmpty()) add("total" to "${money(total(lines))} em ${count(transactions(lines), "lançamento", "lançamentos")}.")
++        groups(lines, ChipKind.TAG).firstOrNull()?.let { add("para-onde-foi" to "${it.first.label} puxa a fila: ${money(total(it.second))}.") }
++        days.maxByOrNull { it.value.v }?.let { add("calendario" to "O dia mais pesado foi ${dateShort(it.key)}: ${money(it.value)}.") }
++        groups(lines, ChipKind.MERCHANT).maxByOrNull { transactions(it.second) }?.takeIf { transactions(it.second) > 1 }
++            ?.let { add("voltam" to "${it.first.label} voltou ${transactions(it.second)} vezes.") }
++    }
++    if (stories.isEmpty()) Sentence("Nada lançado no intervalo.")
++    for ((id, text) in if (big) stories else stories.take(3)) Sentence(
++        text, if (big) Modifier.heightIn(min = 48.dp).clickable { go(Screen.LeituraWidget(id, q)) }.padding(vertical = 8.dp) else Modifier,
++    )
++}
++
++/** O que ficou fora (AC-25): what no widget counts, when the interval has any. */
++@Composable
++private fun LeftOutWidget(db: Db, q: LeituraQuery) {
++    val out = query(db, q) { d -> leftOut(d, q) } ?: return
++    for (line in out) Sentence(line)
++}
++
++// ---- Para onde ----
+ 
+-private val countWords = listOf("Nenhum mês", "Um mês", "Dois meses", "Três meses", "Quatro meses", "Cinco meses", "Seis meses")
++/** Retrato do estabelecimento (AC-38), with one estabelecimento chip: its visits, total and typical value. */
++@Composable
++private fun PortraitWidget(lines: List<LeituraRow>) {
++    val n = transactions(lines)
++    Sentence("${lines.firstOrNull()?.merchant ?: "O estabelecimento"}: ${count(n, "ida", "idas")}, ${money(total(lines))}; típico ${money(Cents(median(lines.map { it.cents.v })))}.")
++    lines.lastOrNull()?.let { Note("Última vez em ${dateShort(it.date)}, em ${it.budgetName}.") }
++}
+ 
++/**
++ * Fluxo (AC-20, AC-21, AC-32): from verba or fonte to the set of marcadores ("padaria + café": a line goes whole to one
++ * destination, so the Fluxo adds up to the total), the estabelecimento or both. A marcador touched lights its paths.
++ */
++@OptIn(ExperimentalLayoutApi::class)
+ @Composable
+-private fun History(data: InsightsData, color: Color) {
++private fun FlowWidget(lines: List<LeituraRow>, big: Boolean, onPiece: (Chip) -> Unit) {
+     val c = Margem.colors
+-    val months = (5 downTo 0).map { back ->
+-        var m = data.month
+-        repeat(back) { m = m.minusMonth() }
+-        m
+-    }
+-    val rows = months.map { m -> data.history.firstOrNull { it.month == m } }
+-    SectionLine("Verbas por mês", aside = "gasto · cota")
+-    val over = rows.count { it != null && it.spent > it.limit }
+-    Text("${countWords[over]} fora da margem.", serif(15, 400, 21, italic = true), Modifier.padding(top = 8.dp).testTag(InsightsTags.HISTORY_SENTENCE), c.inkSecondary)
+-    val description = "Verbas por mês de ${data.detail.name}: " + months.zip(rows).joinToString("; ") { (m, r) ->
+-        if (r == null) "${monthShort(m.month)} sem cota" else "${monthShort(m.month)} ${moneyPlain(r.spent)} de ${moneyPlain(r.limit)}"
+-    }
+-    val top = maxOf(rows.maxOf { maxOf(it?.spent?.v ?: 0L, it?.limit?.v ?: 0L) }, 1L)
+-    val measurer = rememberTextMeasurer()
+-    val label = Margem.type.axis.copy(color = c.inkTertiary)
+-    val value = Margem.type.axis.copy(color = c.overrun)
+-    Canvas(Modifier.fillMaxWidth().height(150.dp).padding(top = 8.dp).testTag(InsightsTags.HISTORY_CHART).semantics { contentDescription = description }) {
+-        val bottom = size.height - 18.dp.toPx()
+-        val slot = size.width / 6
+-        fun y(v: Long) = bottom - (bottom - 14.dp.toPx()) * v / top
+-        for ((i, r) in rows.withIndex()) {
+-            val x0 = slot * i + slot * 0.2f
+-            val bw = slot * 0.6f
+-            if (r != null) {
+-                val within = minOf(r.spent.v, r.limit.v)
+-                drawRect(color, Offset(x0, y(within)), Size(bw, bottom - y(within)))
+-                if (r.spent > r.limit) {
+-                    hatch(c.overrun, Offset(x0, y(r.spent.v)), Size(bw, y(r.limit.v) - y(r.spent.v) - 2.dp.toPx()), 1.6f.dp.toPx(), 4.dp.toPx())
+-                    val t = measurer.measure(moneyParts(r.spent).first, value)
+-                    drawText(t, topLeft = Offset(x0 + bw / 2 - t.size.width / 2, y(r.spent.v) - t.size.height - 2.dp.toPx()))
+-                }
+-                for (dy in listOf(-1.5f, 1.5f)) drawLine(c.brand, Offset(x0 - 3.dp.toPx(), y(r.limit.v) + dy.dp.toPx()), Offset(x0 + bw + 3.dp.toPx(), y(r.limit.v) + dy.dp.toPx()), 0.75f.dp.toPx())
++    var from by rememberSaveable { mutableStateOf("verba") }
++    var to by rememberSaveable { mutableStateOf("marcador") }
++    var lit by rememberSaveable { mutableStateOf("") }
++    // A set of marcadores is named heaviest first, as Para onde foi orders them: "padaria + café".
++    val rank = groups(lines, ChipKind.TAG).mapIndexed { i, g -> g.first.key to i }.toMap()
++    val tagset = { r: LeituraRow -> r.tags.sortedBy { rank[it] }.joinToString(" + ").ifEmpty { "sem marcador" } }
++    val flows = lines.groupBy { r ->
++        (if (from == "fonte") r.sourceName.ifEmpty { "sem recado" } else r.budgetName) to when (to) {
++            "estabelecimento" -> r.merchant
++            "os dois" -> "${tagset(r)} · ${r.merchant}"
++            else -> tagset(r)
++        }
++    }.map { it.key to it.value }.sortedByDescending { total(it.second).v }
++    val top = flows.firstOrNull()
++    Sentence(if (top == null) "Nada lançado no intervalo." else "${top.first.first} → ${top.first.second} puxa: ${money(total(top.second))}.")
++    if (big) {
++        OptionPicker(listOf("verba" to "verba", "fonte" to "fonte"), from, { from = it })
++        OptionPicker(listOf("marcador" to "marcador", "estabelecimento" to "estabelecimento", "os dois" to "os dois"), to, { to = it })
++        FlowRow(Modifier.padding(top = 8.dp), horizontalArrangement = Arrangement.spacedBy(8.dp)) {
++            for ((chip, _) in groups(lines, ChipKind.TAG)) TagChip(chip.label) {
++                lit = chip.key
++                onPiece(chip)
+             }
+-            val t = measurer.measure(monthShort(months[i].month), label)
+-            drawText(t, topLeft = Offset(slot * i + slot / 2 - t.size.width / 2, bottom + 4.dp.toPx()))
+         }
+-        drawLine(label.color.copy(alpha = 0.9f), Offset(0f, bottom), Offset(size.width, bottom), 1.dp.toPx())
+     }
++    for ((path, rs) in if (big) flows else flows.take(4)) {
++        val on = lit.isEmpty() || rs.any { lit in it.tags }
++        Row(Modifier.fillMaxWidth().padding(top = 6.dp), horizontalArrangement = Arrangement.spacedBy(6.dp)) {
++            Text(path.first, sans(13f, 500, 17f), Modifier.weight(0.4f), if (on) c.inkSecondary else c.inkTertiary, maxLines = 1)
++            Text("→", sans(13f, 500, 17f), color = c.inkTertiary)
++            Text(path.second, sans(13f, if (on && lit.isNotEmpty()) 700 else 500, 17f), Modifier.weight(0.6f), if (on) c.ink else c.inkTertiary)
++            Text(moneyPlain(total(rs)), sans(13f, 600, 17f, tabular = true), color = if (on) c.ink else c.inkTertiary)
++        }
++    }
++    // The ficha: the marcador's number of Para onde foi, divided by destination.
++    val with = lines.filter { lit in it.tags }
++    if (big && with.isNotEmpty()) Note(
++        "$lit: ${money(total(with))} = " + with.groupBy(tagset).entries.joinToString(" + ") { "${it.key} ${money(total(it.value))}" },
++    )
+ }
+ 
+-// ---- Marcadores e estabelecimentos ----
+-
++/**
++ * Para onde foi (AC-20, AC-33): by verba, marcador or estabelecimento; soma, vezes or média. The chips of the kind grouped
++ * don't filter it: their rows stay among the others, to swap (Só) or add (+ ou) one.
++ */
+ @Composable
+-private fun Ranking(data: InsightsData, rank: Rank, all: Boolean, onRank: (Rank) -> Unit, onAll: () -> Unit) {
+-    val c = Margem.colors
+-    SectionLine(if (rank == Rank.TAGS) "Marcadores" else "Estabelecimentos", aside = "por valor · R$")
+-    OptionPicker(listOf(Rank.TAGS to "Marcadores", Rank.MERCHANTS to "Estabelecimentos"), rank, onRank, tag = "insights.rank.")
+-    val rows = if (rank == Rank.TAGS) data.tags else data.merchants
+-    if (rows.isEmpty()) {
+-        Text("Nada lançado em ${monthLong(data.month.month)}.", Margem.type.body, Modifier.padding(top = 12.dp).testTag(InsightsTags.RANK_EMPTY), c.inkSecondary)
+-        return
+-    }
+-    Text("${rows[0].name} puxa a fila.", serif(15, 400, 21, italic = true), Modifier.padding(top = 10.dp).testTag(InsightsTags.RANK_SENTENCE), c.inkSecondary)
+-    val shown = if (all) rows else rows.take(RANK_ROWS)
+-    val top = maxOf(rows[0].total.v, 1L)
+-    for ((i, r) in shown.withIndex()) Column(
+-        Modifier.fillMaxWidth().testTag(InsightsTags.RANK_ROW + i).semantics(mergeDescendants = true) {
+-            if (r.fixed.v > 0) stateDescription = "dos quais ${money(r.fixed)} de previstos"
+-        }.padding(top = 10.dp),
+-    ) {
+-        Row(verticalAlignment = Alignment.Bottom) {
+-            Text(r.name, serif(16, 500, 21), Modifier.weight(1f), maxLines = 1)
+-            Text(if (r.count == 1) "1 lançamento" else "${r.count} lançamentos", sans(12f, 500, 16f), Modifier.padding(horizontal = 10.dp), c.inkTertiary)
+-            Text(moneyPlain(r.total), sans(14f, 600, 18f, tabular = true))
++private fun WhereWidget(db: Db, q: LeituraQuery, lines: List<LeituraRow>, big: Boolean, onPiece: (Chip) -> Unit) {
++    var kind by rememberSaveable { mutableStateOf(ChipKind.BUDGET) }
++    var metric by rememberSaveable { mutableStateOf("soma") }
++    val source = if (q.chips.none { it.kind == kind }) lines else query(db, q, kind) { d -> d.leituraLines(q.copy(chips = q.chips.filter { it.kind != kind })) } ?: return
++    val rows = groups(source, kind).map { (chip, rs) ->
++        val n = transactions(rs)
++        when (metric) {
++            "vezes" -> Triple(chip, n.toLong(), count(n, "vez", "vezes"))
++            "media" -> Triple(chip, total(rs).v / n, moneyPlain(Cents(total(rs).v / n)))
++            else -> Triple(chip, total(rs).v, moneyPlain(total(rs)))
+         }
+-        // Spec §7.5 (2026-11-04): the previstos' part first, faint, as their band in the Ritmo; then the rest.
+-        Canvas(Modifier.fillMaxWidth().height(6.dp).padding(top = 3.dp)) {
+-            val fixed = size.width * r.fixed.v / top
+-            drawRect(c.inkTertiary.copy(alpha = 0.3f), Offset.Zero, Size(fixed, size.height))
+-            drawRect(c.inkTertiary, Offset(fixed, 0f), Size(size.width * (r.total.v - r.fixed.v) / top, size.height))
++    }.sortedByDescending { it.second }
++    Sentence(rows.firstOrNull()?.let { "${it.first.label} puxa a fila." } ?: "Nada lançado no intervalo.")
++    if (big) {
++        OptionPicker(listOf(ChipKind.BUDGET to "verba", ChipKind.TAG to "marcador", ChipKind.MERCHANT to "estabelecimento"), kind, { kind = it })
++        OptionPicker(listOf("soma" to "soma", "vezes" to "vezes", "media" to "média"), metric, { metric = it })
++    }
++    val chosen = q.chips.map { it.key }
++    Ranks(if (big) rows else rows.take(4), if (big) onPiece else null) { if (it.key in chosen) "no filtro" else "" }
++    if (kind == ChipKind.TAG && rows.isNotEmpty()) Note("Com vários marcadores, o lançamento conta inteiro em cada um: a soma pode passar do total.")
++}
++
++/** O que cresceu (AC-34): each marcador against the mean of 3 months or the interval before, both ways. */
++@Composable
++private fun GrewWidget(db: Db, q: LeituraQuery, lines: List<LeituraRow>, today: LocalDate, big: Boolean, onPiece: (Chip) -> Unit) {
++    var against by rememberSaveable { mutableIntStateOf(3) }
++    var often by rememberSaveable { mutableStateOf(false) }
++    val before = query(db, q, against, today) { d -> (1..against).flatMap { d.leituraLines(earlier(d, q, today, it)) } } ?: return
++    val now = groups(lines, ChipKind.TAG).associateBy { it.first.key }
++    val was = groups(before, ChipKind.TAG).associateBy { it.first.key }
++    val rows = (now.keys + was.keys).map { k ->
++        val chip = (now[k] ?: was.getValue(k)).first
++        chip to total(now[k]?.second.orEmpty()).v - total(was[k]?.second.orEmpty()).v / against
++    }.filter { (chip, delta) -> delta != 0L && (!often || transactions(now[chip.key]?.second.orEmpty()) >= 3) }
++        .sortedByDescending { abs(it.second) }
++        .map { (chip, delta) -> Triple(chip, delta, (if (delta > 0) "+" else "−") + moneyPlain(Cents(abs(delta)))) }
++    val top = rows.firstOrNull { it.second > 0 }
++    Sentence(if (top == null) "Nada cresceu." else "${top.first.label} cresceu ${money(Cents(top.second))}.")
++    if (big) {
++        OptionPicker(listOf(3 to "média de 3 meses", 1 to "intervalo anterior"), against, { against = it })
++        Row(Modifier.heightIn(min = 48.dp).clickable { often = !often }, verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(10.dp)) {
++            Check(often)
++            Text("só o que voltou 3 ou mais vezes", sans(14f, 400, 18f))
+         }
+     }
+-    if (!all && rows.size > RANK_ROWS) Text(
+-        "Ver todos (${rows.size})", sans(15f, 600, 20f),
+-        Modifier.padding(top = 6.dp).heightIn(min = 48.dp).testTag(InsightsTags.RANK_MORE).clickable(onClick = onAll).padding(vertical = 14.dp),
+-        c.action,
+-    )
+-    if (rank == Rank.TAGS) Text(
+-        "Com vários marcadores, o lançamento conta inteiro em cada um: a soma pode passar do total.",
+-        sans(13f, 400, 18f), Modifier.padding(top = 10.dp).testTag(InsightsTags.RANK_NOTE), c.inkTertiary,
+-    )
++    Ranks(if (big) rows else rows.take(3), if (big) onPiece else null)
+ }
+ 
+-// ---- Calendário de gastos ----
++/** Estabelecimentos que voltam (AC-35): visits in the interval, typical value, "novo" when first seen in it. */
++@Composable
++private fun ReturnWidget(db: Db, q: LeituraQuery, lines: List<LeituraRow>, big: Boolean, onPiece: (Chip) -> Unit) {
++    var byValue by rememberSaveable { mutableStateOf(false) }
++    val fresh = query(db, q, lines) { d -> firstTimers(d, q, lines).map { it.key }.toSet() } ?: return
++    val rows = groups(lines, ChipKind.MERCHANT).filter { transactions(it.second) > 1 }
++        .map { (chip, rs) -> Triple(chip, if (byValue) total(rs).v else transactions(rs).toLong(), "${transactions(rs)} idas") to median(rs.map { it.cents.v }) }
++        .sortedByDescending { it.first.second }
++    Sentence(rows.firstOrNull()?.let { "${it.first.first.label} volta mais: ${it.first.third}." } ?: "Nenhum estabelecimento voltou no intervalo.")
++    if (big) OptionPicker(listOf(false to "vezes", true to "valor"), byValue, { byValue = it })
++    val typical = rows.associate { it.first.first.key to it.second }
++    Ranks(rows.map { it.first }.let { if (big) it else it.take(4) }, if (big) onPiece else null) {
++        "típico ${moneyPlain(Cents(typical.getValue(it.key)))}" + if (it.key in fresh) " · novo" else ""
++    }
++}
+ 
+-private val weekdayPlural = listOf("segundas", "terças", "quartas", "quintas", "sextas", "sábados", "domingos")
+-private val weekdaySingular = listOf("segunda", "terça", "quarta", "quinta", "sexta", "sábado", "domingo")
++/** Primeira vez (AC-36): estabelecimentos and marcadores first seen in the interval. */
++@Composable
++private fun FirstWidget(db: Db, q: LeituraQuery, lines: List<LeituraRow>, big: Boolean, onPiece: (Chip) -> Unit) {
++    val fresh = query(db, q, lines) { d -> firstTimers(d, q, lines) } ?: return
++    Sentence(if (fresh.isEmpty()) "Nada novo no intervalo." else "${count(fresh.size, "novidade", "novidades")}: ${fresh.take(3).joinToString(", ") { it.label }}.")
++    if (big) Ranks(
++        fresh.map { chip -> Triple(chip, total(lines.filter { hits(it, chip) }).v, moneyPlain(total(lines.filter { hits(it, chip) }))) }, onPiece,
++    ) { if (it.kind == ChipKind.TAG) "marcador" else "estabelecimento" }
++}
+ 
+-/** "um sábado", "duas sextas", "quatro sábados". */
+-private fun countOf(day: DayOfWeek, n: Int): String {
+-    val feminine = day.ordinal <= 4
+-    val word = when (n) {
+-        1 -> if (feminine) "uma" else "um"
+-        2 -> if (feminine) "duas" else "dois"
+-        3 -> "três"
+-        4 -> "quatro"
+-        else -> "cinco"
+-    }
+-    return "$word ${if (n == 1) weekdaySingular[day.ordinal] else weekdayPlural[day.ordinal]}"
++/** Tamanho (AC-37): how many lançamentos of each size, the median; on the page, the median by estabelecimento. */
++@Composable
++private fun SizeWidget(lines: List<LeituraRow>, big: Boolean) {
++    val edges = listOf(1_000L, 2_500L, 5_000L, 10_000L, 25_000L)
++    val names = listOf("até 10", "10–25", "25–50", "50–100", "100–250", "250+")
++    val bins = LongArray(names.size)
++    for (r in lines) bins[edges.count { r.cents.v > it }]++
++    Sentence(if (lines.isEmpty()) "Nada lançado no intervalo." else "Metade fica até ${money(Cents(median(lines.map { it.cents.v })))}.")
++    Columns(names.mapIndexed { i, n -> n to listOf(bins[i]) }, listOf(Margem.colors.inkTertiary))
++    if (big) Ranks(groups(lines, ChipKind.MERCHANT).map { (chip, rs) -> median(rs.map { it.cents.v }).let { Triple(chip, it, moneyPlain(Cents(it))) } }.take(8), null) { "mediana" }
+ }
+ 
++// ---- Quando ----
++
++private val weekdayPlural = listOf("segundas", "terças", "quartas", "quintas", "sextas", "sábados", "domingos")
++
++/** Calendário (AC-39): heat by day, soma or contagem, com previstos or only the variável; the heaviest days on the page. */
+ @Composable
+-private fun Calendar(data: InsightsData, until: LocalDate) {
++private fun CalendarWidget(q: LeituraQuery, lines: List<LeituraRow>, big: Boolean, onDays: (LocalDate, LocalDate) -> Unit) {
+     val c = Margem.colors
+-    SectionLine("Gasto por dia", aside = monthLong(data.month.month))
+-    val total = data.byDay.values.sumOf { it.v }
+-    if (total == 0L) {
+-        Text("Nada lançado em ${monthLong(data.month.month)}.", Margem.type.body, Modifier.padding(top = 12.dp).testTag(InsightsTags.CAL_EMPTY), c.inkSecondary)
+-        return
+-    }
+-    val days = (0..data.start.daysUntil(data.end)).map { data.start.plusDays(it) }
+-    // Spec §7.5 (2026-11-04): the days so far (the whole window in a past month); the weekday with the highest mean
+-    // per occurrence, with spending on at least two of them and no tie; otherwise no weekday weighs.
+-    val sofar = days.filter { it <= until }
+-    val order = (0 until 7).map { DayOfWeek.entries[(data.weekStart.ordinal + it) % 7] }
+-    val sum = order.associateWith { wd -> sofar.filter { it.dayOfWeek == wd }.sumOf { data.byDay[it]?.v ?: 0L } }
+-    val count = order.associateWith { wd -> sofar.count { it.dayOfWeek == wd } }
+-    val spentDays = order.associateWith { wd -> sofar.count { it.dayOfWeek == wd && (data.byDay[it]?.v ?: 0L) > 0 } }
+-    // Means compared without division: a ÷ n > b ÷ m ⇔ a × m > b × n.
+-    val heavy = order.filter { count.getValue(it) > 0 }.maxWithOrNull { a, b -> (sum.getValue(a) * count.getValue(b)).compareTo(sum.getValue(b) * count.getValue(a)) }
+-    val tied = heavy != null && order.any { it != heavy && count.getValue(it) > 0 && sum.getValue(it) * count.getValue(heavy) == sum.getValue(heavy) * count.getValue(it) }
+-    val sofarTotal = sum.values.sum()
+-    if (heavy == null || tied || spentDays.getValue(heavy) < 2 || sofarTotal == 0L) {
+-        Text("Nenhum dia da semana pesa.", serif(15, 400, 21, italic = true), Modifier.padding(top = 8.dp).testTag(InsightsTags.CAL_SENTENCE), c.inkSecondary)
+-    } else {
+-        val article = if (heavy.ordinal <= 4) "As" else "Os"
+-        Text("$article ${weekdayPlural[heavy.ordinal]} pesam.", serif(15, 400, 21, italic = true), Modifier.padding(top = 8.dp).testTag(InsightsTags.CAL_SENTENCE), c.inkSecondary)
+-        val share = (200 * sum.getValue(heavy) + sofarTotal) / (2 * sofarTotal)
+-        Text(
+-            "$share% do mês em ${countOf(heavy, count.getValue(heavy))}", sans(13f, 500, 17f),
+-            Modifier.padding(top = 2.dp).testTag(InsightsTags.CAL_SHARE), c.inkTertiary,
+-        )
+-    }
+-    // Spec §7.5: step = highest day ÷ 4, rounded up to R$ 10.
+-    val max = data.byDay.values.maxOf { it.v }
+-    val step = (max + 3999) / 4000 * 1000
+-    Row(Modifier.fillMaxWidth().padding(top = 10.dp), horizontalArrangement = Arrangement.spacedBy(4.dp)) {
+-        for (wd in order) Text(weekdayShort(wd).uppercase(), sans(10.5f, 600, 14f, 0.06f), Modifier.weight(1f), c.inkTertiary)
++    var counting by rememberSaveable { mutableStateOf(false) }
++    var planned by rememberSaveable { mutableStateOf(false) }
++    // R19: the variável by default; "com previstos" adds the lançamentos of previstos.
++    val kept = if (planned) lines else lines.filter { !it.fixed }
++    val byDay = kept.groupBy { it.date }.mapValues { (_, rs) -> if (counting) transactions(rs).toLong() else total(rs).v }
++    val heaviest = byDay.maxByOrNull { it.value }
++    Sentence(heaviest?.let { "O dia mais pesado foi ${dateShort(it.key)}: ${if (counting) count(it.value.toInt(), "lançamento", "lançamentos") else money(Cents(it.value))}." } ?: "Nada lançado no intervalo.")
++    if (big) {
++        OptionPicker(listOf(false to "soma", true to "contagem"), counting, { counting = it })
++        Row(Modifier.heightIn(min = 48.dp).clickable { planned = !planned }, verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(10.dp)) {
++            Check(planned)
++            Text("Com previstos", sans(14f, 400, 18f))
++        }
+     }
+-    val lead = (data.start.dayOfWeek.ordinal - data.weekStart.ordinal + 7) % 7
+-    val cells: List<LocalDate?> = List(lead) { null } + days
+-    for (week in cells.chunked(7)) Row(Modifier.fillMaxWidth().padding(top = 4.dp), horizontalArrangement = Arrangement.spacedBy(4.dp)) {
++    val max = maxOf(heaviest?.value ?: 0L, 1L)
++    val days = (0..q.from.daysUntil(q.to)).map { q.from.plus(it, DateTimeUnit.DAY) }
++    val cells: List<LocalDate> = List(q.from.dayOfWeek.ordinal) { NO_DATE } + days
++    for (week in cells.chunked(7)) Row(Modifier.fillMaxWidth().padding(top = 3.dp), horizontalArrangement = Arrangement.spacedBy(3.dp)) {
+         for (i in 0 until 7) {
+-            val day = week.getOrNull(i)
+-            if (day == null) {
+-                Box(Modifier.weight(1f).aspectRatio(1f))
++            val day = week.getOrElse(i) { NO_DATE }
++            if (day == NO_DATE) {
++                Box(Modifier.weight(1f))
+                 continue
+             }
+-            val spent = data.byDay[day]?.v ?: 0L
+-            val level = if (spent == 0L) 0 else ((spent + step - 1) / step).toInt().coerceIn(1, 4)
+-            val fixed = data.fixedByDay[day]?.v ?: 0L
+-            val description = "${day.day}: ${if (spent == 0L) "sem gasto" else money(Cents(spent))}" +
+-                if (fixed > 0) ", ${money(Cents(fixed))} de previstos" else ""
++            val v = byDay[day] ?: 0L
++            val level = if (v == 0L) 0 else ((4 * v + max - 1) / max).toInt().coerceIn(1, 4)
+             Box(
+-                Modifier.weight(1f).aspectRatio(1f).background(c.heat[level]).clearAndSetSemantics {
+-                    testTag = InsightsTags.CAL_DAY + day
+-                    contentDescription = description
+-                    stateDescription = "degrau $level"
+-                }.padding(3.dp),
+-            ) {
+-                Text(day.day.toString(), sans(10.5f, 600, 13f, tabular = true), color = if (level >= 3) c.paper else c.inkSecondary)
+-                if (fixed > 0) Box(Modifier.align(Alignment.TopEnd).size(5.dp).background(if (level >= 3) c.paper else c.inkTertiary, CircleShape))
+-            }
++                Modifier.weight(1f).aspectRatio(if (big) 1f else 1.6f).background(c.heat[level])
++                    .then(if (big) Modifier.clickable { onDays(day, day) } else Modifier).clearAndSetSemantics {
++                    testTag = InsightsTags.DAY + day
++                    contentDescription = "${day.day}: ${if (v == 0L) "sem gasto" else if (counting) count(v.toInt(), "lançamento", "lançamentos") else money(Cents(v))}"
++                }.padding(2.dp),
++            ) { if (big) Text(day.day.toString(), sans(10.5f, 600, 13f, tabular = true), color = if (level >= 3) c.paper else c.inkSecondary) }
++        }
++    }
++    Series(q, lines)
++    if (big) {
++        SectionLine("Dias mais pesados")
++        for ((day, v) in byDay.entries.sortedByDescending { it.value }.take(5)) ListRow(dateShort(day), onClick = { onDays(day, day) }) {
++            Text(if (counting) v.toString() else moneyPlain(Cents(v)), sans(14f, 600, 18f, tabular = true))
+         }
+     }
+-    // Book Fig. 9.5: fixed 14 px swatches, then "mais · cada degrau ≈ R$ 60" on the same line.
+-    Row(Modifier.fillMaxWidth().padding(top = 8.dp), verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(6.dp)) {
+-        Text("menos", sans(11f, 500, 14f), color = c.inkTertiary)
+-        Row(horizontalArrangement = Arrangement.spacedBy(2.dp)) { for (l in 0..4) Box(Modifier.size(14.dp).background(c.heat[l])) }
+-        Text("mais ·", sans(11f, 500, 14f), color = c.inkTertiary)
+-        Text("cada degrau ≈ ${reais(Cents(step))}", sans(11f, 500, 14f), Modifier.testTag(InsightsTags.CAL_LEGEND), c.inkTertiary, maxLines = 1)
++}
++
++/** Dia da semana (AC-40): the mean per weekday over the days so far of the interval; seg a dom or the heaviest first. */
++@Composable
++private fun WeekdayWidget(db: Db, q: LeituraQuery, lines: List<LeituraRow>, today: LocalDate, big: Boolean) {
++    var heavyFirst by rememberSaveable { mutableStateOf(false) }
++    val start = query(db) { d -> d.settings().weekStart } ?: return
++    val sofar = (0..q.from.daysUntil(minOf(q.to, maxOf(today, q.from)))).map { q.from.plus(it, DateTimeUnit.DAY) }
++    val order = (0 until 7).map { DayOfWeek.entries[(start.ordinal + it) % 7] }
++    val means = order.map { wd ->
++        val n = sofar.count { it.dayOfWeek == wd }
++        wd to if (n == 0) 0L else total(lines.filter { it.date.dayOfWeek == wd && it.date in sofar }).v / n
++    }
++    val heavy = means.maxByOrNull { it.second }?.takeIf { it.second > 0 && means.count { m -> m.second == it.second } == 1 }
++    Sentence(heavy?.let { "${if (it.first.ordinal <= 4) "As" else "Os"} ${weekdayPlural[it.first.ordinal]} pesam: ${money(Cents(it.second))} por dia." } ?: "Nenhum dia da semana pesa.")
++    if (big) OptionPicker(listOf(false to "seg a dom", true to "maior primeiro"), heavyFirst, { heavyFirst = it })
++    Columns((if (heavyFirst) means.sortedByDescending { it.second } else means).map { weekdayShort(it.first) to listOf(it.second) }, listOf(Margem.colors.inkSecondary))
++    Series(q, lines)
++}
++
++/** Semanas (AC-41): a column per week from the Ajustes week start, with the passo semanal's mark when the month allows it. */
++@Composable
++private fun WeeksWidget(db: Db, q: LeituraQuery, lines: List<LeituraRow>, today: LocalDate, big: Boolean, onDays: (LocalDate, LocalDate) -> Unit) {
++    val read = query(db, q, today) { d -> d.settings().weekStart to plan(d, q, today) } ?: return
++    val (start, bm) = read
++    val first = q.from.minus((q.from.dayOfWeek.ordinal - start.ordinal + 7) % 7, DateTimeUnit.DAY)
++    val weeks = generateSequence(first) { it.plus(7, DateTimeUnit.DAY) }.takeWhile { it <= q.to }
++        .map { maxOf(it, q.from) to minOf(it.plus(6, DateTimeUnit.DAY), q.to) }.toList()
++    val sums = weeks.map { (a, b) -> total(lines.filter { it.date in a..b }).v }
++    val heavy = sums.withIndex().maxByOrNull { it.value }?.takeIf { it.value > 0 }
++    Sentence(heavy?.let { "A semana de ${span(weeks[it.index].first, weeks[it.index].second)} pesou mais: ${money(Cents(it.value))}." } ?: "Nada lançado no intervalo.")
++    val mark = bm.weeks.maxOfOrNull { it.step.v } ?: 0L
++    Columns(weeks.mapIndexed { i, (a, _) -> "${a.day}" to listOf(sums[i]) }, listOf(Margem.colors.inkSecondary), if (big) { i -> onDays(weeks[i].first, weeks[i].second) } else null, mark)
++    if (mark > 0) Note("A marca é o maior passo semanal, ${money(Cents(mark))}.")
++    Series(q, lines)
++}
++
++/** Mês a mês (AC-42): 3, 6 or 12 budget months ending in the interval's; divided or not into previstos and variável or by verba. */
++@Composable
++private fun MonthsWidget(db: Db, q: LeituraQuery, big: Boolean, onDays: (LocalDate, LocalDate) -> Unit) {
++    val c = Margem.colors
++    var n by rememberSaveable { mutableIntStateOf(6) }
++    var split by rememberSaveable { mutableStateOf("nao") }
++    val read = query(db, q, n) { d ->
++        val end = d.monthOf(q.to)
++        val windows = (n - 1 downTo 0).map { end.minus(it, DateTimeUnit.MONTH).let { m -> m to d.window(m) } }
++        windows to d.leituraLines(q.copy(from = windows.first().second.start, to = windows.last().second.endInclusive))
++    } ?: return
++    val (windows, lines) = read
++    val budgets = lines.map { it.budget }.distinct()
++    val bars = windows.map { (m, w) ->
++        val rs = lines.filter { it.date in w }
++        monthShort(m.month) to when (split) {
++            "previstos" -> listOf(total(rs.filter { it.fixed }).v, total(rs.filter { !it.fixed }).v)
++            "verba" -> budgets.map { b -> total(rs.filter { it.budget == b }).v }
++            else -> listOf(total(rs).v)
++        }
+     }
+-    if (data.fixedByDay.isNotEmpty()) Row(Modifier.padding(top = 6.dp), verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(6.dp)) {
+-        Box(Modifier.size(5.dp).background(c.inkTertiary, CircleShape))
+-        Text("dia com previsto lançado", sans(11f, 500, 14f), color = c.inkTertiary)
++    val last = bars.last().second.sum()
++    val mean = bars.dropLast(1).map { it.second.sum() }.let { if (it.isEmpty()) 0L else it.sum() / it.size }
++    Sentence("Em ${monthLong(windows.last().first.month)}, ${money(Cents(last))}; a média dos anteriores é ${money(Cents(mean))}.")
++    if (big) {
++        OptionPicker(listOf(3 to "3", 6 to "6", 12 to "12"), n, { n = it })
++        OptionPicker(listOf("nao" to "não", "previstos" to "previstos e variável", "verba" to "por verba"), split, { split = it })
++    }
++    Columns(bars, if (split == "nao") listOf(c.inkSecondary) else if (split == "previstos") listOf(c.inkTertiary.copy(alpha = 0.3f), c.inkSecondary) else c.series, if (big) { i ->
++        onDays(windows[i].second.start, windows[i].second.endInclusive)
++    } else null)
++    Series(q, lines)
++}
++
++/** Meses à frente (AC-43): parcelas and previstos "Todo mês" of the next months, from today on, whatever the interval. */
++@Composable
++private fun AheadWidget(db: Db, q: LeituraQuery, today: LocalDate, big: Boolean) {
++    val c = Margem.colors
++    var n by rememberSaveable { mutableIntStateOf(3) }
++    val read = query(db, q.chips, n, today) { d ->
++        val cur = d.monthOf(today)
++        d.ensureMonths(cur)
++        val windows = (1..n).map { d.window(cur.plus(it, DateTimeUnit.MONTH)) }
++        // planned_dates reaches only today's month (D71): its "Todo mês" previstos are projected, nothing written.
++        val monthly = d.budgetsOverview(cur, today, BudgetOrder.MANUAL).flatMap { d.budgetDetail(it.id, cur, today).plannedLines }
++            .map { it.planned }.filter { p ->
++                p.repeats == Repeats.MONTHLY && (q.chips.isEmpty() ||
++                    q.chips.any { (it.kind == ChipKind.BUDGET && it.key == p.budget.v.toString()) || (it.kind == ChipKind.TAG && it.key in p.tags) })
++            }
++        Triple(windows, d.leituraLines(LeituraQuery(windows.first().start, windows.last().endInclusive, q.chips)), Cents(monthly.sumOf { it.cents.v }))
++    } ?: return
++    val (windows, lines, monthly) = read
++    val bars = windows.map { w -> monthShort(w.start.month) to listOf(total(lines.filter { it.date in w }).v, monthly.v) }
++    Sentence("${money(total(lines))} em parcelas e ${money(Cents(monthly.v * n))} em previstos nos próximos $n meses, de hoje em diante.")
++    if (big) OptionPicker(listOf(3 to "3", 6 to "6", 12 to "12"), n, { n = it })
++    Columns(bars, listOf(c.inkSecondary, c.inkTertiary.copy(alpha = 0.3f)))
++}
++
++/** Volta todo mês (AC-44): estabelecimentos in every month of the last 6 or 12, at a similar value, not from a previsto. */
++@Composable
++private fun MonthlyWidget(db: Db, q: LeituraQuery, today: LocalDate, big: Boolean) {
++    var n by rememberSaveable { mutableIntStateOf(6) }
++    val read = query(db, q.chips, n, today) { d ->
++        val cur = d.monthOf(today)
++        val windows = (n downTo 1).map { d.window(cur.minus(it, DateTimeUnit.MONTH)) }
++        windows to d.leituraLines(LeituraQuery(windows.first().start, windows.last().endInclusive, q.chips))
++    } ?: return
++    val (windows, lines) = read
++    val rows = groups(lines, ChipKind.MERCHANT).mapNotNull { (chip, rs) ->
++        val months = windows.map { w -> total(rs.filter { it.date in w }).v }
++        // Similar: the largest month at most half again the smallest.
++        if (rs.any { it.fixed } || months.any { it == 0L } || months.max() * 2 > months.min() * 3) null
++        else Triple(chip, months.sum() / n, "${moneyPlain(Cents(months.sum() / n))} por mês")
++    }
++    Sentence(if (rows.isEmpty()) "Nenhum estabelecimento voltou todo mês nos últimos $n meses." else "${count(rows.size, "estabelecimento volta", "estabelecimentos voltam")} todo mês sem previsto.")
++    if (big) OptionPicker(listOf(6 to "6 meses", 12 to "12 meses"), n, { n = it })
++    Ranks(if (big) rows else rows.take(3), null)
++}
++
++/**
++ * Dia e hora (AC-26, AC-45): 7 days × 6 bands of 4 hours, only lançamentos of recados, parcela 1, not of a previsto
++ * (R21); says how many stayed out. Contagem by default, "Só até R$ 50" on.
++ */
++@Composable
++private fun HourWidget(q: LeituraQuery, lines: List<LeituraRow>, big: Boolean) {
++    val c = Margem.colors
++    var summing by rememberSaveable { mutableStateOf(false) }
++    var small by rememberSaveable { mutableStateOf(true) }
++    val timed = lines.filter { it.source.isNotEmpty() && it.k == 1 && !it.fixed }
++    val shown = timed.filter { !small || it.cents.v <= 5_000 }
++    val grid = Array(7) { LongArray(6) }
++    for (r in shown) grid[r.date.dayOfWeek.ordinal][r.time.hour / 4] += if (summing) r.cents.v else 1
++    val max = maxOf(grid.maxOf { it.max() }, 1L)
++    Sentence("${count(timed.size, "lançamento", "lançamentos")} com hora de recado; ${lines.size - timed.size} ficaram de fora.")
++    if (big) {
++        OptionPicker(listOf(false to "contagem", true to "soma"), summing, { summing = it })
++        Row(Modifier.heightIn(min = 48.dp).clickable { small = !small }, verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(10.dp)) {
++            Check(small)
++            Text("Só até R$ 50", sans(14f, 400, 18f))
++        }
++    }
++    for (band in 0 until 6) Row(Modifier.fillMaxWidth().padding(top = 2.dp), horizontalArrangement = Arrangement.spacedBy(2.dp), verticalAlignment = Alignment.CenterVertically) {
++        Text("${band * 4}h", sans(10f, 500, 12f, tabular = true), Modifier.widthIn(min = 24.dp), c.inkTertiary)
++        for (wd in 0 until 7) {
++            val v = grid[wd][band]
++            Box(Modifier.weight(1f).height(if (big) 22.dp else 12.dp).background(c.heat[if (v == 0L) 0 else ((4 * v + max - 1) / max).toInt().coerceIn(1, 4)]))
++        }
+     }
++    Series(q, shown)
+ }
+diff --git a/androidApp/src/main/kotlin/com/kaiodelphino/margem/ui/MainActivity.kt b/androidApp/src/main/kotlin/com/kaiodelphino/margem/ui/MainActivity.kt
+index 3ae6bda..4ead5fd 100644
+--- a/androidApp/src/main/kotlin/com/kaiodelphino/margem/ui/MainActivity.kt
++++ b/androidApp/src/main/kotlin/com/kaiodelphino/margem/ui/MainActivity.kt
+@@ -1,6 +1,7 @@
+ package com.kaiodelphino.margem.ui
+ 
+ import android.content.Intent
++import android.net.Uri
+ import android.graphics.Color as AndroidColor
+ import android.os.Bundle
+ import androidx.activity.ComponentActivity
+@@ -39,6 +40,9 @@ import androidx.compose.ui.platform.LocalContext
+ import androidx.lifecycle.Lifecycle
+ import androidx.lifecycle.compose.LifecycleEventEffect
+ import com.kaiodelphino.margem.BudgetId
++import com.kaiodelphino.margem.Chip
++import com.kaiodelphino.margem.ChipKind
++import com.kaiodelphino.margem.LeituraQuery
+ import com.kaiodelphino.margem.NO_MONTH
+ import com.kaiodelphino.margem.Db
+ import com.kaiodelphino.margem.MargemApp
+@@ -49,6 +53,7 @@ import com.kaiodelphino.margem.TransactionId
+ import com.kaiodelphino.margem.isAccessGranted
+ import com.kaiodelphino.margem.widgets.Margem
+ import com.kaiodelphino.margem.widgets.MargemTheme
++import com.kaiodelphino.margem.widgets.Snack
+ import com.kaiodelphino.margem.widgets.SnackHost
+ import com.kaiodelphino.margem.widgets.SnackbarHost
+ import com.kaiodelphino.margem.widgets.Tab
+@@ -71,6 +76,8 @@ sealed interface Screen {
+     data object Inbox : Screen
+     data object Transactions : Screen
+     data object Insights : Screen
++    /** A Leitura widget's page (spec R12), opened on [query]: the Leitura's, or Mês a mês de X's (R14). */
++    data class LeituraWidget(val widget: String, val query: LeituraQuery) : Screen
+     data object Settings : Screen
+     data class Budget(val id: BudgetId, val month: YearMonth) : Screen
+     data object NewBudget : Screen
+@@ -100,6 +107,7 @@ private fun encode(s: Screen): String = when (s) {
+     Screen.Inbox -> "inbox"
+     Screen.Transactions -> "transactions"
+     Screen.Insights -> "insights"
++    is Screen.LeituraWidget -> "leitura:${s.widget}:${encodeQuery(s.query)}"
+     Screen.Settings -> "settings"
+     is Screen.Budget -> "budget:${s.id.v}:${s.month}"
+     Screen.NewBudget -> "newBudget"
+@@ -125,6 +133,7 @@ private fun decode(s: String): Screen {
+         "inbox" -> Screen.Inbox
+         "transactions" -> Screen.Transactions
+         "insights" -> Screen.Insights
++        "leitura" -> Screen.LeituraWidget(p[1], decodeQuery(p[2]))
+         "settings" -> Screen.Settings
+         "budget" -> Screen.Budget(BudgetId(p[1].toLong()), YearMonth.parse(p[2]))
+         "newBudget" -> Screen.NewBudget
+@@ -147,6 +156,22 @@ private fun decode(s: String): Screen {
+     }
+ }
+ 
++/** "from|to|separate|KIND,key,label;…", key and label URI-encoded: no ':' for [encode], no '|', ';' or ','. */
++private fun encodeQuery(q: LeituraQuery): String =
++    "${q.from}|${q.to}|${if (q.separate) 1 else 0}|" + q.chips.joinToString(";") { "${it.kind},${Uri.encode(it.key)},${Uri.encode(it.label)}" }
++
++private fun decodeQuery(s: String): LeituraQuery {
++    val p = s.split('|')
++    val chips = p[3].split(';').filter(String::isNotEmpty).map {
++        val c = it.split(',')
++        Chip(ChipKind.valueOf(c[0]), Uri.decode(c[1]), Uri.decode(c[2]))
++    }
++    return LeituraQuery(LocalDate.parse(p[0]), LocalDate.parse(p[1]), chips, p[2] == "1")
++}
++
++/** The Leitura's query across recreation and process death (AC-F3). */
++val QuerySaver = Saver<LeituraQuery, String>(save = { encodeQuery(it) }, restore = ::decodeQuery)
++
+ private val StackSaver = Saver<List<Screen>, ArrayList<String>>(
+     save = { stack -> ArrayList(stack.map(::encode)) },
+     restore = { saved -> saved.map(::decode) },
+@@ -155,7 +180,7 @@ private val StackSaver = Saver<List<Screen>, ArrayList<String>>(
+ private fun tabOf(s: Screen): Tab = when (s) {
+     Screen.Inbox, is Screen.Post, is Screen.Refund -> Tab.INBOX
+     Screen.Transactions, is Screen.Edit, Screen.NewTransaction, is Screen.FromPlanned, is Screen.EditPlanned -> Tab.TRANSACTIONS
+-    Screen.Insights -> Tab.INSIGHTS
++    Screen.Insights, is Screen.LeituraWidget -> Tab.INSIGHTS
+     Screen.Settings, Screen.Dismissed, Screen.Sources, Screen.Tags, Screen.StartDays, Screen.Backup, Screen.Cobudget -> Tab.SETTINGS
+     Screen.Budgets, is Screen.Budget, Screen.NewBudget, is Screen.EditBudget -> Tab.BUDGETS
+ }
+@@ -223,9 +248,12 @@ fun App(db: Db, tabRequest: Screen?, onTabOpened: () -> Unit) {
+     // D18: the screens under the top keep their rememberSaveable state (a form while Nova verba is on top, D66);
+     // a screen that leaves the stack drops it.
+     val saved = rememberSaveableStateHolder()
++    // The Leitura's query lives while its tab is open (D-5): leaving the tab resets it.
++    var leitura by rememberSaveable(stateSaver = QuerySaver) { mutableStateOf(LeituraQuery()) }
+     fun keyOf(i: Int, s: List<Screen>) = "$i:${encode(s[i])}"
+     fun move(next: List<Screen>) {
+         for (i in stack.indices) if (i >= next.size || next[i] != stack[i]) saved.removeState(keyOf(i, stack))
++        if (next.first() != Screen.Insights) leitura = LeituraQuery()
+         stack = next
+     }
+     LaunchedEffect(tabRequest) {
+@@ -242,6 +270,19 @@ fun App(db: Db, tabRequest: Screen?, onTabOpened: () -> Unit) {
+     val back: () -> Unit = { move(if (stack.size > 1) stack.dropLast(1) else listOf(Screen.Budgets)) }
+     val home: () -> Unit = { move(listOf(Screen.Budgets)) }
+     val replace: (Screen) -> Unit = { move(stack.dropLast(1) + it) }
++    // Spec R14: "Só X", "+ ou X" and "Usar como intervalo" change the whole Leitura and go back to the grid, with
++    // Desfazer; once the tab was left, the Leitura is already reset (D-5) and Desfazer changes nothing (AC-F4).
++    val leituraTo: (LeituraQuery, String) -> Unit = { q, text ->
++        val old = leitura
++        leitura = q
++        move(listOf(Screen.Insights))
++        snack.show(Snack(text, "Desfazer") {
++            if (stack.first() == Screen.Insights) {
++                leitura = old
++                move(listOf(Screen.Insights))
++            }
++        })
++    }
+     // Back from another tab's root goes to Verbas; from Verbas it leaves the app.
+     BackHandler(stack.size > 1 || screen != Screen.Budgets, back)
+     // Forms (lançar, editar, novo) take the whole page; everything else keeps the tab bar.
+@@ -255,7 +296,8 @@ fun App(db: Db, tabRequest: Screen?, onTabOpened: () -> Unit) {
+                 Screen.Budgets -> Budgets(db, snack, go)
+                 Screen.Inbox -> Inbox(db, granted, snack, go)
+                 Screen.Transactions -> Transactions(db, snack, go)
+-                Screen.Insights -> Insights(db)
++                Screen.Insights -> Insights(db, leitura, { leitura = it }, go)
++                is Screen.LeituraWidget -> LeituraWidgetPage(db, screen.widget, screen.query, go, back, leituraTo)
+                 Screen.Settings -> Settings(db, granted, go)
+                 Screen.Sources -> Sources(db, back)
+                 is Screen.Budget -> BudgetDetailScreen(db, screen.id, screen.month, go, { move(stack.dropLast(1) + Screen.Budget(screen.id, it)) }, back)
+diff --git a/androidApp/src/main/kotlin/com/kaiodelphino/margem/ui/Transactions.kt b/androidApp/src/main/kotlin/com/kaiodelphino/margem/ui/Transactions.kt
+index a993930..997237e 100644
+--- a/androidApp/src/main/kotlin/com/kaiodelphino/margem/ui/Transactions.kt
++++ b/androidApp/src/main/kotlin/com/kaiodelphino/margem/ui/Transactions.kt
+@@ -2,22 +2,15 @@ package com.kaiodelphino.margem.ui
+ 
+ import androidx.compose.foundation.background
+ import androidx.compose.foundation.ExperimentalFoundationApi
+-import androidx.compose.foundation.interaction.MutableInteractionSource
+-import androidx.compose.foundation.interaction.collectIsFocusedAsState
+ import androidx.compose.foundation.layout.WindowInsets
+ import androidx.compose.foundation.layout.isImeVisible
+ import androidx.compose.foundation.relocation.BringIntoViewRequester
+ import androidx.compose.foundation.relocation.bringIntoViewRequester
+-import androidx.compose.foundation.text.BasicTextField
+-import androidx.compose.foundation.text.KeyboardActions
+-import androidx.compose.foundation.text.KeyboardOptions
+ import androidx.compose.ui.focus.onFocusChanged
+ import androidx.compose.ui.layout.onSizeChanged
+ import androidx.compose.ui.platform.LocalDensity
+-import androidx.compose.ui.graphics.SolidColor
+ import androidx.compose.ui.semantics.CollectionItemInfo
+ import androidx.compose.ui.semantics.collectionItemInfo
+-import androidx.compose.ui.text.input.ImeAction
+ import com.kaiodelphino.margem.fold
+ import com.kaiodelphino.margem.foldedMatch
+ import com.kaiodelphino.margem.widgets.dashedBorder
+@@ -114,6 +107,7 @@ import com.kaiodelphino.margem.widgets.InfoBand
+ import com.kaiodelphino.margem.widgets.Margem
+ import com.kaiodelphino.margem.widgets.MargemDialog
+ import com.kaiodelphino.margem.widgets.MoneyField
++import com.kaiodelphino.margem.widgets.SearchLine
+ import com.kaiodelphino.margem.widgets.Snack
+ import com.kaiodelphino.margem.widgets.SnackHost
+ import com.kaiodelphino.margem.widgets.Stepper
+@@ -1430,37 +1424,6 @@ private fun BudgetField(name: String, margin: Cents?, month: String, suggested:
+     }
+ }
+ 
+-/** Book 8.12: a search line — lupa, the text, the rule under it; [onDone] on the keyboard's done keeps the focus. */
+-@Composable
+-private fun SearchLine(
+-    value: String, onChange: (String) -> Unit, placeholder: String, tag: String, modifier: Modifier = Modifier, onDone: (() -> Unit)? = null,
+-) {
+-    val c = Margem.colors
+-    val interaction = remember { MutableInteractionSource() }
+-    val focused by interaction.collectIsFocusedAsState()
+-    BasicTextField(
+-        value, onChange, modifier.fillMaxWidth().testTag(tag), singleLine = true, interactionSource = interaction,
+-        textStyle = sans(16f, 400, 20f).copy(color = c.ink), cursorBrush = SolidColor(c.info),
+-        keyboardOptions = KeyboardOptions(imeAction = ImeAction.Done),
+-        keyboardActions = if (onDone == null) KeyboardActions.Default else KeyboardActions(onDone = { onDone() }),
+-        decorationBox = { inner ->
+-            Row(
+-                Modifier.fillMaxWidth().heightIn(min = 48.dp).drawBehind {
+-                    val w = (if (focused) 2 else 1).dp.toPx()
+-                    drawLine(if (focused) c.ink else c.ruleStrong, Offset(0f, size.height - w / 2), Offset(size.width, size.height - w / 2), w)
+-                },
+-                verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(10.dp),
+-            ) {
+-                Icon(R.drawable.i_lupa, tint = c.inkTertiary, size = 20.dp)
+-                Box(Modifier.weight(1f)) {
+-                    if (value.isEmpty()) Text(placeholder, sans(16f, 400, 20f), color = c.inkTertiary)
+-                    inner()
+-                }
+-            }
+-        },
+-    )
+-}
+-
+ /** Book 8.12: "Em qual verba entra?" [TransactionTags.BUDGET_SHEET]. */
+ @Composable
+ private fun BudgetSheet(
+diff --git a/androidApp/src/main/kotlin/com/kaiodelphino/margem/widgets/Components.kt b/androidApp/src/main/kotlin/com/kaiodelphino/margem/widgets/Components.kt
+index 0646179..032e632 100644
+--- a/androidApp/src/main/kotlin/com/kaiodelphino/margem/widgets/Components.kt
++++ b/androidApp/src/main/kotlin/com/kaiodelphino/margem/widgets/Components.kt
+@@ -974,17 +974,19 @@ fun TabBar(selected: Tab, onSelect: (Tab) -> Unit, modifier: Modifier = Modifier
+ /**
+  * Book §8.7 selector: a few short options side by side; the active one in ink 700 with a 2 dp rule
+  * below, and `selected`. "Ordenar" in Verbas, theme and widget order in Ajustes. [tag]: each option is
+- * "$tag" + its value in lowercase (D35).
++ * "$tag" + its value in lowercase (D35). [disabled] options stay in place and can't be chosen (Leitura's ritmo, R17).
+  */
+ @Composable
+-fun <T> OptionPicker(options: List<Pair<T, String>>, selected: T, onSelect: (T) -> Unit, modifier: Modifier = Modifier, tag: String = "") {
++fun <T> OptionPicker(
++    options: List<Pair<T, String>>, selected: T, onSelect: (T) -> Unit, modifier: Modifier = Modifier, tag: String = "", disabled: Set<T> = emptySet(),
++) {
+     val c = Margem.colors
+     Row(modifier.fillMaxWidth().drawBehind { drawLine(c.rule, Offset(0f, size.height - 0.5f), Offset(size.width, size.height - 0.5f), 1.dp.toPx()) }) {
+         for ((value, label) in options) {
+             val on = value == selected
+             Box(
+                 Modifier.weight(1f).heightIn(min = 48.dp).testTag("$tag${value.toString().lowercase()}")
+-                    .semantics { this.selected = on }.clickable(role = Role.RadioButton) { onSelect(value) }
++                    .semantics { this.selected = on }.clickable(enabled = value !in disabled, role = Role.RadioButton) { onSelect(value) }
+                     .drawBehind { if (on) drawRect(c.ink, Offset(size.width * 0.14f, size.height - 1.dp.toPx()), Size(size.width * 0.72f, 2.dp.toPx())) }
+                     .padding(horizontal = 6.dp),
+                 contentAlignment = Alignment.Center,
+@@ -993,6 +995,37 @@ fun <T> OptionPicker(options: List<Pair<T, String>>, selected: T, onSelect: (T)
+     }
+ }
+ 
++/** Book 8.12: a search line — lupa, the text, the rule under it; [onDone] on the keyboard's done keeps the focus. */
++@Composable
++fun SearchLine(
++    value: String, onChange: (String) -> Unit, placeholder: String, tag: String, modifier: Modifier = Modifier, onDone: (() -> Unit)? = null,
++) {
++    val c = Margem.colors
++    val interaction = remember { MutableInteractionSource() }
++    val focused by interaction.collectIsFocusedAsState()
++    BasicTextField(
++        value, onChange, modifier.fillMaxWidth().testTag(tag), singleLine = true, interactionSource = interaction,
++        textStyle = sans(16f, 400, 20f).copy(color = c.ink), cursorBrush = SolidColor(c.info),
++        keyboardOptions = KeyboardOptions(imeAction = ImeAction.Done),
++        keyboardActions = if (onDone == null) KeyboardActions.Default else KeyboardActions(onDone = { onDone() }),
++        decorationBox = { inner ->
++            Row(
++                Modifier.fillMaxWidth().heightIn(min = 48.dp).drawBehind {
++                    val w = (if (focused) 2 else 1).dp.toPx()
++                    drawLine(if (focused) c.ink else c.ruleStrong, Offset(0f, size.height - w / 2), Offset(size.width, size.height - w / 2), w)
++                },
++                verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(10.dp),
++            ) {
++                Icon(R.drawable.i_lupa, tint = c.inkTertiary, size = 20.dp)
++                Box(Modifier.weight(1f)) {
++                    if (value.isEmpty()) Text(placeholder, sans(16f, 400, 20f), color = c.inkTertiary)
++                    inner()
++                }
++            }
++        },
++    )
++}
++
+ // ---- Page pieces ----
+ 
+ /** Rubric, headline and dek: how each screen opens, like a magazine page (book §10). */
+diff --git a/docs/architecture.md b/docs/architecture.md
+index 8783c1d..b4a2de1 100644
+--- a/docs/architecture.md
++++ b/docs/architecture.md
+@@ -24,7 +24,7 @@ Estilo: Codin' Dirty (CLAUDE.md): poucas camadas, funções grandes onde está o
+ | D14 | **Backup = cópia do arquivo do banco**, feita no `shared` com `kotlinx-io`: exportar = `VACUUM INTO` o caminho dado; importar fecha o escritor e os leitores, substitui o arquivo (apagando `-wal`/`-shm`), reabre, migra e incrementa `version`. A escolha do arquivo (SAF) fica no `androidApp`, que entrega um caminho local. Na tela, importar pede confirmação num diálogo antes de chamar `importFrom` (bloco 5). | Sem formato próprio para manter; o mesmo código nos dois apps e nos testes da JVM. |
+ | D15 | **UI em Compose Foundation, sem Material 3.** Tokens do book num objeto `Margem` e cerca de 10 componentes próprios. | Fiel ao book, sem desligar padrões do Material. |
+ | D16 | **Fontes variáveis empacotadas** em `res/font`, 4 arquivos do `google/fonts` (OFL): Newsreader e Newsreader Italic (`opsz`, `wght`), Source Sans 3 e Source Sans 3 Italic (`wght`). Cada estilo do book vira um `Font` com `FontVariation` (`wght` e, na Newsreader, `opsz` = corpo em sp, limitado a 6–72). Pesos do book: Newsreader 300–600 e itálico 400/500; Source Sans 3 400–700. | Funciona offline desde o primeiro uso, inclusive nos widgets. Um arquivo por família e estilo cobre todos os pesos, e o eixo óptico faz o mesmo desenho ficar robusto pequeno e fino grande, como no book. |
+-| D17 | **Gráficos em Canvas próprio**, um Composable por gráfico. | São 4 gráficos simples, no estilo do book; sem dependência. |
++| D17 | **Gráficos em Canvas próprio**, um Composable por gráfico. Revisto em 2026-11-06 (D76): a Leitura v2 tem 18 widgets, mas os gráficos se repetem (colunas, linhas de ranking, calor, acumulado): um Composable por forma de gráfico. | São gráficos simples, no estilo do book; sem dependência. |
+ | D18 | **Navegação sem biblioteca**: `sealed interface Screen`, pilha em `rememberSaveable`, um `when` e `BackHandler`. | Explícita; depura fácil. |
+ | D19 | **Sem ViewModel.** Cada tela observa `Db.version` e consulta o Db direto; formulários em `rememberSaveable`. | O banco já é o estado; menos classes. |
+ | D20 | **Widgets em Jetpack Glance**, redimensionáveis (`SizeMode.Responsive`). | Mesmo jeito de pensar da UI; layout por tamanho. |
+@@ -51,7 +51,7 @@ Estilo: Codin' Dirty (CLAUDE.md): poucas camadas, funções grandes onde está o
+ | D42 | **Teto: uma linha por mês** em `ceiling_months`, criada sob demanda pelo `ensureMonths` (D30) copiando o **padrão** (`settings.ceiling`), não o mês anterior; meses pulados também recebem o padrão. `0` = sem teto (zero é inicialização). "Só este mês" grava só a linha do mês atual; "deste mês em diante" grava o padrão e a linha do mês atual e apaga as linhas de meses depois dele. Migração v2. | Cada mês guarda o teto que valia nele, como a cota (D8): a Leitura pode mostrá-lo depois sem migrar de novo. Copiar o padrão, e não o mês anterior, é o que faz o "só este mês" não vazar para o mês seguinte. |
+ | D43 | **Mudar o início do mês copia a cota para o mês atual novo**: `setMonthStartDay`, na mesma escrita, garante a linha de cada verba no mês atual antigo (como o `ensureMonths`) e copia essa cota para o mês atual novo com `INSERT OR IGNORE`: onde já havia linha, fica a que estava. Quando o mês atual volta um mês, esse vira o primeiro mês das verbas criadas no mês de antes. Decidido em 2026-10-14, depois de verbas sumirem da aba Verbas e do Lançar ao mudar o dia 1 para um dia depois de hoje. | O `ensureMonths` só preenche para a frente (D8, D30), e o detalhe da verba o chama com meses passados, então preencher para trás ali criaria cota antes de a verba existir. Na troca, o único mês que pode ficar sem linha é o atual novo. |
+ | D44 | **Ritmo ideal dia a dia no `shared`**: `BudgetMonth.idealByDay`, um valor por dia da janela do mês (índice 0 = `start`), = o ritmo ideal de §6.4 com hoje = aquele dia; o dia de hoje é igual a `ideal`. A Leitura só desenha. Decidido no bloco 6. | D12: a regra do ritmo num lugar só. |
+-| D45 | **Leitura sem consulta nova**: a tela usa `history`, `tagRanking`, `merchantRanking`, `spentByDay` e `budgetDetail` (linhas do mês para o gasto acumulado; `budgetsOverview` para a ordem de risco). Cor de série = posição por id entre as verbas que existem, calculada na tela (spec §7.5). Frases, degraus do calendário e escala dos gráficos são cálculo de apresentação em `ui/Insights.kt`. Tags em `InsightsTags` (D35). Decidido no bloco 6. Revisto em 2026-11-04 (marca dos previstos, spec §7.5): `RankRow.fixed` (a parte de lançamentos de previsto, na mesma consulta) e `spentByDay(…, fixedOnly = true)`, sem função nova. | As leituras existem desde o bloco 1 e já são testadas; sem schema novo, sem disputar versão com teto e legenda. |
++| D45 | **Substituída por D76** (2026-11-06). **Leitura sem consulta nova**: a tela usa `history`, `tagRanking`, `merchantRanking`, `spentByDay` e `budgetDetail` (linhas do mês para o gasto acumulado; `budgetsOverview` para a ordem de risco). Cor de série = posição por id entre as verbas que existem, calculada na tela (spec §7.5). Frases, degraus do calendário e escala dos gráficos são cálculo de apresentação em `ui/Insights.kt`. Tags em `InsightsTags` (D35). Decidido no bloco 6. Revisto em 2026-11-04 (marca dos previstos, spec §7.5): `RankRow.fixed` (a parte de lançamentos de previsto, na mesma consulta) e `spentByDay(…, fixedOnly = true)`, sem função nova. | As leituras existem desde o bloco 1 e já são testadas; sem schema novo, sem disputar versão com teto e legenda. |
+ | D46 | **Migração com banco golden: descartada** em 2026-10-16. Chegou a ser planejada com um backup real anonimizado, mas foi tirada antes de entrar no repositório. | Decisão do usuário. |
+ | D47 | **Teste baseado em modelo**: sequências aleatórias de ações (seed fixa) rodam no `Db` e num modelo ingênuo em memória (listas Kotlin, sem SQL) escrito a partir da spec; as leituras públicas dos dois são comparadas a cada passo. Decidido em 2026-10-16. | As invariantes (§5) pegam estado impossível; o modelo pega estado possível e errado (mês trocado, estorno contado duas vezes). |
+ | D48 | **Teste de mutação**: `make mutation` roda o PIT (1.30.0) no alvo `jvm` do `shared`, com a suíte do `commonTest` (como `jvmTest`): os mutadores padrão do PIT (`DEFAULTS`) no bytecode Kotlin, mais um **operador de SQL** próprio que muta o SQL dentro das constantes de string (`LDC` e a receita do `makeConcatWithConstants` de um template `$x`) que começam com SELECT, INSERT, UPDATE, DELETE, WITH ou REPLACE, ou, nas classes `Db` e `Capture` (onde as consultas são montadas com trechos como `"t.budget_id = ? AND t.id = ?"`), que têm uma palavra de SQL em maiúsculas (AND, OR, WHERE, JOIN, ORDER, SUM, IS NULL…; ampliado em 2026-10-20): AND↔OR (fora o AND do BETWEEN e o OR de `INSERT OR`), `<`↔`<=`, `>`↔`>=`, SUM↔MAX, LEFT JOIN↔JOIN, `COALESCE(x, d)`→`x`, ASC↔DESC, IS NULL↔IS NOT NULL; um mutante por ocorrência, fora de literais entre aspas. O operador é um build incluído pequeno (`tools/pit-sql`, Java, `MethodMutatorFactory` do PIT por `ServiceLoader`, nome `SQL`), construído só pela tarefa `:shared:mutation`. Código de produção não muda. `make check` dependia de `make mutation` até 2026-10-23, quando a mutação saiu dele (Q2, decisão do usuário: 37 min e `PitError`); agora roda à parte; `make test` e `./gradlew test` não rodam o PIT. `--mutationThreshold` = o placar alcançado ao configurar, arredondado para baixo: **86** (86,44% em 2026-10-20, com o operador ampliado: Kotlin 87,19%, SQL 78,10%, 1268 mutantes, rodada de ~28 min; na configuração inicial, 85,99%, e antes dos testes novos, 79,98%); mutante sobrevivente que pode esconder bug vira teste de integração pela API pública (`MutationKillTest`), equivalente fica de fora. **Exceção à D23** (2026-10-20): as exclusões que deixariam linhas órfãs (`budget_months`, `week_steps`, `installments`, `transaction_tags`, `refunds`) não aparecem em nenhuma leitura pública, então um teste do `MutationKillTest` olha o arquivo do `exportTo` com SQL e conta as linhas que apontam para verba, lançamento ou marcador apagados. É o único teste que confere linhas do Margem direto no arquivo; os outros que abrem o arquivo só montam cenário (backup do cobudget, versão do schema). **Se o `make check` ficar lento demais (a rodada leva ~25–35 min), o `mutation` sai dele.** Decidido em 2026-10-16. | Os testes de contrato cobrem o que a spec diz, não provam que pegariam um erro: o mutante mostra o que nenhum teste vê. O SQL é metade da regra do app (D5, D12) e os mutadores do PIT não enxergam dentro de uma string. O limite impede que um bloco novo baixe a cobertura sem ninguém ver. |
+@@ -82,6 +82,7 @@ Estilo: Codin' Dirty (CLAUDE.md): poucas camadas, funções grandes onde está o
+ | D73 | **Total e previstos do detalhe sem função nova de leitura** (2026-10-27, M9, M12). O cabeçalho de Verbas soma, na tela, os `BudgetMonth` que `budgetsOverview` já devolve (`limit`, `spent`, `open`, `fixed`) e lê o `Ceiling` de sempre. `BudgetDetail` ganha `plannedLines: List<PlannedLine>` (ocorrências da verba com data no mês, pelo dia: nome, dia, repete, em aberto com o valor do previsto ou lançada com o valor de `fixedByDay`, e a ocorrência, para abrir a folha). Forma (2026-10-27, decisão do usuário): `PlannedLine(planned: Planned, cents, launched)`, o `Planned` da ocorrência (aberta ou lançada), o valor da linha e a data da parcela lançada (NO_DATE em aberto). | Nada novo para manter em sincronia: o total é a soma do que a lista já mostra. |
+ | D74 | **Rodada de contrato da margem honesta** (2026-10-27): prefixo `Reserva…` (`ReservaEdgeTest`, `ReservaFuzzTest`, `ReservaConcurrencyTest`, `ReservaInvariantsTest` no `shared`, `ReservaUiTest` no `androidApp`), como no previsto (D63). | Mesmo oráculo independente dos outros blocos. |
+ | D75 | **Pipeline de feature** (2026-11-04, decisões do usuário): o pipeline de `~/Development/pipeline` (feito para o uList) é **copiado e adaptado neste repo**, sem perfil genérico: `.claude/pipeline/RULES.md`, skills `req-gather`, `dev-build`, `dev-verify`, `dev-bench`, `dev-minimize`, `dev-run`, `margem-review`, `simplification-review`, workflows em `.claude/workflows/`, scripts em `scripts/pipeline/`. **Testes no estágio 1**: commit de contrato (símbolos do manifesto, KDoc, corpos `TODO()`, `make test` verde) → testes dos critérios de aceite (vermelhos) → corrida de **2** implementações em worktrees, em paralelo com a rodada de contrato às cegas de sempre (Borda, Fuzz, Concorrência, Invariantes, UI) → aplica a menor verde → triagem da rodada; regra que a spec não cobre para o pipeline e vai ao usuário, uma pergunta por vez. **Orçamento padrão** por feature: 600 linhas de produção, 1 arquivo novo, 10 símbolos públicos (`const val` de tags não contam), declarado no manifesto antes do código. **Commits**: checkpoints num branch de trabalho (nunca `main`), empurrado ao `origin`; `scripts/pipeline/finish.sh` faz o cherry-pick para `main` depois de uma aprovação do usuário, roda `make check` e não empurra `main`. **Ferramentas**: Kover 0.9.9 nos dois módulos (`make coverage`, XML único para o `uncovered.sh`) e detekt 2.0.0-alpha.3 (o da linha 2.x feito sobre Kotlin 2.3.21), regras padrão, sem falhar o build; `dead.sh` lê só as regras de código morto, mais os avisos `w:` do kotlinc. Nenhum dos dois entra no `make test` nem no `make check`. | Uma feature inteira de ponta a ponta, com os dois oráculos (critérios de aceite e rodada às cegas, §10) e a seleção pelo menor diff. Copiar em vez de generalizar: o uList segue intocado e o pipeline daqui fala Kotlin, Gradle e as decisões deste repo. |
++| D76 | **Leitura v2: leituras por widget sobre uma consulta só** (2026-11-06, new-leitura-page, API exploratória). O filtro é um valor, `LeituraQuery(from, to, chips, separate)` (`Chip(kind, key, label)`, `ChipKind` verba · marcador · estabelecimento · recado); `from` NO_DATE = o mês da verba de hoje. `Db.leituraLines(q)` devolve as parcelas do intervalo (estornadas fora), com o filtro em SQL: os chips somam com OU, cada lançamento uma vez. `Db.window(month)` dá a janela de um mês da verba à tela (`monthWindow` é interno). Cada widget chama `leituraLines` com a sua consulta (o intervalo anterior, o costume, os meses do Mês a mês, a facet de Para onde foi) e agrupa em Kotlin (D12); Margem, Ritmo, Semanas e Previstos do mês continuam em `budgetsOverview`/`budgetDetail`. A consulta da Leitura mora no `App` (`rememberSaveable` com `QuerySaver`) e zera quando a raiz da pilha deixa de ser a Leitura (D-5); a página é `Screen.LeituraWidget(widget, query)`; "Só", "+ ou" e "Usar como intervalo" passam por um só caminho do `App`, com Desfazer que não faz nada depois que a aba saiu. Substitui D45. | Duas funções no `Db` em vez das seis do manifesto: agrupar parcelas de um intervalo cabe em Kotlin, e o formato das leituras só se prova quando os 18 widgets as usam. Para assentar: medir no VolumeTest e, se alguma leitura passar do teto, levar o agrupamento dela ao SQL. |
+ | D33 | **Encerrada no bloco 2**: `app/` (cobudget) ficou no build até o bloco do `androidApp` e foi removido no começo dele; o build é `:shared` + `:androidApp`. O que ainda serve de base (listener, `loadLauncherApps`, casos do `CaptureTest`) é lido do histórico (`git show 7616cd2:app/...`). | O cobudget não será mais usado. A importação do backup `.db` dele (D3, D4) continua e não depende do código de `app/`. |
+ 
+ ## 2. Componentes
+@@ -289,7 +290,7 @@ sealed interface Screen {
+ - **Componentes** (`widgets/Components.kt`): botão, campo de valor, chip de marcador, cartão de recado, régua, seletor de mês, editor de passos, barra de abas, diálogo, snackbar; mais seletor de opções, aviso, cabeçalho de página e linha de lista. **Nascem todos no bloco 2**, com o visual das seções 8.x do book.
+ - **Campos de dígitos** (`MoneyField`, hora do `DateTimeDialog`): guardam o `TextFieldValue` do teclado, com a composição; só um valor vindo de fora (Desfazer, valor carregado) o substitui. Recriar o valor a cada recomposição descartava a composição de teclados que compõem o número inteiro (FlorisBoard), reiniciava a entrada e perdia dígitos. A `OffsetMapping` da máscara (`withTypedTail`) leva cada dígito digitado a um espaço de largura zero depois do valor: a composição cai em caracteres reais (o cursor do teclado não quebra) e o sublinhado que o Compose põe sob ela, que não está no book, fica com largura zero. Um toque no campo põe o cursor no fim.
+ - **Catálogo** (só no debug): `src/debug/.../CatalogActivity.kt`, segunda entrada no launcher ("Margem-Dev · catálogo"), com todos os componentes nos estados do book, alternando claro e escuro. A conferência dos componentes é visual, nele; não ganham teste unitário.
+-- **Gráficos** (`ui/Insights.kt`, D17, D45): ritmo do mês, verbas por mês, ranking, calendário de gastos, um Composable de Canvas cada; o mês do topo e a verba escolhida em `rememberSaveable`.
++- **Leitura** (`ui/Insights.kt`, D76): o filtro e a grade de 18 widgets em três contextos; um Composable por widget, o mesmo na grade e na página dele (`big`), com as opções em `rememberSaveable`; gráficos em Canvas (`Pace`, `Columns`, `Ranks`, calendário).
+ 
+ ## 8. Widgets (`androidApp`)
+ 
+diff --git a/docs/glossary.md b/docs/glossary.md
+index 3900471..d2fb8da 100644
+--- a/docs/glossary.md
++++ b/docs/glossary.md
+@@ -50,6 +50,8 @@ Vocabulário do app, alinhado ao [spec](spec.md). Fonte visual: [design_system.h
+ | Fora da margem | `PaceStatus.OVERRUN` | A margem ficou negativa: gasto + previstos em aberto passaram da cota. O excesso é dito em reais, “além”. | “R$ 12,00 além da cota.” | estourou, no vermelho, negativo, excedeu |
+ | Régua | `BudgetMeter` | Medidor da verba: trilho, previstos do mês na frente (tracejado em aberto, tinta 3 lançado), tinta do gasto variável, marca do ritmo e fio duplo da margem. | — (componente) | barra de progresso, termômetro |
+ | Leitura | `Insights` | Área de análise: gastos por verba, marcador, estabelecimento e tempo. | Aba “Leitura”. | relatórios, dashboard, estatísticas |
++| Intervalo | `LeituraQuery.from`, `to` | Os dias de-até que a Leitura lê: abre no mês atual; atalhos por mês ou início e fim no calendário. | “1 a 30 nov · até hoje” | período |
++| Costume | — | Média dos meses anteriores no mesmo trecho do intervalo (no dia 6, os dias 1 a 6 de cada um). | “R$ 35,00 acima do costume.” | normal, média histórica |
+ | Ritmo ideal | `PaceLine` | Gasto esperado até hoje pelo plano: passos das semanas fechadas + passo da semana atual proporcional aos dias corridos. Linha tracejada nos gráficos. | Rótulo “ritmo ideal” no gráfico. | meta, target |
+ | Passo semanal | `WeeklyStep` | Quanto cabe por semana: cota livre × dias da semana no mês ÷ dias do mês. Só visualização, não é limite. Editável por semana; as não editadas se ajustam para somar a cota livre, e uma semana fica sempre automática. | “Passo desta semana: R$ 140,00.” | meta semanal, limite semanal, cota semanal |
+ | Semana | `Week` | Semana de calendário, com dia de início escolhido em Ajustes, cortada no mês; a primeira e a última podem ser parciais. | “Semana de 6 a 12 out.” | — |
+diff --git a/docs/spec.md b/docs/spec.md
+index cdfbeab..1ddd2f8 100644
+--- a/docs/spec.md
++++ b/docs/spec.md
+@@ -36,7 +36,7 @@ O estorno não é crédito: é só o registro de que uma compra não conta (§6)
+     - Apagar o lançamento (ou Desfazer logo depois de lançar) apaga a legenda junto: o recado volta à Pauta sem ela, sem aviso a mais.
+     - Aparece no formulário (§7.3), em Lançamentos (§7.4), no detalhe da verba (§7.1) e na escolha da compra estornada (§7.3). Recados (Pauta, Riscados, widget da Pauta) não têm legenda; snackbars e diálogos não a mostram.
+     - Lançamento de um previsto (§2.13) nasce com o nome do previsto como legenda.
+-13. **Previsto**: gasto que a pessoa já sabe que vem (aluguel, internet, conta de luz), anotado antes de acontecer com valor, nome, dia, verba e marcadores, à espera de um recado. Não é lançamento: não é gasto nem entra nos rankings e no calendário da Leitura até ser lançado. Em aberto, **reserva** o valor dele na margem da verba, no mês do dia dele, e fica fora do ritmo: o ritmo é só da cota livre (§3, §5; 2026-10-26). Desenho: book 8.11 ([design_system.html](design_system.html#comp)).
++13. **Previsto**: gasto que a pessoa já sabe que vem (aluguel, internet, conta de luz), anotado antes de acontecer com valor, nome, dia, verba e marcadores, à espera de um recado. Não é lançamento: não é gasto até ser lançado; na Leitura, com "com previstos", aparece tracejado e à parte do gasto (§7.5, 2026-11-06). Em aberto, **reserva** o valor dele na margem da verba, no mês do dia dele, e fica fora do ritmo: o ritmo é só da cota livre (§3, §5; 2026-10-26). Desenho: book 8.11 ([design_system.html](design_system.html#comp)).
+     - **Criar**: lançamento manual com data à frente vira previsto (§7.3). Mesmas exigências de lançar: uma verba e ao menos um marcador.
+     - **Repete**: "Só uma vez" ou "Todo mês". Todo mês mantém o dia; num mês sem ele (29–31), vale o último dia. Sem data de fim: para parar, apaga-se o previsto ou muda-se para "Só uma vez". "Repete" aparece sempre no formulário — lançamento manual (com qualquer data), Lançar recado e edição. Num lançamento de hoje ou do passado, "Todo mês" lança agora e cria os previstos a partir do mês seguinte; no Lançar recado e na edição de um lançamento com recado, o previsto nasce **já ligado** à fonte e ao texto do banco desse recado, com o nome do lançamento (legenda, senão apelido, senão texto do banco). "Todo mês" num lançamento antigo cria todos os meses desde o seguinte ao da compra, os já passados atrasados; a pessoa pula o que não quiser (intencional, 2026-10-23). No **Editar previsto**, trocar "Todo mês" por "Só uma vez" deixa só a ocorrência que foi aberta para editar; as outras em aberto somem, as lançadas e puladas não mudam (2026-10-23).
+     - **Ligar**: dizer qual recado é o previsto. A primeira vez é à mão, no Lançar do recado ("É um previsto? Ligar", §7.3). A ligação guarda a **fonte e o texto do banco** do recado.
+@@ -198,24 +198,29 @@ Cinco abas: **Verbas** (início) · **Pauta** · **Lançamentos** · **Leitura**
+ - Tocar abre a edição (7.3). Botão de **lançamento manual**.
+ 
+ ### 7.5 Leitura
+-- **Um mês para a página toda**: seletor de mês no topo (do primeiro mês com verba até o atual; "1 a 31 · até sex, 9" no mês atual). Ritmo, ranking e calendário são desse mês; Verbas por mês termina nele.
+-- **Ritmo do mês**: gasto variável acumulado × plano dos passos da cota livre (ritmo ideal dia a dia), por verba, com a projeção "no passo atual", que soma os previstos do mês (§5; 2026-10-26).
+-  - **Previstos na base** (2026-11-04): os previstos do mês ficam numa faixa no pé do gráfico, como na régua (lançados em tinta 3, em aberto no contorno tracejado), e a linha do gasto variável, o ritmo ideal e a projeção partem dela. A régua da cota fica na cota cheia: a linha chega nela quando a margem zera. Mês passado: a linha termina no gasto do mês mais os previstos que ficaram em aberto.
+-  - **Uma verba por vez**: o nome dela, na linha da seção, abre a escolha entre as verbas com cota no mês; vale também para Verbas por mês. Padrão: a mais em risco no mês (ordem do §8.1). A escolha fica enquanto a tela está aberta; num mês em que a verba não tem cota, volta ao padrão.
+-  - Mês atual: o resto do mês sombreado e em branco; frase "+ R$ 51,10 sobre o ritmo ideal. No passo atual, o mês fecharia em R$ 796." (abaixo do ritmo: "R$ 20,00 abaixo do ritmo ideal. …"; fora da margem: "R$ 12,00 além da cota. …"; sem projeção quando o ritmo ideal de hoje é R$ 0,00, §5, ou quando nada foi gasto no mês). Sobre e abaixo do ritmo comparam o gasto variável com o ritmo ideal da cota livre; "além da cota" é a margem negativa (cota − gasto − previstos em aberto, §3) (2026-10-27).
+-  - Mês passado: o mês inteiro, sem sombra e sem projeção; frase "Fechou em R$ 1.180,00, R$ 60,00 dentro da cota." ou "… R$ 12,00 além da cota." (o gasto do mês; dentro e além pela margem do §3, com os previstos que ficaram em aberto; "exatamente a cota" com margem zero; 2026-10-27).
+-- **Verbas por mês**: a verba escolhida nos 6 meses até o mês do topo, gasto × cota de cada mês (a cota de cada mês, §3), excesso em hachura com o valor. Meses antes do primeiro mês da verba ficam no lugar, vazios. Frase: "Dois meses fora da margem." / "Nenhum mês fora da margem."
+-- **Marcadores e estabelecimentos**: ranking **por valor** no mês do topo, com a contagem ao lado (estabelecimentos pelo apelido; o mesmo apelido é o mesmo lugar, sem diferença de maiúsculas e acentos; a legenda não entra).
+-  - Seletor "Marcadores · Estabelecimentos" numa seção só; 6 linhas e depois "Ver todos (n)", que abre o resto no lugar. A escolha fica enquanto a tela está aberta.
+-  - Um lançamento com vários marcadores conta inteiro em cada um; a tela avisa que a soma dos marcadores pode passar do total.
+-  - Frase: "feira puxa a fila."
+-- **Calendário de gastos**: mapa de calor por dia do mês do topo, com a semana dos Ajustes. Degrau 0 = sem gasto; degraus 1–4 em faixas iguais: degrau = maior dia do mês ÷ 4, arredondado para cima em R$ 10; o dia vai ao degrau ⌈gasto ÷ degrau⌉. Legenda "cada degrau ≈ R$ 60". Frase pelo dia da semana que pesa: o de maior média por ocorrência nos dias até hoje (o mês inteiro num mês passado), com gasto em pelo menos dois deles e sem empate: "Os sábados pesam." e "31% do mês em quatro sábados" (a parte do gasto até hoje, nos sábados até hoje); sem dia que pese, "Nenhum dia da semana pesa." e sem a segunda linha (2026-11-04, decisão do usuário).
+-- **Previstos no ranking e no calendário** (2026-11-04, decisão do usuário): os lançamentos de previsto continuam contando, marcados como na régua: na barra do ranking, a parte de previstos vem primeiro, apagada, e o resto como sempre (TalkBack: "dos quais R$ 2.000,00 de previstos"); no calendário, o dia com lançamento de previsto ganha um ponto em tinta 3 no canto, e a legenda diz "dia com previsto lançado".
+-- Ranking e calendário contam a compra parcelada **pela data de cada parcela**, como o Gasto do mês (§3); a contagem do ranking é de lançamentos com parcela no período. Compras estornadas não contam.
+-- **Frases** de conclusão por modelos fixos (acima); sem anotações com fio-guia.
+-- **Acessibilidade**: cada gráfico tem descrição para o TalkBack com a frase de conclusão e os números principais; sem tabela equivalente.
+-- **Vazio**: sem verba, "Nada para ler ainda."; com verba mas nada lançado no mês, Ritmo e Verbas por mês desenham em zero, e ranking e calendário dizem "Nada lançado em outubro." no lugar do gráfico.
+-- **Cor da verba** (book 9.1): pela ordem de criação entre as verbas que existem (a primeira é Índigo); da 7ª em diante, "Outras". Apagar uma verba muda a cor das mais novas.
++Leitura v2 (2026-11-06, new-leitura-page; desenho em `docs/mockups/analise-v8-widgets.html`). Sem abas no topo: o filtro, depois uma grade de widgets em três contextos.
++- **Intervalo** (glossário): a Leitura abre no mês da verba de hoje. Uma folha de baixo, a única da Leitura, tem "este mês", "mês passado", "3 meses", "6 meses" (meses da verba, terminando no atual) e um calendário: o primeiro toque marca o início, o segundo o fim. Todo widget conta só as parcelas com data no intervalo (a compra parcelada pela data de cada parcela, §3).
++- **Busca única com chips**: "Buscar verba, marcador, estabelecimento ou recado". Sugestões em seções fixas, Verbas · Marcadores · Estabelecimentos · Recados, cada uma com a contagem e a soma no intervalo, sem diferença de maiúsculas e acentos. Estabelecimento casa pelo apelido ou pelo texto do banco; recado, pela fonte. A legenda nunca casa (§2.12). Escolher vira um chip.
++- **Os chips somam com OU**: entra o lançamento que bate em qualquer chip, uma vez só; "ou" entre os chips; sem chip, tudo.
++- **Linha de resumo**: "R$ 130,00 · 5 lançamentos · até hoje" ("até hoje" quando o intervalo tem hoje).
++- **Separar**, com 2 chips ou mais: nos widgets que separam, uma série por chip com a cor do chip (tirar um chip não repinta os outros); o lançamento que bate em dois vai para "a + b".
++- **Contextos**: Quanto (Margem, Total e costume, Ritmo acumulado, Previstos do mês, História, O que ficou fora), Para onde (Fluxo verba → marcador, Para onde foi, O que cresceu, Estabelecimentos que voltam, Primeira vez, Tamanho) e Quando (Calendário, Dia da semana, Semanas, Mês a mês, Meses à frente, Volta todo mês, Dia e hora), nessa ordem. Cada título tem rótulo, nome em Newsreader 29 e pergunta; quando sai da tela, uma barra de 44 dp com o nome fica presa sob a TopBar até o próximo.
++- **Widget com fita lateral**: sem cartão, cada widget pende de um fio vertical de 2 dp (o Fluxo, do fio duplo argila); rótulo, frase e gráfico pequeno. Meias em pares; uma meia sozinha ocupa a linha.
++- **Busca que recolhe**: rolando além do filtro, ele recolhe; a TopBar mostra o intervalo e a lupa, com o número de chips no selo. A lupa reabre o filtro onde está, esmaecendo o resto; tocar fora ou rolar 12 dp recolhe. Voltar ao topo, mudar a consulta ou voltar de uma página reabre; rolar para cima não.
++- **Página do widget**: tocar num widget empurra uma página inteira, com voltar: o filtro (editável, só para a página), a frase, as opções do widget, o gráfico grande, o pedaço tocado e a lista. Voltar volta à grade na mesma consulta.
++  - **Lista**: Maiores (numerada, com a parte de cada lançamento) ou Recentes (por dia, com o total do dia).
++  - **Pedaço tocado**: um item oferece "Só X" (troca os chips) e "+ ou X" (soma um chip); um dia, semana ou mês oferece "Usar como intervalo". Os três valem para a Leitura inteira: voltam à grade com a consulta nova e um Snackbar com Desfazer (depois de sair da aba, Desfazer não muda nada). Em O que cresceu, "Mês a mês de X" abre a página do Mês a mês só com X.
++- **Regra C, nada se divide**: todo número de marcador conta o lançamento inteiro. No Fluxo, um lançamento com vários marcadores vai a um destino próprio ("padaria + café", o marcador mais pesado primeiro), e o Fluxo soma exatamente o total; tocar num marcador acende os destinos que o têm e a ficha mostra a divisão, que soma o número de Para onde foi.
++- **Ritmo ideal, cota e "no passo atual"** só com um mês da verba inteiro e sem chip além de verbas (a cota é da verba): a frase e o gráfico de sempre (§5, previstos na base). Fora disso, o Ritmo compara o acumulado com o intervalo anterior ou com o costume, e a opção "ritmo" fica apagada, com o porquê.
++- **Comparações seguem o intervalo**: um mês, o mês anterior até o mesmo dia; 3 ou 6 meses, os mesmos meses antes; outro intervalo, os N dias anteriores.
++- **Margem e Previstos do mês** falam do mês em que o intervalo termina, com o mês na frase. **Meses à frente** olha sempre de hoje em diante e diz isso; os previstos "Todo mês" são projetados além das ocorrências gravadas, sem gravar nada.
++- **Previstos** (§2.13): por padrão, os widgets de para onde, quando e tamanho mostram o variável; "com previstos" soma os lançados de previsto e mostra os em aberto tracejados, à parte, sem somar no gasto. Um previsto em aberto não tem estabelecimento nem fonte: só entra num filtro de verba ou marcador.
++- **Estornos e riscados** não contam em nenhum widget; O que ficou fora os mostra, com os recados na Pauta, quando há algum no intervalo.
++- **Hora do dia** (Dia e hora) só de lançamentos de recado, na parcela 1 e fora de previsto; o widget diz quantos ficaram de fora.
++- **Retrato do estabelecimento**: com um só chip, de estabelecimento, entra no topo de Para onde, e saem Estabelecimentos que voltam, O que cresceu e Primeira vez. **Primeira vez** some quando não há nada novo.
++- **Frases** por modelos fixos; **cor** das séries pelo chip.
++- **Vazio**: sem verba, "Nada para ler ainda."; intervalo sem lançamento, cada widget diz a frase de vazio dele e a grade fica no lugar.
++- **Estado**: filtro e opções sobrevivem a girar a tela e à morte do processo enquanto a aba está aberta; trocar de aba zera (mês atual, sem chips).
+ 
+ ### 7.6 Ajustes
+ - Fontes (quais apps são anotados).
+diff --git a/shared/src/commonMain/kotlin/com/kaiodelphino/margem/Db.kt b/shared/src/commonMain/kotlin/com/kaiodelphino/margem/Db.kt
+index 3129725..a90db80 100644
+--- a/shared/src/commonMain/kotlin/com/kaiodelphino/margem/Db.kt
++++ b/shared/src/commonMain/kotlin/com/kaiodelphino/margem/Db.kt
+@@ -1033,6 +1033,46 @@ class Db(
+         ) { LocalDate.parse(it.getText(0)) to Cents(it.getLong(1)) }.toMap()
+     }
+ 
++    // ---- Leitura v2 (new-leitura-page, D-9): each widget reads [leituraLines] with its own query ----
++
++    /** The first and last day of the budget month [month], by the current month start day (spec §3). */
++    suspend fun window(month: YearMonth): LocalDateRange = read { c -> monthWindow(month, settings(c).monthStartDay) }
++
++    /**
++     * The installments dated in [q]'s from..to (dates, not NO_DATE), oldest first (date, time, id), refunded
++     * lançamentos left out. The chips add up with OR, in SQL: a lançamento enters once when it matches any of them.
++     */
++    suspend fun leituraLines(q: LeituraQuery): List<LeituraRow> = read { c ->
++        val place = "CASE WHEN a.alias IS NULL THEN 'k' || t.merchant_key ELSE 'a' || a.alias_key END"
++        val args = arrayListOf<Any>(q.from.low(), q.to.high())
++        val any = q.chips.groupBy { it.kind }.map { (kind, chips) ->
++            val marks = chips.joinToString(",") { "?" }
++            chips.forEach { args += it.key }
++            when (kind) {
++                ChipKind.BUDGET -> "t.budget_id IN ($marks)"
++                ChipKind.TAG -> "EXISTS (SELECT 1 FROM transaction_tags l JOIN tags g ON g.id = l.tag_id WHERE l.transaction_id = t.id AND g.name IN ($marks))"
++                ChipKind.MERCHANT -> "$place IN ($marks)"
++                ChipKind.NOTICE -> "n.package IN ($marks)"
++            }
++        }
++        c.query(
++            "SELECT t.id, i.k, i.date, t.time, i.cents, t.budget_id, b.name, " +
++                "(SELECT group_concat(g.name, char(31)) FROM transaction_tags l JOIN tags g ON g.id = l.tag_id WHERE l.transaction_id = t.id), " +
++                "COALESCE(a.alias, t.merchant), t.merchant, $place, COALESCE(n.package, ''), COALESCE(s.label, n.app_label, ''), t.fixed " +
++                "FROM installments i JOIN transactions t ON t.id = i.transaction_id JOIN budgets b ON b.id = t.budget_id " +
++                "LEFT JOIN merchant_aliases a ON a.merchant_key = t.merchant_key LEFT JOIN notices n ON n.id = t.notice_id " +
++                "LEFT JOIN sources s ON s.package = n.package WHERE i.date BETWEEN ? AND ? AND $NOT_REFUNDED" +
++                (if (any.isEmpty()) "" else " AND (${any.joinToString(" OR ")})") + " ORDER BY i.date, t.time, t.id",
++            *args.toTypedArray(),
++        ) {
++            LeituraRow(
++                TransactionId(it.getLong(0)), it.getInt(1), LocalDate.parse(it.getText(2)), LocalTime.parse(it.getText(3)), Cents(it.getLong(4)),
++                BudgetId(it.getLong(5)), it.getText(6), if (it.isNull(7)) emptyList() else it.getText(7).split('\u001F').sorted(),
++                it.getText(8), it.getText(9), it.getText(10), it.getText(11), it.getText(12), it.getLong(13) != 0L,
++            )
++        }
++    }
++
+     // ---- Private: shared by reads and writes ----
+ 
+     private fun settings(c: SQLiteConnection): Settings {
+diff --git a/shared/src/commonMain/kotlin/com/kaiodelphino/margem/Types.kt b/shared/src/commonMain/kotlin/com/kaiodelphino/margem/Types.kt
+index 5ed0427..2d3cd95 100644
+--- a/shared/src/commonMain/kotlin/com/kaiodelphino/margem/Types.kt
++++ b/shared/src/commonMain/kotlin/com/kaiodelphino/margem/Types.kt
+@@ -486,3 +486,50 @@ data class HistoryRow(
+  * [total] from lançamentos of previstos ([TransactionRow.fixed]), drawn apart (spec §7.5, 2026-11-04).
+  */
+ data class RankRow(val name: String = "", val total: Cents = Cents(0), val count: Int = 0, val fixed: Cents = Cents(0))
++
++/** What a chip of the Leitura matches: verba, marcador, estabelecimento or recado (by its fonte). */
++enum class ChipKind { BUDGET, TAG, MERCHANT, NOTICE }
++
++/**
++ * One chip of the Leitura's search. [key]: the budget id, the tag name, the estabelecimento ("a" + alias key, else
++ * "k" + merchant key: one alias is one estabelecimento, D50/D61) or the fonte's package; [label] is what it says.
++ */
++data class Chip(val kind: ChipKind = ChipKind.BUDGET, val key: String = "", val label: String = "")
++
++/**
++ * The Leitura's query: the interval [from]..[to] (NO_DATE: the budget month of today) and the chips, which add up
++ * with OR (none: everything). [separate]: one series per chip in the widgets that split (R5).
++ */
++data class LeituraQuery(
++    val from: LocalDate = NO_DATE,
++    val to: LocalDate = NO_DATE,
++    val chips: List<Chip> = emptyList(),
++    val separate: Boolean = false,
++)
++
++/** One installment of a lançamento in the Leitura, on its own date (spec §6: each parcela in its month). */
++data class LeituraRow(
++    val transaction: TransactionId = TransactionId(0),
++    /** Which installment; 1 for à vista. */
++    val k: Int = 0,
++    val date: LocalDate = NO_DATE,
++    /** The lançamento's time: a recado's hour, the clock of a manual one, 00:00 sem recado (R21). */
++    val time: LocalTime = NO_TIME,
++    val cents: Cents = Cents(0),
++    val budget: BudgetId = BudgetId(0),
++    val budgetName: String = "",
++    /** Sorted. */
++    val tags: List<String> = emptyList(),
++    /** Alias, else bank text. */
++    val merchant: String = "",
++    /** Bank text. */
++    val bank: String = "",
++    /** The estabelecimento, as the key of a MERCHANT chip ([Chip.key]). */
++    val merchantKey: String = "",
++    /** The package of the fonte of its recado; "" = no recado (manual or sem recado). */
++    val source: String = "",
++    /** The fonte's label, else the recado's app label; "" without a recado. */
++    val sourceName: String = "",
++    /** A lançamento of a previsto ([TransactionRow.fixed]). */
++    val fixed: Boolean = false,
++)
