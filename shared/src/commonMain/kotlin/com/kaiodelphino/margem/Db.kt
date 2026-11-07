@@ -8,6 +8,8 @@ import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.NonCancellable
 import kotlinx.coroutines.IO
 import kotlinx.coroutines.channels.Channel
+import kotlinx.coroutines.currentCoroutineContext
+import kotlinx.coroutines.ensureActive
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
@@ -127,6 +129,7 @@ class Db(
         // reader lost each later read, and close(), waits forever. Taken, it always reaches the finally that gives it back.
         val c = withContext(NonCancellable) { readers.receive() }
         try {
+            currentCoroutineContext().ensureActive()
             c.execSQL("BEGIN")
             try {
                 block(c)

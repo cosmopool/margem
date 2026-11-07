@@ -386,7 +386,8 @@ private suspend fun earlier(d: Db, q: LeituraQuery, today: LocalDate, n: Int): L
     }
     val months = (last.year * 12 + last.month.ordinal) - (first.year * 12 + first.month.ordinal) + 1
     val from = d.window(first.minus(months * n, DateTimeUnit.MONTH)).start
-    val to = if (today in q.from..q.to) from.plus(q.from.daysUntil(today), DateTimeUnit.DAY) else d.window(last.minus(months * n, DateTimeUnit.MONTH)).endInclusive
+    val end = d.window(last.minus(months * n, DateTimeUnit.MONTH)).endInclusive
+    val to = if (today in q.from..q.to) minOf(from.plus(q.from.daysUntil(today), DateTimeUnit.DAY), end) else end
     return q.copy(from = from, to = to)
 }
 
@@ -779,7 +780,7 @@ private fun TotalWidget(db: Db, q: LeituraQuery, lines: List<LeituraRow>, today:
     var add by rememberSaveable { mutableStateOf("tudo") }
     val keep = { r: LeituraRow -> add == "tudo" || r.fixed == (add == "previstos") }
     val before = query(db, q, back, add) { d -> (1..back).map { total(d.leituraLines(earlier(d, q, today, it)).filter(keep)).v } } ?: return
-    val now = total(lines.filter(keep))
+    val now = total(lines.filter { keep(it) && (today !in q.from..q.to || it.date <= today) })
     val usual = Cents(before.sum() / back)
     Sentence(
         when {
@@ -1119,7 +1120,7 @@ private fun GrewWidget(db: Db, q: LeituraQuery, lines: List<LeituraRow>, today: 
     var against by rememberSaveable { mutableIntStateOf(3) }
     var often by rememberSaveable { mutableStateOf(false) }
     val before = query(db, q, against, today) { d -> (1..against).flatMap { d.leituraLines(earlier(d, q, today, it)) } } ?: return
-    val now = groups(lines, ChipKind.TAG).associateBy { it.first.key }
+    val now = groups(lines.filter { today !in q.from..q.to || it.date <= today }, ChipKind.TAG).associateBy { it.first.key }
     val was = groups(before, ChipKind.TAG).associateBy { it.first.key }
     val rows = (now.keys + was.keys).map { k ->
         val chip = (now[k] ?: was.getValue(k)).first
