@@ -1,0 +1,37 @@
+    LBENCH generated in 22800 ms
+    VOLUME data: 5608 notices (4853 accepted, 635 dismissed, 22 pending), 110 refunds, 8 budgets, 22 tags, 160 step edits, 7866 installment rows; generated in 22800 ms
+    LBENCH leituraLines month: 88 rows, median 1.706 ms
+    LBENCH leituraLines 6 months: 733 rows, median 7.511 ms
+    LBENCH leituraLines all (5y): 7497 rows, median 60.872 ms
+    LBENCH firstTimers history read (month, 86 chips OR'd): 7434 rows, median 74.666 ms
+    LBENCH leftOut (transactions+dismissed+pending, full tables): median 52.745 ms
+    LBENCH base Leitura open (one block): median 286.759 ms
+    LBENCH one budgetDetail (+overview): median 19.192 ms
+    LBENCH grid[month] load                         median 14.226 ms
+    LBENCH grid[month] extra(firstTimers+leftOut)   median 123.996 ms
+    LBENCH grid[month] margem                       median 9.615 ms
+    LBENCH grid[month] total(6 earlier)             median 7.545 ms
+    LBENCH grid[month] ritmo(plan)                  median 18.718 ms
+    LBENCH grid[month] previstos                    median 88.647 ms
+    LBENCH grid[month] cresceu(3 earlier)           median 9.918 ms
+    LBENCH grid[month] dia-da-semana                median 0.149 ms
+    LBENCH grid[month] semanas                      median 8.982 ms
+    LBENCH grid[month] mes-a-mes(6)                 median 15.951 ms
+    LBENCH grid[month] meses-a-frente(3)            median 102.738 ms
+    LBENCH grid[month] volta-todo-mes(6)            median 7.4 ms
+    LBENCH grid[month] sequential sum of 12 query blocks: 407.8 ms
+    LBENCH grid[month] concurrent wall (all blocks at once, 2 readers): 238.585 ms
+    LBENCH grid[6 months] load                         median 20.017 ms
+    LBENCH grid[6 months] extra(firstTimers+leftOut)   median 119.606 ms
+    LBENCH grid[6 months] margem                       median 16.025 ms
+    LBENCH grid[6 months] total(6 earlier)             median 63.599 ms
+    LBENCH grid[6 months] ritmo(plan)                  median 0.4 ms
+    LBENCH grid[6 months] previstos                    median 112.32 ms
+    LBENCH grid[6 months] cresceu(3 earlier)           median 28.706 ms
+    LBENCH grid[6 months] dia-da-semana                median 0.13 ms
+    LBENCH grid[6 months] semanas                      median 0.343 ms
+    LBENCH grid[6 months] mes-a-mes(6)                 median 8.689 ms
+    LBENCH grid[6 months] meses-a-frente(3)            median 113.721 ms
+    LBENCH grid[6 months] volta-todo-mes(6)            median 12.657 ms
+    LBENCH grid[6 months] sequential sum of 12 query blocks: 496.2 ms
+    LBENCH grid[6 months] concurrent wall (all blocks at once, 2 readers): 282.171 ms
