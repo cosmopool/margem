@@ -170,7 +170,7 @@ private fun decodeQuery(s: String): LeituraQuery {
 }
 
 /** The Leitura's query across recreation and process death (AC-F3). */
-val QuerySaver = Saver<LeituraQuery, String>(save = { encodeQuery(it) }, restore = ::decodeQuery)
+internal val QuerySaver = Saver<LeituraQuery, String>(save = { encodeQuery(it) }, restore = ::decodeQuery)
 
 private val StackSaver = Saver<List<Screen>, ArrayList<String>>(
     save = { stack -> ArrayList(stack.map(::encode)) },
