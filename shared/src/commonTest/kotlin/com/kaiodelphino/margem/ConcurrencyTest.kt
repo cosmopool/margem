@@ -29,6 +29,7 @@ import kotlinx.coroutines.test.TestResult
 import kotlinx.coroutines.test.runTest
 import kotlinx.coroutines.withContext
 import kotlinx.coroutines.withTimeout
+import kotlinx.coroutines.withTimeoutOrNull
 import kotlinx.datetime.LocalDate
 import kotlinx.datetime.LocalTime
 import kotlinx.datetime.TimeZone
@@ -678,5 +679,28 @@ class ConcurrencyTest {
             .awaitAll().forEach { assertNotEquals(0L, it.v) }
         assertEquals(10, second.pendingCount())
         assertEquals(10_000L, second.budgetDetail(budget, MONTH, TODAY).month.spent.v)
+    }
+
+    /**
+     * A screen's reads are cancelled all the time (produceState restarts on every version bump and leaves with the
+     * screen). A read cancelled while a reader is being handed to it must not lose the reader: afterwards every
+     * reader comes back, so close() (which takes them all) ends. Found by the Leitura v2, whose ~20 widgets read at
+     * once and restart together when the day turns (LeituraLifecycleTest AC-F2 hung in the teardown's close()).
+     */
+    @Test
+    fun readsCancelledWhileWaitingForAReaderNeverLoseIt() = conc {
+        // Closed here, not by the cleanup: with a reader lost, close() would hang the cleanup instead of failing.
+        val db = openDb(tempPath()).also { opened.remove(it) }
+        seeded(db)
+        val rnd = Random(7)
+        repeat(300) {
+            val reads = List(24) { launch { db.transactions() } }
+            delay(rnd.nextLong(0, 3))
+            reads.forEach { it.cancel() }
+            reads.joinAll()
+        }
+        assertEquals(0, db.transactions().size)
+        val closing = async(Dispatchers.IO) { db.close() }
+        assertNotEquals(null, withTimeoutOrNull(5.seconds) { closing.await() }, "close() waits for a reader no read holds: one was lost")
     }
 }

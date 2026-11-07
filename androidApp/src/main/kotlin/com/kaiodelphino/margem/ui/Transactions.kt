@@ -2,22 +2,15 @@ package com.kaiodelphino.margem.ui
 
 import androidx.compose.foundation.background
 import androidx.compose.foundation.ExperimentalFoundationApi
-import androidx.compose.foundation.interaction.MutableInteractionSource
-import androidx.compose.foundation.interaction.collectIsFocusedAsState
 import androidx.compose.foundation.layout.WindowInsets
 import androidx.compose.foundation.layout.isImeVisible
 import androidx.compose.foundation.relocation.BringIntoViewRequester
 import androidx.compose.foundation.relocation.bringIntoViewRequester
-import androidx.compose.foundation.text.BasicTextField
-import androidx.compose.foundation.text.KeyboardActions
-import androidx.compose.foundation.text.KeyboardOptions
 import androidx.compose.ui.focus.onFocusChanged
 import androidx.compose.ui.layout.onSizeChanged
 import androidx.compose.ui.platform.LocalDensity
-import androidx.compose.ui.graphics.SolidColor
 import androidx.compose.ui.semantics.CollectionItemInfo
 import androidx.compose.ui.semantics.collectionItemInfo
-import androidx.compose.ui.text.input.ImeAction
 import com.kaiodelphino.margem.fold
 import com.kaiodelphino.margem.foldedMatch
 import com.kaiodelphino.margem.widgets.dashedBorder
@@ -114,6 +107,7 @@ import com.kaiodelphino.margem.widgets.InfoBand
 import com.kaiodelphino.margem.widgets.Margem
 import com.kaiodelphino.margem.widgets.MargemDialog
 import com.kaiodelphino.margem.widgets.MoneyField
+import com.kaiodelphino.margem.widgets.SearchLine
 import com.kaiodelphino.margem.widgets.Snack
 import com.kaiodelphino.margem.widgets.SnackHost
 import com.kaiodelphino.margem.widgets.Stepper
@@ -1428,37 +1422,6 @@ private fun BudgetField(name: String, margin: Cents?, month: String, suggested: 
         }
         Icon(R.drawable.i_avancar, tint = c.inkTertiary, size = 20.dp)
     }
-}
-
-/** Book 8.12: a search line — lupa, the text, the rule under it; [onDone] on the keyboard's done keeps the focus. */
-@Composable
-private fun SearchLine(
-    value: String, onChange: (String) -> Unit, placeholder: String, tag: String, modifier: Modifier = Modifier, onDone: (() -> Unit)? = null,
-) {
-    val c = Margem.colors
-    val interaction = remember { MutableInteractionSource() }
-    val focused by interaction.collectIsFocusedAsState()
-    BasicTextField(
-        value, onChange, modifier.fillMaxWidth().testTag(tag), singleLine = true, interactionSource = interaction,
-        textStyle = sans(16f, 400, 20f).copy(color = c.ink), cursorBrush = SolidColor(c.info),
-        keyboardOptions = KeyboardOptions(imeAction = ImeAction.Done),
-        keyboardActions = if (onDone == null) KeyboardActions.Default else KeyboardActions(onDone = { onDone() }),
-        decorationBox = { inner ->
-            Row(
-                Modifier.fillMaxWidth().heightIn(min = 48.dp).drawBehind {
-                    val w = (if (focused) 2 else 1).dp.toPx()
-                    drawLine(if (focused) c.ink else c.ruleStrong, Offset(0f, size.height - w / 2), Offset(size.width, size.height - w / 2), w)
-                },
-                verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(10.dp),
-            ) {
-                Icon(R.drawable.i_lupa, tint = c.inkTertiary, size = 20.dp)
-                Box(Modifier.weight(1f)) {
-                    if (value.isEmpty()) Text(placeholder, sans(16f, 400, 20f), color = c.inkTertiary)
-                    inner()
-                }
-            }
-        },
-    )
 }
 
 /** Book 8.12: "Em qual verba entra?" [TransactionTags.BUDGET_SHEET]. */

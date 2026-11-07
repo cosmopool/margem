@@ -1,6 +1,7 @@
 package com.kaiodelphino.margem.ui
 
 import android.content.Intent
+import android.net.Uri
 import android.graphics.Color as AndroidColor
 import android.os.Bundle
 import androidx.activity.ComponentActivity
@@ -39,6 +40,9 @@ import androidx.compose.ui.platform.LocalContext
 import androidx.lifecycle.Lifecycle
 import androidx.lifecycle.compose.LifecycleEventEffect
 import com.kaiodelphino.margem.BudgetId
+import com.kaiodelphino.margem.Chip
+import com.kaiodelphino.margem.ChipKind
+import com.kaiodelphino.margem.LeituraQuery
 import com.kaiodelphino.margem.NO_MONTH
 import com.kaiodelphino.margem.Db
 import com.kaiodelphino.margem.MargemApp
@@ -49,6 +53,7 @@ import com.kaiodelphino.margem.TransactionId
 import com.kaiodelphino.margem.isAccessGranted
 import com.kaiodelphino.margem.widgets.Margem
 import com.kaiodelphino.margem.widgets.MargemTheme
+import com.kaiodelphino.margem.widgets.Snack
 import com.kaiodelphino.margem.widgets.SnackHost
 import com.kaiodelphino.margem.widgets.SnackbarHost
 import com.kaiodelphino.margem.widgets.Tab
@@ -71,6 +76,8 @@ sealed interface Screen {
     data object Inbox : Screen
     data object Transactions : Screen
     data object Insights : Screen
+    /** A Leitura widget's page (spec R12), opened on [query]: the Leitura's, or Mês a mês de X's (R14). */
+    data class LeituraWidget(val widget: String, val query: LeituraQuery) : Screen
     data object Settings : Screen
     data class Budget(val id: BudgetId, val month: YearMonth) : Screen
     data object NewBudget : Screen
@@ -100,6 +107,7 @@ private fun encode(s: Screen): String = when (s) {
     Screen.Inbox -> "inbox"
     Screen.Transactions -> "transactions"
     Screen.Insights -> "insights"
+    is Screen.LeituraWidget -> "leitura:${s.widget}:${encodeQuery(s.query)}"
     Screen.Settings -> "settings"
     is Screen.Budget -> "budget:${s.id.v}:${s.month}"
     Screen.NewBudget -> "newBudget"
@@ -125,6 +133,7 @@ private fun decode(s: String): Screen {
         "inbox" -> Screen.Inbox
         "transactions" -> Screen.Transactions
         "insights" -> Screen.Insights
+        "leitura" -> Screen.LeituraWidget(p[1], decodeQuery(p[2]))
         "settings" -> Screen.Settings
         "budget" -> Screen.Budget(BudgetId(p[1].toLong()), YearMonth.parse(p[2]))
         "newBudget" -> Screen.NewBudget
@@ -147,6 +156,22 @@ private fun decode(s: String): Screen {
     }
 }
 
+/** "from|to|separate|KIND,key,label;…", key and label URI-encoded: no ':' for [encode], no '|', ';' or ','. */
+private fun encodeQuery(q: LeituraQuery): String =
+    "${q.from}|${q.to}|${if (q.separate) 1 else 0}|" + q.chips.joinToString(";") { "${it.kind},${Uri.encode(it.key)},${Uri.encode(it.label)}" }
+
+private fun decodeQuery(s: String): LeituraQuery {
+    val p = s.split('|')
+    val chips = p[3].split(';').filter(String::isNotEmpty).map {
+        val c = it.split(',')
+        Chip(ChipKind.valueOf(c[0]), Uri.decode(c[1]), Uri.decode(c[2]))
+    }
+    return LeituraQuery(LocalDate.parse(p[0]), LocalDate.parse(p[1]), chips, p[2] == "1")
+}
+
+/** The Leitura's query across recreation and process death (AC-F3). */
+val QuerySaver = Saver<LeituraQuery, String>(save = { encodeQuery(it) }, restore = ::decodeQuery)
+
 private val StackSaver = Saver<List<Screen>, ArrayList<String>>(
     save = { stack -> ArrayList(stack.map(::encode)) },
     restore = { saved -> saved.map(::decode) },
@@ -155,7 +180,7 @@ private val StackSaver = Saver<List<Screen>, ArrayList<String>>(
 private fun tabOf(s: Screen): Tab = when (s) {
     Screen.Inbox, is Screen.Post, is Screen.Refund -> Tab.INBOX
     Screen.Transactions, is Screen.Edit, Screen.NewTransaction, is Screen.FromPlanned, is Screen.EditPlanned -> Tab.TRANSACTIONS
-    Screen.Insights -> Tab.INSIGHTS
+    Screen.Insights, is Screen.LeituraWidget -> Tab.INSIGHTS
     Screen.Settings, Screen.Dismissed, Screen.Sources, Screen.Tags, Screen.StartDays, Screen.Backup, Screen.Cobudget -> Tab.SETTINGS
     Screen.Budgets, is Screen.Budget, Screen.NewBudget, is Screen.EditBudget -> Tab.BUDGETS
 }
@@ -223,9 +248,12 @@ fun App(db: Db, tabRequest: Screen?, onTabOpened: () -> Unit) {
     // D18: the screens under the top keep their rememberSaveable state (a form while Nova verba is on top, D66);
     // a screen that leaves the stack drops it.
     val saved = rememberSaveableStateHolder()
+    // The Leitura's query lives while its tab is open (D-5): leaving the tab resets it.
+    var leitura by rememberSaveable(stateSaver = QuerySaver) { mutableStateOf(LeituraQuery()) }
     fun keyOf(i: Int, s: List<Screen>) = "$i:${encode(s[i])}"
     fun move(next: List<Screen>) {
         for (i in stack.indices) if (i >= next.size || next[i] != stack[i]) saved.removeState(keyOf(i, stack))
+        if (next.first() != Screen.Insights) leitura = LeituraQuery()
         stack = next
     }
     LaunchedEffect(tabRequest) {
@@ -242,6 +270,19 @@ fun App(db: Db, tabRequest: Screen?, onTabOpened: () -> Unit) {
     val back: () -> Unit = { move(if (stack.size > 1) stack.dropLast(1) else listOf(Screen.Budgets)) }
     val home: () -> Unit = { move(listOf(Screen.Budgets)) }
     val replace: (Screen) -> Unit = { move(stack.dropLast(1) + it) }
+    // Spec R14: "Só X", "+ ou X" and "Usar como intervalo" change the whole Leitura and go back to the grid, with
+    // Desfazer; once the tab was left, the Leitura is already reset (D-5) and Desfazer changes nothing (AC-F4).
+    val leituraTo: (LeituraQuery, String) -> Unit = { q, text ->
+        val old = leitura
+        leitura = q
+        move(listOf(Screen.Insights))
+        snack.show(Snack(text, "Desfazer") {
+            if (stack.first() == Screen.Insights) {
+                leitura = old
+                move(listOf(Screen.Insights))
+            }
+        })
+    }
     // Back from another tab's root goes to Verbas; from Verbas it leaves the app.
     BackHandler(stack.size > 1 || screen != Screen.Budgets, back)
     // Forms (lançar, editar, novo) take the whole page; everything else keeps the tab bar.
@@ -255,7 +296,8 @@ fun App(db: Db, tabRequest: Screen?, onTabOpened: () -> Unit) {
                 Screen.Budgets -> Budgets(db, snack, go)
                 Screen.Inbox -> Inbox(db, granted, snack, go)
                 Screen.Transactions -> Transactions(db, snack, go)
-                Screen.Insights -> Insights(db)
+                Screen.Insights -> Insights(db, leitura, { leitura = it }, go)
+                is Screen.LeituraWidget -> LeituraWidgetPage(db, screen.widget, screen.query, go, back, leituraTo)
                 Screen.Settings -> Settings(db, granted, go)
                 Screen.Sources -> Sources(db, back)
                 is Screen.Budget -> BudgetDetailScreen(db, screen.id, screen.month, go, { move(stack.dropLast(1) + Screen.Budget(screen.id, it)) }, back)

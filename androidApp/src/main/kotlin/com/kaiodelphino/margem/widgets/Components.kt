@@ -974,23 +974,56 @@ fun TabBar(selected: Tab, onSelect: (Tab) -> Unit, modifier: Modifier = Modifier
 /**
  * Book §8.7 selector: a few short options side by side; the active one in ink 700 with a 2 dp rule
  * below, and `selected`. "Ordenar" in Verbas, theme and widget order in Ajustes. [tag]: each option is
- * "$tag" + its value in lowercase (D35).
+ * "$tag" + its value in lowercase (D35). [disabled] options stay in place and can't be chosen (Leitura's ritmo, R17).
  */
 @Composable
-fun <T> OptionPicker(options: List<Pair<T, String>>, selected: T, onSelect: (T) -> Unit, modifier: Modifier = Modifier, tag: String = "") {
+fun <T> OptionPicker(
+    options: List<Pair<T, String>>, selected: T, onSelect: (T) -> Unit, modifier: Modifier = Modifier, tag: String = "", disabled: Set<T> = emptySet(),
+) {
     val c = Margem.colors
     Row(modifier.fillMaxWidth().drawBehind { drawLine(c.rule, Offset(0f, size.height - 0.5f), Offset(size.width, size.height - 0.5f), 1.dp.toPx()) }) {
         for ((value, label) in options) {
             val on = value == selected
             Box(
                 Modifier.weight(1f).heightIn(min = 48.dp).testTag("$tag${value.toString().lowercase()}")
-                    .semantics { this.selected = on }.clickable(role = Role.RadioButton) { onSelect(value) }
+                    .semantics { this.selected = on }.clickable(enabled = value !in disabled, role = Role.RadioButton) { onSelect(value) }
                     .drawBehind { if (on) drawRect(c.ink, Offset(size.width * 0.14f, size.height - 1.dp.toPx()), Size(size.width * 0.72f, 2.dp.toPx())) }
                     .padding(horizontal = 6.dp),
                 contentAlignment = Alignment.Center,
             ) { Text(label, sans(14f, if (on) 700 else 500, 18f), color = if (on) c.ink else c.inkTertiary, maxLines = 1) }
         }
     }
+}
+
+/** Book 8.12: a search line — lupa, the text, the rule under it; [onDone] on the keyboard's done keeps the focus. */
+@Composable
+fun SearchLine(
+    value: String, onChange: (String) -> Unit, placeholder: String, tag: String, modifier: Modifier = Modifier, onDone: (() -> Unit)? = null,
+) {
+    val c = Margem.colors
+    val interaction = remember { MutableInteractionSource() }
+    val focused by interaction.collectIsFocusedAsState()
+    BasicTextField(
+        value, onChange, modifier.fillMaxWidth().testTag(tag), singleLine = true, interactionSource = interaction,
+        textStyle = sans(16f, 400, 20f).copy(color = c.ink), cursorBrush = SolidColor(c.info),
+        keyboardOptions = KeyboardOptions(imeAction = ImeAction.Done),
+        keyboardActions = if (onDone == null) KeyboardActions.Default else KeyboardActions(onDone = { onDone() }),
+        decorationBox = { inner ->
+            Row(
+                Modifier.fillMaxWidth().heightIn(min = 48.dp).drawBehind {
+                    val w = (if (focused) 2 else 1).dp.toPx()
+                    drawLine(if (focused) c.ink else c.ruleStrong, Offset(0f, size.height - w / 2), Offset(size.width, size.height - w / 2), w)
+                },
+                verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(10.dp),
+            ) {
+                Icon(R.drawable.i_lupa, tint = c.inkTertiary, size = 20.dp)
+                Box(Modifier.weight(1f)) {
+                    if (value.isEmpty()) Text(placeholder, sans(16f, 400, 20f), color = c.inkTertiary)
+                    inner()
+                }
+            }
+        },
+    )
 }
 
 // ---- Page pieces ----

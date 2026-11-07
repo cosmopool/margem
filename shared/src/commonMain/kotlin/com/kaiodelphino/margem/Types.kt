@@ -486,3 +486,50 @@ data class HistoryRow(
  * [total] from lançamentos of previstos ([TransactionRow.fixed]), drawn apart (spec §7.5, 2026-11-04).
  */
 data class RankRow(val name: String = "", val total: Cents = Cents(0), val count: Int = 0, val fixed: Cents = Cents(0))
+
+/** What a chip of the Leitura matches: verba, marcador, estabelecimento or recado (by its fonte). */
+enum class ChipKind { BUDGET, TAG, MERCHANT, NOTICE }
+
+/**
+ * One chip of the Leitura's search. [key]: the budget id, the tag name, the estabelecimento ("a" + alias key, else
+ * "k" + merchant key: one alias is one estabelecimento, D50/D61) or the fonte's package; [label] is what it says.
+ */
+data class Chip(val kind: ChipKind = ChipKind.BUDGET, val key: String = "", val label: String = "")
+
+/**
+ * The Leitura's query: the interval [from]..[to] (NO_DATE: the budget month of today) and the chips, which add up
+ * with OR (none: everything). [separate]: one series per chip in the widgets that split (R5).
+ */
+data class LeituraQuery(
+    val from: LocalDate = NO_DATE,
+    val to: LocalDate = NO_DATE,
+    val chips: List<Chip> = emptyList(),
+    val separate: Boolean = false,
+)
+
+/** One installment of a lançamento in the Leitura, on its own date (spec §6: each parcela in its month). */
+data class LeituraRow(
+    val transaction: TransactionId = TransactionId(0),
+    /** Which installment; 1 for à vista. */
+    val k: Int = 0,
+    val date: LocalDate = NO_DATE,
+    /** The lançamento's time: a recado's hour, the clock of a manual one, 00:00 sem recado (R21). */
+    val time: LocalTime = NO_TIME,
+    val cents: Cents = Cents(0),
+    val budget: BudgetId = BudgetId(0),
+    val budgetName: String = "",
+    /** Sorted. */
+    val tags: List<String> = emptyList(),
+    /** Alias, else bank text. */
+    val merchant: String = "",
+    /** Bank text. */
+    val bank: String = "",
+    /** The estabelecimento, as the key of a MERCHANT chip ([Chip.key]). */
+    val merchantKey: String = "",
+    /** The package of the fonte of its recado; "" = no recado (manual or sem recado). */
+    val source: String = "",
+    /** The fonte's label, else the recado's app label; "" without a recado. */
+    val sourceName: String = "",
+    /** A lançamento of a previsto ([TransactionRow.fixed]). */
+    val fixed: Boolean = false,
+)

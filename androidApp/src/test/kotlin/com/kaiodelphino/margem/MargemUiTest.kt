@@ -159,9 +159,13 @@ class MargemUiTest {
     fun `leitura compares the gasto variavel with the ideal of the cota livre`() {
         seed()
         open(Screen.Insights)
-        waitFor(InsightsTags.PACE_SENTENCE)
+        // Leitura v2: the Ritmo sits inside its widget (WIDGET + "ritmo", clickable, so merged): read the unmerged tree.
+        compose.waitUntil(5_000) {
+            compose.onAllNodes(hasTestTag(InsightsTags.PACE_SENTENCE) and hasAnyAncestor(hasTestTag(InsightsTags.WIDGET + "ritmo")), useUnmergedTree = true)
+                .fetchSemanticsNodes().isNotEmpty()
+        }
         // 290,31 − 40,00 below; M6: 4.000 × 100.000 ÷ 29.031 = 13.778 + 200.000 = R$ 2.137,78 → R$ 2.138.
-        compose.onNodeWithTag(InsightsTags.PACE_SENTENCE)
+        compose.onNodeWithTag(InsightsTags.PACE_SENTENCE, useUnmergedTree = true)
             .assertTextEquals(r("R$ 250,31 abaixo do ritmo ideal. No passo atual, o mês fecharia em R$ 2.138."))
     }
 

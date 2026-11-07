@@ -9,6 +9,7 @@ import androidx.compose.ui.semantics.SemanticsNode
 import androidx.compose.ui.semantics.SemanticsProperties
 import androidx.compose.ui.semantics.getOrNull
 import androidx.compose.ui.test.hasTestTag
+import androidx.compose.ui.test.hasText
 import androidx.compose.ui.test.junit4.createComposeRule
 import androidx.compose.ui.test.onNodeWithTag
 import androidx.compose.ui.test.performClick
@@ -43,7 +44,7 @@ import kotlin.random.Random
  * Margem honesta drawn on the screens (spec §2.13, §3, §4, §5, §7.1, §7.5; margem-plan M1–M13, §5.2; book 8.5,
  * 8.6, 8.10, 8.11, 10.1, 10.8; D68–D74): the Verbas header total fused with the teto (M9), the verba row's
  * TalkBack (M12), the detail's dek, "Previstos de outubro", "Soma = cota livre" and "cota atingida aqui" (M13),
- * and Leitura's "Ritmo do mês" sentence (variable − ideal, M6 projection, "além/dentro da cota" by the M1
+ * and the Leitura's Ritmo acumulado sentence (variable − ideal, M6 projection, "além/dentro da cota" by the M1
  * margem). Blind contract tests (D74): written from the spec, the book and the tags' KDoc, before the
  * implementation; every expected number is computed by hand in a comment.
  *
@@ -527,7 +528,7 @@ class ReservaUiTest {
         assertShows(BudgetTags.LINE_SUM + cine.v, "419,00")
     }
 
-    // ---- Leitura, Ritmo do mês (spec §7.5, M6; InsightsTags.PACE_SENTENCE, PACE_CHART) ----
+    // ---- Leitura, Ritmo acumulado (spec §7.5 v2, M6; InsightsTags.PACE_SENTENCE, PACE_CHART, WIDGET, RANGE) ----
 
     @Test
     fun `leitura measures the variable gasto against the ideal of the cota livre`() {
@@ -540,12 +541,14 @@ class ReservaUiTest {
         spend(casa, 30000, OCT_8, "Bar do Ponto", "bar")
         open(Screen.Insights)
         waitFor(InsightsTags.PACE_SENTENCE)
-        assertShows(InsightsTags.PACE_BUDGET, "Casa")
+        // Leitura v2 has no verba picker: with no chip the Ritmo is of every verba, here only Casa. Its margem,
+        // 3.000 − 2.100 − 300 = 600, is the Margem widget's, of the month the interval ends in (D-10).
         assertSays(InsightsTags.PACE_SENTENCE, "+ ${money(Cents(3873))} sobre o ritmo ideal. No passo atual, o mês fecharia em R$ 3.133.")
         // The chart reads the gasto variável up to today (300,00, not the 2.400,00 of gasto) and the ideal of the cota livre.
         // Its "para uma cota de …" tail is left out (cota or cota livre: not said).
-        val chart = "Ritmo do mês de Casa: ${money(Cents(30000))} até o dia 9, contra ritmo ideal de ${money(Cents(26127))}; no passo atual, R$ 3.133 no fim do mês"
+        val chart = "Ritmo do mês: ${money(Cents(30000))} até o dia 9, contra ritmo ideal de ${money(Cents(26127))}; no passo atual, R$ 3.133 no fim do mês"
         assertTrue("${descriptions(InsightsTags.PACE_CHART)}", descriptions(InsightsTags.PACE_CHART).any { it.startsWith(norm(chart)) })
+        assertShows(InsightsTags.WIDGET + "margem", "Em outubro, cabem ${money(Cents(60000))}.")
     }
 
     @Test
@@ -577,9 +580,11 @@ class ReservaUiTest {
         ahead("Aluguel", casa, "aluguel", 200000, SEP_10, Repeats.ONCE, today = SEP_1)
         spend(casa, spent, SEP_15, "Mercadinho Bom Preço", "mercado")
         open(Screen.Insights)
-        waitFor(InsightsTags.MONTH_PREV)
-        click(InsightsTags.MONTH_PREV)
-        compose.waitUntil(5_000) { shows(InsightsTags.MONTH_LABEL, "setembro de 2026") }
+        // Leitura v2: the interval sheet's "mês passado" (R1, A-8), a whole budget month, so the Ritmo keeps the cota (R17).
+        click(InsightsTags.RANGE)
+        compose.waitUntil(5_000) { compose.onAllNodes(hasText("mês passado")).fetchSemanticsNodes().isNotEmpty() }
+        compose.onNode(hasText("mês passado")).performClick()
+        compose.waitUntil(5_000) { shows(InsightsTags.RANGE, "1 a 30 set") }
         waitFor(InsightsTags.PACE_SENTENCE)
     }
 

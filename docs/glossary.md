@@ -50,6 +50,8 @@ Vocabulário do app, alinhado ao [spec](spec.md). Fonte visual: [design_system.h
 | Fora da margem | `PaceStatus.OVERRUN` | A margem ficou negativa: gasto + previstos em aberto passaram da cota. O excesso é dito em reais, “além”. | “R$ 12,00 além da cota.” | estourou, no vermelho, negativo, excedeu |
 | Régua | `BudgetMeter` | Medidor da verba: trilho, previstos do mês na frente (tracejado em aberto, tinta 3 lançado), tinta do gasto variável, marca do ritmo e fio duplo da margem. | — (componente) | barra de progresso, termômetro |
 | Leitura | `Insights` | Área de análise: gastos por verba, marcador, estabelecimento e tempo. | Aba “Leitura”. | relatórios, dashboard, estatísticas |
+| Intervalo | `LeituraQuery.from`, `to` | Os dias de-até que a Leitura lê: abre no mês atual; atalhos por mês ou início e fim no calendário. | “1 a 30 nov · até hoje” | período |
+| Costume | — | Média dos meses anteriores no mesmo trecho do intervalo (no dia 6, os dias 1 a 6 de cada um). | “R$ 35,00 acima do costume.” | normal, média histórica |
 | Ritmo ideal | `PaceLine` | Gasto esperado até hoje pelo plano: passos das semanas fechadas + passo da semana atual proporcional aos dias corridos. Linha tracejada nos gráficos. | Rótulo “ritmo ideal” no gráfico. | meta, target |
 | Passo semanal | `WeeklyStep` | Quanto cabe por semana: cota livre × dias da semana no mês ÷ dias do mês. Só visualização, não é limite. Editável por semana; as não editadas se ajustam para somar a cota livre, e uma semana fica sempre automática. | “Passo desta semana: R$ 140,00.” | meta semanal, limite semanal, cota semanal |
 | Semana | `Week` | Semana de calendário, com dia de início escolhido em Ajustes, cortada no mês; a primeira e a última podem ser parciais. | “Semana de 6 a 12 out.” | — |
