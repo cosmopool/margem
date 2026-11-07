@@ -275,12 +275,12 @@ fun Insights(db: Db, leitura: LeituraQuery, onLeitura: (LeituraQuery) -> Unit, g
             return@Column
         }
         // Widgets that come and go (§5): the grid knows before laying out its pairs.
-        val extra = data?.let { (q, lines) -> query(db, q, lines) { d -> firstTimers(d, q, lines).isNotEmpty() to leftOut(d, q).isNotEmpty() } }
+        val extra = data?.let { (q, lines) -> query(db, q, lines) { d -> firstTimers(d, q, lines) to leftOut(d, q) } }
         val portrait = leitura.chips.singleOrNull()?.kind == ChipKind.MERCHANT
         val gone = buildSet {
             if (portrait) addAll(listOf("voltam", "cresceu", "primeira-vez")) else add("retrato")
-            if (extra?.first != true) add("primeira-vez")
-            if (extra?.second != true) add("fora")
+            if (extra?.first.isNullOrEmpty()) add("primeira-vez")
+            if (extra?.second.isNullOrEmpty()) add("fora")
         }
         Box(Modifier.weight(1f)) {
             Column(Modifier.fillMaxSize().testTag(InsightsTags.GRID).verticalScroll(scroll).padding(start = Margem.space.page, end = Margem.space.page, bottom = 32.dp)) {
@@ -300,7 +300,7 @@ fun Insights(db: Db, leitura: LeituraQuery, onLeitura: (LeituraQuery) -> Unit, g
                     }
                     for (row in rows) Row(Modifier.fillMaxWidth().padding(top = 20.dp).height(IntrinsicSize.Min)) {
                         for (id in row) Frame(id, Modifier.weight(1f), { go(Screen.LeituraWidget(id, leitura)) }) {
-                            if (data != null) Widget(db, id, data.first, data.second, data.third, false, {}, go)
+                            if (data != null) Widget(db, id, data.first, data.second, data.third, false, {}, go, extra)
                         }
                     }
                 }
@@ -341,7 +341,7 @@ fun LeituraWidgetPage(db: Db, id: String, start: LeituraQuery, go: (Screen) -> U
         Column(Modifier.weight(1f).testTag(InsightsTags.PAGE + id).verticalScroll(rememberScrollState()).padding(start = Margem.space.page, end = Margem.space.page, bottom = 32.dp)) {
             Filter(db, raw, q, lines, today) { raw = it }
             Gap()
-            Widget(db, id, q, lines, today, true, { piece = it }, go)
+            Widget(db, id, q, lines, today, true, { piece = it }, go, null)
             val chip = piece.chips.firstOrNull()
             if (chip != null || piece.from != NO_DATE) SectionLine(chip?.label ?: span(piece.from, piece.to), aside = "o pedaço tocado")
             if (chip != null) FlowRow(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
@@ -604,9 +604,12 @@ private fun Frame(id: String, modifier: Modifier, onOpen: () -> Unit, content: @
     }
 }
 
-/** One widget, small on the grid or [big] on its page with its options; a touched piece goes to [onPiece]. */
+/**
+ * One widget, small on the grid or [big] on its page with its options; a touched piece goes to [onPiece]. On the grid,
+ * [extra] holds the grid's own firstTimers and leftOut, so fora, voltam and primeira-vez do not read them again.
+ */
 @Composable
-private fun Widget(db: Db, id: String, q: LeituraQuery, lines: List<LeituraRow>, today: LocalDate, big: Boolean, onPiece: (LeituraQuery) -> Unit, go: (Screen) -> Unit) {
+private fun Widget(db: Db, id: String, q: LeituraQuery, lines: List<LeituraRow>, today: LocalDate, big: Boolean, onPiece: (LeituraQuery) -> Unit, go: (Screen) -> Unit, extra: Pair<List<Chip>, List<String>>?) {
     val chip: (Chip) -> Unit = { onPiece(LeituraQuery(chips = listOf(it))) }
     val days: (LocalDate, LocalDate) -> Unit = { a, b -> onPiece(LeituraQuery(a, b)) }
     when (id) {
@@ -615,13 +618,13 @@ private fun Widget(db: Db, id: String, q: LeituraQuery, lines: List<LeituraRow>,
         "ritmo" -> RitmoWidget(db, q, lines, today, big)
         "previstos" -> PlannedWidget(db, q, today, big)
         "historia" -> HistoryWidget(q, lines, big, go)
-        "fora" -> LeftOutWidget(db, q)
+        "fora" -> LeftOutWidget(db, q, big, extra)
         "retrato" -> PortraitWidget(lines)
         "fluxo" -> FlowWidget(lines, big, chip)
         "para-onde-foi" -> WhereWidget(db, q, lines, big, chip)
         "cresceu" -> GrewWidget(db, q, lines, today, big, chip)
-        "voltam" -> ReturnWidget(db, q, lines, big, chip)
-        "primeira-vez" -> FirstWidget(db, q, lines, big, chip)
+        "voltam" -> ReturnWidget(db, q, lines, big, chip, extra)
+        "primeira-vez" -> FirstWidget(db, q, lines, big, chip, extra)
         "tamanho" -> SizeWidget(lines, big)
         "calendario" -> CalendarWidget(q, lines, big, days)
         "dia-da-semana" -> WeekdayWidget(db, q, lines, today, big)
@@ -1023,8 +1026,8 @@ private fun HistoryWidget(q: LeituraQuery, lines: List<LeituraRow>, big: Boolean
 
 /** O que ficou fora (AC-25): what no widget counts, when the interval has any. */
 @Composable
-private fun LeftOutWidget(db: Db, q: LeituraQuery) {
-    val out = query(db, q) { d -> leftOut(d, q) } ?: return
+private fun LeftOutWidget(db: Db, q: LeituraQuery, big: Boolean, extra: Pair<List<Chip>, List<String>>?) {
+    val out = (if (big) query(db, q) { d -> leftOut(d, q) } else extra?.second) ?: return
     for (line in out) Sentence(line)
 }
 
@@ -1142,9 +1145,9 @@ private fun GrewWidget(db: Db, q: LeituraQuery, lines: List<LeituraRow>, today: 
 
 /** Estabelecimentos que voltam (AC-35): visits in the interval, typical value, "novo" when first seen in it. */
 @Composable
-private fun ReturnWidget(db: Db, q: LeituraQuery, lines: List<LeituraRow>, big: Boolean, onPiece: (Chip) -> Unit) {
+private fun ReturnWidget(db: Db, q: LeituraQuery, lines: List<LeituraRow>, big: Boolean, onPiece: (Chip) -> Unit, extra: Pair<List<Chip>, List<String>>?) {
     var byValue by rememberSaveable { mutableStateOf(false) }
-    val fresh = query(db, q, lines) { d -> firstTimers(d, q, lines).map { it.key }.toSet() } ?: return
+    val fresh = (if (big) query(db, q, lines) { d -> firstTimers(d, q, lines) } else extra?.first)?.map { it.key }?.toSet() ?: return
     val rows = groups(lines, ChipKind.MERCHANT).filter { transactions(it.second) > 1 }
         .map { (chip, rs) -> Triple(chip, if (byValue) total(rs).v else transactions(rs).toLong(), "${transactions(rs)} idas") to median(rs.map { it.cents.v }) }
         .sortedByDescending { it.first.second }
@@ -1158,8 +1161,8 @@ private fun ReturnWidget(db: Db, q: LeituraQuery, lines: List<LeituraRow>, big: 
 
 /** Primeira vez (AC-36): estabelecimentos and marcadores first seen in the interval. */
 @Composable
-private fun FirstWidget(db: Db, q: LeituraQuery, lines: List<LeituraRow>, big: Boolean, onPiece: (Chip) -> Unit) {
-    val fresh = query(db, q, lines) { d -> firstTimers(d, q, lines) } ?: return
+private fun FirstWidget(db: Db, q: LeituraQuery, lines: List<LeituraRow>, big: Boolean, onPiece: (Chip) -> Unit, extra: Pair<List<Chip>, List<String>>?) {
+    val fresh = (if (big) query(db, q, lines) { d -> firstTimers(d, q, lines) } else extra?.first) ?: return
     Sentence(if (fresh.isEmpty()) "Nada novo no intervalo." else "${count(fresh.size, "novidade", "novidades")}: ${fresh.take(3).joinToString(", ") { it.label }}.")
     if (big) Ranks(
         fresh.map { chip -> Triple(chip, total(lines.filter { hits(it, chip) }).v, moneyPlain(total(lines.filter { hits(it, chip) }))) }, onPiece,
