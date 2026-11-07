@@ -12,6 +12,8 @@
   - `plannedBetween(from, to, today)`: ocorrências de todas as verbas no intervalo, inclusive puladas, e as "Todo mês" projetadas além do horizonte de `planned_dates` sem gravar nada (Previstos do mês, Meses à frente, O que ficou fora).
   - `installmentsAfter(today, months)`: parcelas futuras (Meses à frente).
   - Ritmo, Margem e Semanas continuam em `budgetsOverview`/`budgetDetail`/`history`; o mês do fim do intervalo vem de `monthOf`.
+  - `window(month)`: a janela do mês de orçamento pelo dia de início atual, sobre o `monthWindow` interno (Month.kt:18), que o androidApp não alcança. Insights.kt a usa para os intervalos por mês.
+  - `read`/`close`: a espera pelo leitor e a devolução dele passam a rodar em `NonCancellable`, para que uma leitura cancelada enquanto espera nunca perca o leitor.
 - `androidApp/src/main/kotlin/com/kaiodelphino/margem/ui/Insights.kt`: reescrita.
   - `Insights(db, query, go, back, snack)` com: filtro (campo + chips + intervalo + resumo + Separar), grade em três contextos com títulos e barra presa, busca que recolhe e lupa com selo.
   - Os 18 widgets: um `@Composable` privado por widget, com miniatura e versão grande no mesmo corpo e um parâmetro `big`.
@@ -30,6 +32,7 @@
   - Reescritos: `androidApp/src/test/.../LeituraUiTest.kt`, `LeituraInvariantsTest.kt`, `LeituraLifecycleTest.kt`; `shared/src/commonTest/.../LeituraEdgeTest.kt`, `LeituraFuzzTest.kt`.
   - Ajustados: `ModelTest.kt` (leituras novas no modelo, D47), `MutationKillTest.kt` (SQL novo, D48) e `VolumeTest.kt` (teto das leituras novas, D49).
   - Ajustes de tag: `ReservaUiTest.kt`, `MargemUiTest.kt` e `TetoLifecycleTest.kt`.
+  - `shared/src/commonTest/.../ConcurrencyTest.kt`: `readsCancelledWhileWaitingForAReaderNeverLoseIt`, que cobre a correção de cancelamento em `Db.read`/`close`.
 - Documentação:
   - `docs/spec.md`: §7.5 reescrita e §2.13 com previsto em aberto tracejado.
   - `docs/architecture.md`: D-row nova substitui D45 e D17; §9 se mudar arquivo.
@@ -43,7 +46,7 @@
   - `LeituraQuery`, `Chip`, `ChipKind`: o filtro como valor, encodável na pilha (D18).
   - `LeituraRow`, `LeituraSuggestion`, `GroupRow`: o retorno das leituras.
   - `Group`: o enum do agrupamento.
-- `Db.kt`: `leituraSuggestions`, `leituraLines`, `leituraGroups`, `firstSeen`, `plannedBetween`, `installmentsAfter`. São seis leituras, a superfície mínima para D-9 sem uma função por widget.
+- `Db.kt`: `leituraSuggestions`, `leituraLines`, `leituraGroups`, `firstSeen`, `plannedBetween`, `installmentsAfter`. São seis leituras, a superfície mínima para D-9 sem uma função por widget. Mais `window`, a janela do mês para o androidApp.
 - `MainActivity.kt`: `Screen.LeituraWidget`.
 - `Components.kt`:
   - `PinnedBar`, `CollapsingHeader`, `RangeSheet`, `TypedChip`;
