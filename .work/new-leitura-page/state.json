@@ -3,10 +3,10 @@
   "branch": "refac/new-leitura-page",
   "jira": "",
   "base": "a5980d613849e903e248650a2c9d0896011b999e",
-  "stage": "minimize",
-  "step": "approved",
+  "stage": "finish",
+  "step": "done",
   "round": null,
-  "commit": "a02ecee2e7e8736a2d14cbeda2c0e8c5da54a489",
+  "commit": "75cb1c1eb9f9d05fb38ec08d2afb34a37da6c346",
   "budget": {
     "added": 4200,
     "newFiles": 0,
@@ -62,6 +62,12 @@
       "step": "approved",
       "round": null,
       "commit": "a02ecee2e7e8736a2d14cbeda2c0e8c5da54a489"
+    },
+    {
+      "stage": "finish",
+      "step": "done",
+      "round": null,
+      "commit": "75cb1c1eb9f9d05fb38ec08d2afb34a37da6c346"
     }
   ],
   "verify": {
