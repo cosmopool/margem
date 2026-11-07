@@ -3,10 +3,10 @@
   "branch": "refac/new-leitura-page",
   "jira": "",
   "base": "a5980d613849e903e248650a2c9d0896011b999e",
-  "stage": "build",
-  "step": "done",
-  "round": null,
-  "commit": "dd74a197564b10e20d6432de415932bc0a699f7b",
+  "stage": "verify",
+  "step": "round-1",
+  "round": 1,
+  "commit": "e6d8884347f2c23370ca43e5fcd957cee5ea56bc",
   "budget": {
     "added": 4200,
     "newFiles": 0,
@@ -38,6 +38,23 @@
       "step": "done",
       "round": null,
       "commit": "dd74a197564b10e20d6432de415932bc0a699f7b"
+    },
+    {
+      "stage": "verify",
+      "step": "round-1",
+      "round": 1,
+      "commit": "e6d8884347f2c23370ca43e5fcd957cee5ea56bc"
     }
-  ]
+  ],
+  "verify": {
+    "round": 1,
+    "newCritical": 0,
+    "seen": [
+      "androidApp/src/main/kotlin/com/kaiodelphino/margem/ui/Insights.kt: Total e costume and O que cresceu compare the whole interval, future-dated parcelas included, against earlier stretches cut at today's day",
+      "androidApp/src/main/kotlin/com/kaiodelphino/margem/ui/Insights.kt: earlier() runs past the end of a shorter earlier month and counts current-month days in the \"anterior\"/costume",
+      "shared/src/commonMain/kotlin/com/kaiodelphino/margem/Db.kt: Cancelled reads now run their whole SQL: the reader is taken under NonCancellable and nothing checks cancellation before block(c)",
+      "androidApp/src/main/kotlin/com/kaiodelphino/margem/ui/MainActivity.kt: Desfazer de \"S\u00f3 X\" devolve a consulta antiga depois que a aba foi deixada e reaberta, o que quebra D-5",
+      "androidApp/src/main/kotlin/com/kaiodelphino/margem/ui/Insights.kt: Colunas toc\u00e1veis de Semanas e M\u00eas a m\u00eas n\u00e3o t\u00eam r\u00f3tulo para o TalkBack, e o gr\u00e1fico de meses perdeu a descri\u00e7\u00e3o que o antigo tinha"
+    ]
+  }
 }

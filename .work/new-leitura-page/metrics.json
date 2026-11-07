@@ -14,5 +14,21 @@
     },
     "exceeded": [],
     "within_budget": true
+  },
+  {
+    "stage": "verify",
+    "step": "round-1",
+    "base": "a5980d613849e903e248650a2c9d0896011b999e",
+    "added": 1279,
+    "removed": 450,
+    "new_files": 0,
+    "new_public_symbols": 11,
+    "budget": {
+      "added": null,
+      "new_files": null,
+      "new_public_symbols": null
+    },
+    "exceeded": [],
+    "within_budget": true
   }
 ]
