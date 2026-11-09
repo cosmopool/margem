@@ -30,6 +30,7 @@ import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableIntStateOf
+import androidx.compose.runtime.mutableStateListOf
 import androidx.compose.runtime.mutableStateMapOf
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
@@ -220,6 +221,9 @@ private val CONTEXTS = listOf(
     ),
 )
 
+/** The widgets of the first screenful, whose reads the grid starts before the others'. */
+private val FIRST = setOf("margem", "total", "ritmo", "dia-da-semana")
+
 /** Widgets of the whole width; the others are halves, in pairs (a half left alone takes the line, AC-36). */
 private val WHOLE = setOf("ritmo", "fora", "retrato", "fluxo", "voltam", "calendario")
 
@@ -241,6 +245,7 @@ fun Insights(db: Db, leitura: LeituraQuery, onLeitura: (LeituraQuery) -> Unit, g
     var filterHeight by rememberSaveable { mutableIntStateOf(0) }
     var open by remember { mutableStateOf(false) }
     val tops = remember { mutableStateMapOf<String, Int>() }
+    val shown = remember { mutableStateListOf<String>() }
     // R10: past the filter's height it collapses into the lupa; the lupa reopens it where it is, and scrolling 12 dp closes it.
     val collapsed = filterHeight > 0 && scroll.value > filterHeight
     // A new query, or the way back from a widget's page, reopens the filter at the top (R10).
@@ -277,6 +282,9 @@ fun Insights(db: Db, leitura: LeituraQuery, onLeitura: (LeituraQuery) -> Unit, g
         // Widgets that come and go (§5): the grid knows before laying out its pairs.
         val extra = data?.let { (q, lines) -> query(db, q, lines) { d -> firstTimers(d, q, lines) to leftOut(d, q) } }
         val portrait = leitura.chips.singleOrNull()?.kind == ChipKind.MERCHANT
+        // Above the fold first (ordering only, each widget still reads its own, D-9): the other widgets start their reads once
+        // margem, total, ritmo and dia-da-semana show something, which they do only with their data.
+        val rest = FIRST.all { it in shown }
         val gone = buildSet {
             if (portrait) addAll(listOf("voltam", "cresceu", "primeira-vez")) else add("retrato")
             if (extra?.first.isNullOrEmpty()) add("primeira-vez")
@@ -300,7 +308,9 @@ fun Insights(db: Db, leitura: LeituraQuery, onLeitura: (LeituraQuery) -> Unit, g
                     }
                     for (row in rows) Row(Modifier.fillMaxWidth().padding(top = 20.dp).height(IntrinsicSize.Min)) {
                         for (id in row) Frame(id, Modifier.weight(1f), { go(Screen.LeituraWidget(id, leitura)) }) {
-                            if (data != null) Widget(db, id, data.first, data.second, data.third, false, {}, go, extra)
+                            if (data != null && id in FIRST) Column(Modifier.onSizeChanged { if (it.height > 0 && id !in shown) shown += id }) {
+                                Widget(db, id, data.first, data.second, data.third, false, {}, go, extra)
+                            } else if (data != null && rest) Widget(db, id, data.first, data.second, data.third, false, {}, go, extra)
                         }
                     }
                 }
