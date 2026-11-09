@@ -28,6 +28,7 @@ import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.verticalScroll
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
+import androidx.compose.runtime.derivedStateOf
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableIntStateOf
 import androidx.compose.runtime.mutableStateListOf
@@ -247,7 +248,8 @@ fun Insights(db: Db, leitura: LeituraQuery, onLeitura: (LeituraQuery) -> Unit, g
     val tops = remember { mutableStateMapOf<String, Int>() }
     val shown = remember { mutableStateListOf<String>() }
     // R10: past the filter's height it collapses into the lupa; the lupa reopens it where it is, and scrolling 12 dp closes it.
-    val collapsed = filterHeight > 0 && scroll.value > filterHeight
+    // Derived, so a swipe recomposes the Leitura only when it crosses the filter, not at every pixel.
+    val collapsed by remember { derivedStateOf { filterHeight > 0 && scroll.value > filterHeight } }
     // A new query, or the way back from a widget's page, reopens the filter at the top (R10).
     LaunchedEffect(leitura) { scroll.scrollTo(0) }
     LaunchedEffect(open) {
@@ -316,7 +318,7 @@ fun Insights(db: Db, leitura: LeituraQuery, onLeitura: (LeituraQuery) -> Unit, g
                 }
             }
             // R8: the context whose title went off the top stays pinned until the next one's does.
-            val pinned = CONTEXTS.lastOrNull { (tops[it.first.first] ?: Int.MAX_VALUE) < scroll.value }?.first
+            val pinned = remember { derivedStateOf { CONTEXTS.lastOrNull { (tops[it.first.first] ?: Int.MAX_VALUE) < scroll.value }?.first } }.value
             if (pinned != null) Box(
                 Modifier.fillMaxWidth().height(44.dp).background(c.paper).drawBehind { drawLine(c.ink, Offset(0f, size.height - 0.5f), Offset(size.width, size.height - 0.5f), 1.dp.toPx()) }
                     .testTag(InsightsTags.PINNED).padding(horizontal = Margem.space.page),
