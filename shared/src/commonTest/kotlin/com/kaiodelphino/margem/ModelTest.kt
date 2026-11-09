@@ -1314,6 +1314,13 @@ private class MtRun(val db: Db, val path: String, val seed: Int) {
                 LeftOut(Tally(refundedIn.size, Cents(refundedIn.sumOf { it.total })), tally(NoticeStatus.DISMISSED), tally(NoticeStatus.PENDING)),
                 db.leftOut(a, z), "leftOut $a..$z",
             )
+
+            // Total e costume: Σ of the interval's installments, and of the lançamentos of previstos; a marcador chip keeps its lançamentos.
+            for (tag in listOf(null) + m.tags.take(2)) {
+                val kept = counted.filter { tag == null || tag in it.first.tags }
+                val want = LeituraSum(Cents(kept.sumOf { (_, i) -> i.sumOf { it.cents.v } }), Cents(kept.filter { it.first.fixed }.sumOf { (_, i) -> i.sumOf { it.cents.v } }))
+                assertEquals(want, db.leituraSum(LeituraQuery(a, z, listOfNotNull(tag?.let { Chip(ChipKind.TAG, it, it) }))), "leituraSum $a..$z $tag")
+            }
         }
 
         // §7.3 the edit screen and the notice behind each transaction.

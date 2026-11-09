@@ -503,6 +503,31 @@ class MutationKillTest {
         assertEquals(LeftOut(), db.leftOut(LocalDate(2026, 10, 7), LocalDate(2026, 10, 31)))
     }
 
+    @Test
+    fun `the leitura's sum is its lines' - all of them and the lançamentos of previstos - with and without chips`() = runTest {
+        db.addSource(BANK, "Banco", 0)
+        val a = db.createBudget("A", Cents(100_000), OCT_6)
+        val b = db.createBudget("B", Cents(100_000), OCT_6)
+        db.addManual(form(a, "Feira", OCT_6, tags = listOf("feira")).copy(total = Cents(3000), installments = 3))
+        db.addManual(form(b, "Bar", OCT_6, tags = listOf("bar")))
+        assertTrue(db.addManual(form(b, "", LocalDate(2026, 10, 10), tags = listOf("conta")).copy(total = Cents(500), caption = "Luz", repeats = Repeats.MONTHLY), OCT_6).planned.v != 0L)
+        val luz = db.planned(OCT_6).single { it.name == "Luz" }
+        db.addManual(TransactionForm(b, listOf("conta"), Cents(700), 1, "Luz", OCT_6, NOON, occurrence = luz.occurrence), OCT_6)
+        val refunded = db.addManual(form(a, "Volta", OCT_6)).transaction
+        assertTrue(capture(db, bank("e", T, "Estorno de R$ 10,00")))
+        assertTrue(db.registerRefund(db.pending().single().id, refunded))
+
+        val oct = LeituraQuery(OCT_6, OCT_6)
+        assertEquals(LeituraSum(Cents(2700), Cents(700)), db.leituraSum(oct))
+        assertEquals(LeituraSum(Cents(700), Cents(700)), db.leituraSum(oct.copy(chips = listOf(Chip(ChipKind.TAG, "conta", "conta")))))
+        assertEquals(LeituraSum(Cents(3000), Cents(0)), db.leituraSum(LeituraQuery(OCT_6, LocalDate(2026, 12, 31), listOf(Chip(ChipKind.BUDGET, a.v.toString(), "A")))))
+        assertEquals(LeituraSum(), db.leituraSum(LeituraQuery(LocalDate(2026, 10, 7), LocalDate(2026, 10, 31))))
+        for (q in listOf(oct, LeituraQuery(OCT_6, LocalDate(2027, 1, 31), listOf(Chip(ChipKind.TAG, "bar", "bar"), Chip(ChipKind.BUDGET, a.v.toString(), "A"))))) {
+            val lines = db.leituraLines(q)
+            assertEquals(LeituraSum(Cents(lines.sumOf { it.cents.v }), Cents(lines.filter { it.fixed }.sumOf { it.cents.v })), db.leituraSum(q), "$q")
+        }
+    }
+
     // ---- Types ----
 
     @Test

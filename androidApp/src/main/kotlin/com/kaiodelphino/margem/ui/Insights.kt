@@ -779,7 +779,16 @@ private fun TotalWidget(db: Db, q: LeituraQuery, lines: List<LeituraRow>, today:
     var back by rememberSaveable { mutableIntStateOf(6) }
     var add by rememberSaveable { mutableStateOf("tudo") }
     val keep = { r: LeituraRow -> add == "tudo" || r.fixed == (add == "previstos") }
-    val before = query(db, q, back, add) { d -> (1..back).map { total(d.leituraLines(earlier(d, q, today, it)).filter(keep)).v } } ?: return
+    val before = query(db, q, back, add) { d ->
+        (1..back).map {
+            val s = d.leituraSum(earlier(d, q, today, it))
+            when (add) {
+                "tudo" -> s.total.v
+                "previstos" -> s.fixed.v
+                else -> s.total.v - s.fixed.v
+            }
+        }
+    } ?: return
     val now = total(lines.filter { keep(it) && (today !in q.from..q.to || it.date <= today) })
     val usual = Cents(before.sum() / back)
     Sentence(

@@ -1051,27 +1051,13 @@ class Db(
      * lançamentos left out. The chips add up with OR, in SQL: a lançamento enters once when it matches any of them.
      */
     suspend fun leituraLines(q: LeituraQuery): List<LeituraRow> = read { c ->
-        val place = "CASE WHEN a.alias IS NULL THEN 'k' || t.merchant_key ELSE 'a' || a.alias_key END"
-        val args = arrayListOf<Any>(q.from.low(), q.to.high())
-        val any = q.chips.groupBy { it.kind }.map { (kind, chips) ->
-            val marks = chips.joinToString(",") { "?" }
-            chips.forEach { args += it.key }
-            when (kind) {
-                ChipKind.BUDGET -> "t.budget_id IN ($marks)"
-                ChipKind.TAG -> "EXISTS (SELECT 1 FROM transaction_tags l JOIN tags g ON g.id = l.tag_id WHERE l.transaction_id = t.id AND g.name IN ($marks))"
-                ChipKind.MERCHANT -> "$place IN ($marks)"
-                ChipKind.NOTICE -> "n.package IN ($marks)"
-            }
-        }
+        val (from, args) = leituraFrom(q)
         c.query(
             "SELECT t.id, i.k, i.date, t.time, i.cents, t.budget_id, b.name, " +
                 "(SELECT group_concat(g.name, char(31)) FROM transaction_tags l JOIN tags g ON g.id = l.tag_id WHERE l.transaction_id = t.id), " +
-                "COALESCE(a.alias, t.merchant), t.merchant, $place, COALESCE(n.package, ''), COALESCE(s.label, n.app_label, ''), t.fixed " +
-                "FROM installments i JOIN transactions t ON t.id = i.transaction_id JOIN budgets b ON b.id = t.budget_id " +
-                "LEFT JOIN merchant_aliases a ON a.merchant_key = t.merchant_key LEFT JOIN notices n ON n.id = t.notice_id " +
-                "LEFT JOIN sources s ON s.package = n.package WHERE i.date BETWEEN ? AND ? AND $NOT_REFUNDED" +
-                (if (any.isEmpty()) "" else " AND (${any.joinToString(" OR ")})") + " ORDER BY i.date, t.time, t.id",
-            *args.toTypedArray(),
+                "COALESCE(a.alias, t.merchant), t.merchant, $PLACE, COALESCE(n.package, ''), COALESCE(s.label, n.app_label, ''), t.fixed " +
+                "$from ORDER BY i.date, t.time, t.id",
+            *args,
         ) {
             LeituraRow(
                 TransactionId(it.getLong(0)), it.getInt(1), LocalDate.parse(it.getText(2)), LocalTime.parse(it.getText(3)), Cents(it.getLong(4)),
@@ -1079,6 +1065,33 @@ class Db(
                 it.getText(8), it.getText(9), it.getText(10), it.getText(11), it.getText(12), it.getLong(13) != 0L,
             )
         }
+    }
+
+    /** Σ of [leituraLines] of [q] (Total e costume), all of it and the part of lançamentos of previstos, without building rows. */
+    suspend fun leituraSum(q: LeituraQuery): LeituraSum = read { c ->
+        val (from, args) = leituraFrom(q)
+        c.query("SELECT COALESCE(SUM(i.cents), 0), COALESCE(SUM(CASE WHEN t.fixed = 1 THEN i.cents ELSE 0 END), 0) $from", *args) {
+            LeituraSum(Cents(it.getLong(0)), Cents(it.getLong(1)))
+        }.first()
+    }
+
+    /** [leituraLines]' FROM and WHERE for [q], with its arguments: the interval, refunded lançamentos out, the chips with OR. */
+    private fun leituraFrom(q: LeituraQuery): Pair<String, Array<Any>> {
+        val args = arrayListOf<Any>(q.from.low(), q.to.high())
+        val any = q.chips.groupBy { it.kind }.map { (kind, chips) ->
+            val marks = chips.joinToString(",") { "?" }
+            chips.forEach { args += it.key }
+            when (kind) {
+                ChipKind.BUDGET -> "t.budget_id IN ($marks)"
+                ChipKind.TAG -> "EXISTS (SELECT 1 FROM transaction_tags l JOIN tags g ON g.id = l.tag_id WHERE l.transaction_id = t.id AND g.name IN ($marks))"
+                ChipKind.MERCHANT -> "$PLACE IN ($marks)"
+                ChipKind.NOTICE -> "n.package IN ($marks)"
+            }
+        }
+        return "FROM installments i JOIN transactions t ON t.id = i.transaction_id JOIN budgets b ON b.id = t.budget_id " +
+            "LEFT JOIN merchant_aliases a ON a.merchant_key = t.merchant_key LEFT JOIN notices n ON n.id = t.notice_id " +
+            "LEFT JOIN sources s ON s.package = n.package WHERE i.date BETWEEN ? AND ? AND $NOT_REFUNDED" +
+            (if (any.isEmpty()) "" else " AND (${any.joinToString(" OR ")})") to args.toTypedArray()
     }
 
     /**
@@ -1601,6 +1614,9 @@ class Db(
                 "FROM notices n"
 
         const val NOT_REFUNDED = "NOT EXISTS (SELECT 1 FROM refunds r WHERE r.transaction_id = t.id)"
+
+        /** The estabelecimento of `t` as a MERCHANT chip's key ([Chip.key]): "a" + its alias key, else "k" + its merchant key. */
+        const val PLACE = "CASE WHEN a.alias IS NULL THEN 'k' || t.merchant_key ELSE 'a' || a.alias_key END"
 
         /**
          * v1: the schema of architecture §4, plus merchant_key on transactions (alias and suggestion lookups).

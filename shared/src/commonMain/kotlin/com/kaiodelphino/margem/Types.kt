@@ -542,3 +542,6 @@ data class Tally(val count: Int = 0, val cents: Cents = Cents(0))
  * total, the recados riscados and the recados still in the Pauta by the date and value read from them.
  */
 data class LeftOut(val refunded: Tally = Tally(), val dismissed: Tally = Tally(), val pending: Tally = Tally())
+
+/** Σ of the Leitura's lines ([Db.leituraSum]): [total], and [fixed], the part of lançamentos of previstos ([LeituraRow.fixed]). */
+data class LeituraSum(val total: Cents = Cents(0), val fixed: Cents = Cents(0))
