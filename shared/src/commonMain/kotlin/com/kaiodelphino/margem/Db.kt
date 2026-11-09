@@ -1150,7 +1150,7 @@ class Db(
             budget, w.start.low(), w.endInclusive.high(),
         ) { LocalDate.parse(it.getText(0)) to Cents(it.getLong(1)) }.toMap()
         val spent = c.query(
-            "SELECT i.date, SUM(i.cents) FROM installments i JOIN transactions t ON t.id = i.transaction_id " +
+            "SELECT i.date, SUM(i.cents) FROM installments i CROSS JOIN transactions t ON t.id = i.transaction_id " +
                 "WHERE t.budget_id = ? AND i.date BETWEEN ? AND ? AND $NOT_REFUNDED GROUP BY i.date",
             budget, w.start.low(), w.endInclusive.high(),
         ) { LocalDate.parse(it.getText(0)) to Cents(it.getLong(1)) }.toMap()
@@ -1167,7 +1167,7 @@ class Db(
      */
     private fun reserve(c: SQLiteConnection, budget: Long, w: LocalDateRange): Pair<Map<LocalDate, Cents>, Cents> {
         val fixed = c.query(
-            "SELECT i.date, SUM(i.cents) FROM installments i JOIN transactions t ON t.id = i.transaction_id " +
+            "SELECT i.date, SUM(i.cents) FROM installments i CROSS JOIN transactions t ON t.id = i.transaction_id " +
                 "WHERE t.budget_id = ? AND t.fixed = 1 AND i.date BETWEEN ? AND ? AND $NOT_REFUNDED GROUP BY i.date",
             budget, w.start.low(), w.endInclusive.high(),
         ) { LocalDate.parse(it.getText(0)) to Cents(it.getLong(1)) }.toMap()
@@ -1199,7 +1199,7 @@ class Db(
     /** Σ installments in [from]..[to] of the non-refunded transactions matching [where] (over `t`). */
     private fun spentIn(c: SQLiteConnection, where: String, budget: Long, from: LocalDate, to: LocalDate, vararg more: Any): Long =
         c.long(
-            "SELECT COALESCE(SUM(i.cents), 0) FROM installments i JOIN transactions t ON t.id = i.transaction_id " +
+            "SELECT COALESCE(SUM(i.cents), 0) FROM installments i CROSS JOIN transactions t ON t.id = i.transaction_id " +
                 "WHERE $where AND i.date BETWEEN ? AND ? AND $NOT_REFUNDED",
             budget, *more, from.low(), to.high(),
         )
