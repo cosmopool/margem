@@ -1256,11 +1256,12 @@ private fun CalendarWidget(q: LeituraQuery, lines: List<LeituraRow>, big: Boolea
 private fun WeekdayWidget(db: Db, q: LeituraQuery, lines: List<LeituraRow>, today: LocalDate, big: Boolean) {
     var heavyFirst by rememberSaveable { mutableStateOf(false) }
     val start = query(db) { d -> d.settings().weekStart } ?: return
-    val sofar = (0..q.from.daysUntil(minOf(q.to, maxOf(today, q.from)))).map { q.from.plus(it, DateTimeUnit.DAY) }
+    val end = minOf(q.to, maxOf(today, q.from))
+    val sofar = (0..q.from.daysUntil(end)).map { q.from.plus(it, DateTimeUnit.DAY) }
     val order = (0 until 7).map { DayOfWeek.entries[(start.ordinal + it) % 7] }
     val means = order.map { wd ->
         val n = sofar.count { it.dayOfWeek == wd }
-        wd to if (n == 0) 0L else total(lines.filter { it.date.dayOfWeek == wd && it.date in sofar }).v / n
+        wd to if (n == 0) 0L else total(lines.filter { it.date.dayOfWeek == wd && it.date in q.from..end }).v / n
     }
     val heavy = means.maxByOrNull { it.second }?.takeIf { it.second > 0 && means.count { m -> m.second == it.second } == 1 }
     Sentence(heavy?.let { "${if (it.first.ordinal <= 4) "As" else "Os"} ${weekdayPlural[it.first.ordinal]} pesam: ${money(Cents(it.second))} por dia." } ?: "Nenhum dia da semana pesa.")
