@@ -1621,7 +1621,7 @@ class Db(
     }
 
     private companion object {
-        const val READERS = 4
+        const val READERS = 2
 
         /** Every notice with its derived status: 0 pending, 1 dismissed, 2 processed (architecture §5). */
         const val NOTICES =
