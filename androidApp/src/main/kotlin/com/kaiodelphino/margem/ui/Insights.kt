@@ -30,6 +30,7 @@ import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.verticalScroll
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.derivedStateOf
 import androidx.compose.runtime.getValue
@@ -37,6 +38,7 @@ import androidx.compose.runtime.mutableIntStateOf
 import androidx.compose.runtime.mutableStateListOf
 import androidx.compose.runtime.mutableStateMapOf
 import androidx.compose.runtime.mutableStateOf
+import androidx.compose.runtime.produceState
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.saveable.rememberSaveable
 import androidx.compose.runtime.setValue
@@ -111,7 +113,9 @@ import com.kaiodelphino.margem.widgets.monthShort
 import com.kaiodelphino.margem.widgets.sans
 import com.kaiodelphino.margem.widgets.serif
 import com.kaiodelphino.margem.widgets.weekdayShort
+import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.flow.first
+import kotlinx.coroutines.withContext
 import kotlinx.datetime.DateTimeUnit
 import kotlinx.datetime.DayOfWeek
 import kotlinx.datetime.LocalDate
@@ -122,6 +126,7 @@ import kotlinx.datetime.onDay
 import kotlinx.datetime.plus
 import kotlinx.datetime.plusMonth
 import kotlinx.datetime.yearMonth
+import java.util.WeakHashMap
 import kotlin.math.abs
 
 /**
@@ -240,9 +245,7 @@ private fun titleOf(id: String) = CONTEXTS.flatMap { it.second }.firstOrNull { i
 @Composable
 fun Insights(db: Db, leitura: LeituraQuery, onLeitura: (LeituraQuery) -> Unit, go: (Screen) -> Unit) {
     val c = Margem.colors
-    val todayOf = LocalToday.current
-    // Today is read with the lines, so a day that turns with the screen open is seen at the next write (AC-F2).
-    val data = query(db, leitura) { d -> load(d, leitura, todayOf()) }
+    val data = leituraOf(db, leitura)
     val scroll = rememberScrollState()
     val density = LocalDensity.current
     // Saved, so the way back from a page lays the grid out at once, the filter's place kept while it reloads.
@@ -285,7 +288,7 @@ fun Insights(db: Db, leitura: LeituraQuery, onLeitura: (LeituraQuery) -> Unit, g
             return@Column
         }
         // Widgets that come and go (§5): the grid knows before laying out its pairs.
-        val extra = data?.let { (q, lines) -> query(db, q, lines) { d -> firstTimers(d, q, lines) to leftOut(d, q) } }
+        val extra = data?.let { (q, lines) -> kept(db, "extra", q, lines) { d -> firstTimers(d, q, lines) to leftOut(d, q) } }
         val portrait = leitura.chips.singleOrNull()?.kind == ChipKind.MERCHANT
         // Above the fold first (ordering only, each widget still reads its own, D-9): the other widgets start their reads once
         // margem, total, ritmo and dia-da-semana show something, which they do only with their data.
@@ -344,13 +347,12 @@ fun Insights(db: Db, leitura: LeituraQuery, onLeitura: (LeituraQuery) -> Unit, g
 @OptIn(ExperimentalLayoutApi::class)
 @Composable
 fun LeituraWidgetPage(db: Db, id: String, start: LeituraQuery, go: (Screen) -> Unit, back: () -> Unit, leituraTo: (LeituraQuery, String) -> Unit) {
-    val todayOf = LocalToday.current
     var raw by rememberSaveable(stateSaver = QuerySaver) { mutableStateOf(start) }
     // The piece touched: one chip, or a from..to of days.
     var piece by rememberSaveable(stateSaver = QuerySaver) { mutableStateOf(LeituraQuery()) }
     // R13: Maiores or Recentes, here so the lazy list's rows below can follow it.
     var recent by rememberSaveable { mutableStateOf(false) }
-    val data = query(db, raw) { d -> load(d, raw, todayOf()) }
+    val data = leituraOf(db, raw)
     Column(Modifier.fillMaxSize()) {
         TopBar(titleOf(id), onBack = back)
         val (q, lines, today) = data ?: return@Column
@@ -391,6 +393,48 @@ fun LeituraWidgetPage(db: Db, id: String, start: LeituraQuery, go: (Screen) -> U
 }
 
 // ---- Reads ----
+
+/**
+ * The Leitura's results by Db, then by call site and keys, each with the db.version it was read at (D19, revised):
+ * the grid, a widget's page and the way back show the last result at once, and read again only when something was
+ * written since. Weak on the Db, so a closed one takes its results with it. Main thread only; 64 per Db, least recently used out.
+ */
+private val keptReads = WeakHashMap<Db, LinkedHashMap<List<Any?>, Pair<Long, Any?>>>()
+
+/**
+ * [query] through [keptReads]: the result kept for [site] and [keys] right away (even one of an older version), read
+ * again when stale. [keys] name every value [block] captures, as with [query].
+ */
+@Composable
+private fun <T> kept(db: Db, site: String, vararg keys: Any?, block: suspend (Db) -> T): T? {
+    // Read once here: the version the effect below starts for, not the one when its read ends (a write may land between).
+    val version = db.version.collectAsState().value
+    val cache = keptReads.getOrPut(db) {
+        object : LinkedHashMap<List<Any?>, Pair<Long, Any?>>(64, 0.75f, true) {
+            override fun removeEldestEntry(eldest: MutableMap.MutableEntry<List<Any?>, Pair<Long, Any?>>?) = size > 64
+        }
+    }
+    val key = listOf(site, *keys)
+    @Suppress("UNCHECKED_CAST")
+    val hit = cache[key] as Pair<Long, T>?
+    val state = produceState(hit?.second, version, *keys) {
+        if (hit?.first == version) return@produceState
+        val v = withContext(Dispatchers.IO) { block(db) }
+        cache[key] = version to v
+        value = v
+    }
+    // state.value always read, so the read that lands recomposes even while the kept result is shown.
+    val landed = state.value
+    return hit?.second ?: landed
+}
+
+/** [load] for the grid and the pages alike, so a page opened on the grid's query starts from the grid's lines. */
+@Composable
+private fun leituraOf(db: Db, raw: LeituraQuery): Triple<LeituraQuery, List<LeituraRow>, LocalDate>? {
+    val today = LocalToday.current()
+    // Today is a key: a day that turns is seen at the next open, or at the next write with the screen open (AC-F2).
+    return kept(db, "load", raw, today) { d -> load(d, raw, today) }
+}
 
 /** [raw] with its interval resolved (NO_DATE: today's budget month), its lines and today; from NO_DATE: no budgets yet. */
 private suspend fun load(d: Db, raw: LeituraQuery, today: LocalDate): Triple<LeituraQuery, List<LeituraRow>, LocalDate> {
@@ -551,7 +595,7 @@ private fun Filter(db: Db, raw: LeituraQuery, q: LeituraQuery, lines: List<Leitu
 @Composable
 private fun Suggestions(db: Db, q: LeituraQuery, text: String, pick: (Chip) -> Unit) {
     val c = Margem.colors
-    val all = query(db, q.from, q.to) { d -> d.leituraLines(LeituraQuery(q.from, q.to)) } ?: return
+    val all = kept(db, "suggestions", q.from, q.to) { d -> d.leituraLines(LeituraQuery(q.from, q.to)) } ?: return
     val word = fold(text.trim())
     val key = MerchantKey.of(text).v
     for ((kind, title) in listOf(ChipKind.BUDGET to "Verbas", ChipKind.TAG to "Marcadores", ChipKind.MERCHANT to "Estabelecimentos", ChipKind.NOTICE to "Recados")) {
@@ -577,7 +621,7 @@ private fun Suggestions(db: Db, q: LeituraQuery, text: String, pick: (Chip) -> U
 @Composable
 private fun RangeSheet(db: Db, today: LocalDate, onPick: (LocalDate, LocalDate) -> Unit, close: () -> Unit) {
     val c = Margem.colors
-    val shortcuts = query(db, today) { d ->
+    val shortcuts = kept(db, "range", today) { d ->
         val cur = d.monthOf(today)
         listOf("este mês" to 0, "mês passado" to 1, "3 meses" to 2, "6 meses" to 5).map { (label, back) ->
             Triple(label, d.window(cur.minus(back, DateTimeUnit.MONTH)).start, d.window(if (back == 1) cur.minusMonth() else cur).endInclusive)
@@ -781,7 +825,7 @@ private fun LineRow(i: Int, r: LeituraRow, recent: Boolean, sum: Long) {
 @Composable
 private fun MargemWidget(db: Db, q: LeituraQuery, lines: List<LeituraRow>, today: LocalDate, big: Boolean) {
     var order by rememberSaveable { mutableStateOf("risco") }
-    val read = query(db, q.to, today) { d ->
+    val read = kept(db, "margem", q.to, today) { d ->
         val m = d.monthOf(q.to)
         d.ensureMonths(m)
         m to d.budgetsOverview(m, today, BudgetOrder.RISK)
@@ -816,7 +860,7 @@ private fun TotalWidget(db: Db, q: LeituraQuery, lines: List<LeituraRow>, today:
     var back by rememberSaveable { mutableIntStateOf(6) }
     var add by rememberSaveable { mutableStateOf("tudo") }
     val keep = { r: LeituraRow -> add == "tudo" || r.fixed == (add == "previstos") }
-    val before = query(db, q, back, add) { d ->
+    val before = kept(db, "total", q, back, add, today) { d ->
         (1..back).map {
             val s = d.leituraSum(earlier(d, q, today, it))
             when (add) {
@@ -850,13 +894,13 @@ private fun TotalWidget(db: Db, q: LeituraQuery, lines: List<LeituraRow>, today:
 @Composable
 private fun RitmoWidget(db: Db, q: LeituraQuery, lines: List<LeituraRow>, today: LocalDate, big: Boolean) {
     var compare by rememberSaveable { mutableStateOf("") }
-    val bm = query(db, q, today) { d -> plan(d, q, today) } ?: return
+    val bm = kept(db, "ritmo", q, today) { d -> plan(d, q, today) } ?: return
     val whole = bm.limit.v > 0
     val mode = if (compare == "" || (compare == "ritmo" && !whole)) (if (whole) "ritmo" else "anterior") else compare
     if (mode == "ritmo") Pace(bm, lines, today)
     else {
         val n = if (mode == "costume") 3 else 1
-        val before = query(db, q, n, today) { d -> (1..n).map { earlier(d, q, today, it) }.map { it.from to d.leituraLines(it) } } ?: return
+        val before = kept(db, "ritmo-before", q, n, today) { d -> (1..n).map { earlier(d, q, today, it) }.map { it.from to d.leituraLines(it) } } ?: return
         Versus(q, lines, before, today, if (n == 1) "no intervalo anterior" else "de costume")
     }
     if (!big) return
@@ -1016,7 +1060,7 @@ private fun DrawScope.grid(measurer: TextMeasurer, label: TextStyle, left: Float
 @Composable
 private fun PlannedWidget(db: Db, q: LeituraQuery, today: LocalDate, big: Boolean) {
     val c = Margem.colors
-    val read = query(db, q.to, today) { d ->
+    val read = kept(db, "previstos", q.to, today) { d ->
         val m = d.monthOf(q.to)
         d.ensureMonths(m)
         m to d.plannedLines(m, today).sortedBy { it.planned.date }
@@ -1070,7 +1114,7 @@ private fun HistoryWidget(q: LeituraQuery, lines: List<LeituraRow>, big: Boolean
 /** O que ficou fora (AC-25): what no widget counts, when the interval has any. */
 @Composable
 private fun LeftOutWidget(db: Db, q: LeituraQuery, big: Boolean, extra: Pair<List<Chip>, List<String>>?) {
-    val out = (if (big) query(db, q) { d -> leftOut(d, q) } else extra?.second) ?: return
+    val out = (if (big) kept(db, "fora", q) { d -> leftOut(d, q) } else extra?.second) ?: return
     for (line in out) Sentence(line)
 }
 
@@ -1141,7 +1185,7 @@ private fun FlowWidget(lines: List<LeituraRow>, big: Boolean, onPiece: (Chip) ->
 private fun WhereWidget(db: Db, q: LeituraQuery, lines: List<LeituraRow>, big: Boolean, onPiece: (Chip) -> Unit) {
     var kind by rememberSaveable { mutableStateOf(ChipKind.BUDGET) }
     var metric by rememberSaveable { mutableStateOf("soma") }
-    val source = if (q.chips.none { it.kind == kind }) lines else query(db, q, kind) { d -> d.leituraLines(q.copy(chips = q.chips.filter { it.kind != kind })) } ?: return
+    val source = if (q.chips.none { it.kind == kind }) lines else kept(db, "para-onde-foi", q, kind) { d -> d.leituraLines(q.copy(chips = q.chips.filter { it.kind != kind })) } ?: return
     val rows = groups(source, kind).map { (chip, rs) ->
         val n = transactions(rs)
         when (metric) {
@@ -1165,7 +1209,7 @@ private fun WhereWidget(db: Db, q: LeituraQuery, lines: List<LeituraRow>, big: B
 private fun GrewWidget(db: Db, q: LeituraQuery, lines: List<LeituraRow>, today: LocalDate, big: Boolean, onPiece: (Chip) -> Unit) {
     var against by rememberSaveable { mutableIntStateOf(3) }
     var often by rememberSaveable { mutableStateOf(false) }
-    val before = query(db, q, against, today) { d -> (1..against).flatMap { d.leituraLines(earlier(d, q, today, it)) } } ?: return
+    val before = kept(db, "cresceu", q, against, today) { d -> (1..against).flatMap { d.leituraLines(earlier(d, q, today, it)) } } ?: return
     val now = groups(lines.filter { today !in q.from..q.to || it.date <= today }, ChipKind.TAG).associateBy { it.first.key }
     val was = groups(before, ChipKind.TAG).associateBy { it.first.key }
     val rows = (now.keys + was.keys).map { k ->
@@ -1190,7 +1234,7 @@ private fun GrewWidget(db: Db, q: LeituraQuery, lines: List<LeituraRow>, today: 
 @Composable
 private fun ReturnWidget(db: Db, q: LeituraQuery, lines: List<LeituraRow>, big: Boolean, onPiece: (Chip) -> Unit, extra: Pair<List<Chip>, List<String>>?) {
     var byValue by rememberSaveable { mutableStateOf(false) }
-    val fresh = (if (big) query(db, q, lines) { d -> firstTimers(d, q, lines) } else extra?.first)?.map { it.key }?.toSet() ?: return
+    val fresh = (if (big) kept(db, "first-timers", q, lines) { d -> firstTimers(d, q, lines) } else extra?.first)?.map { it.key }?.toSet() ?: return
     val rows = groups(lines, ChipKind.MERCHANT).filter { transactions(it.second) > 1 }
         .map { (chip, rs) -> Triple(chip, if (byValue) total(rs).v else transactions(rs).toLong(), "${transactions(rs)} idas") to median(rs.map { it.cents.v }) }
         .sortedByDescending { it.first.second }
@@ -1205,7 +1249,7 @@ private fun ReturnWidget(db: Db, q: LeituraQuery, lines: List<LeituraRow>, big: 
 /** Primeira vez (AC-36): estabelecimentos and marcadores first seen in the interval. */
 @Composable
 private fun FirstWidget(db: Db, q: LeituraQuery, lines: List<LeituraRow>, big: Boolean, onPiece: (Chip) -> Unit, extra: Pair<List<Chip>, List<String>>?) {
-    val fresh = (if (big) query(db, q, lines) { d -> firstTimers(d, q, lines) } else extra?.first) ?: return
+    val fresh = (if (big) kept(db, "first-timers", q, lines) { d -> firstTimers(d, q, lines) } else extra?.first) ?: return
     Sentence(if (fresh.isEmpty()) "Nada novo no intervalo." else "${count(fresh.size, "novidade", "novidades")}: ${fresh.take(3).joinToString(", ") { it.label }}.")
     if (big) Ranks(
         fresh.map { chip -> Triple(chip, total(lines.filter { hits(it, chip) }).v, moneyPlain(total(lines.filter { hits(it, chip) }))) }, onPiece,
@@ -1280,7 +1324,7 @@ private fun CalendarWidget(q: LeituraQuery, lines: List<LeituraRow>, big: Boolea
 @Composable
 private fun WeekdayWidget(db: Db, q: LeituraQuery, lines: List<LeituraRow>, today: LocalDate, big: Boolean) {
     var heavyFirst by rememberSaveable { mutableStateOf(false) }
-    val start = query(db) { d -> d.settings().weekStart } ?: return
+    val start = kept(db, "week-start") { d -> d.settings().weekStart } ?: return
     val end = minOf(q.to, maxOf(today, q.from))
     val sofar = (0..q.from.daysUntil(end)).map { q.from.plus(it, DateTimeUnit.DAY) }
     val order = (0 until 7).map { DayOfWeek.entries[(start.ordinal + it) % 7] }
@@ -1298,7 +1342,7 @@ private fun WeekdayWidget(db: Db, q: LeituraQuery, lines: List<LeituraRow>, toda
 /** Semanas (AC-41): a column per week from the Ajustes week start, with the passo semanal's mark when the month allows it. */
 @Composable
 private fun WeeksWidget(db: Db, q: LeituraQuery, lines: List<LeituraRow>, today: LocalDate, big: Boolean, onDays: (LocalDate, LocalDate) -> Unit) {
-    val read = query(db, q, today) { d -> d.settings().weekStart to plan(d, q, today) } ?: return
+    val read = kept(db, "semanas", q, today) { d -> d.settings().weekStart to plan(d, q, today) } ?: return
     val (start, bm) = read
     val first = q.from.minus((q.from.dayOfWeek.ordinal - start.ordinal + 7) % 7, DateTimeUnit.DAY)
     val weeks = generateSequence(first) { it.plus(7, DateTimeUnit.DAY) }.takeWhile { it <= q.to }
@@ -1318,7 +1362,7 @@ private fun MonthsWidget(db: Db, q: LeituraQuery, big: Boolean, onDays: (LocalDa
     val c = Margem.colors
     var n by rememberSaveable { mutableIntStateOf(6) }
     var split by rememberSaveable { mutableStateOf("nao") }
-    val read = query(db, q, n) { d ->
+    val read = kept(db, "mes-a-mes", q, n) { d ->
         val end = d.monthOf(q.to)
         val windows = (n - 1 downTo 0).map { end.minus(it, DateTimeUnit.MONTH).let { m -> m to d.window(m) } }
         windows to d.leituraLines(q.copy(from = windows.first().second.start, to = windows.last().second.endInclusive))
@@ -1351,7 +1395,7 @@ private fun MonthsWidget(db: Db, q: LeituraQuery, big: Boolean, onDays: (LocalDa
 private fun AheadWidget(db: Db, q: LeituraQuery, today: LocalDate, big: Boolean) {
     val c = Margem.colors
     var n by rememberSaveable { mutableIntStateOf(3) }
-    val read = query(db, q.chips, n, today) { d ->
+    val read = kept(db, "meses-a-frente", q.chips, n, today) { d ->
         val cur = d.monthOf(today)
         d.ensureMonths(cur)
         val windows = (1..n).map { d.window(cur.plus(it, DateTimeUnit.MONTH)) }
@@ -1374,7 +1418,7 @@ private fun AheadWidget(db: Db, q: LeituraQuery, today: LocalDate, big: Boolean)
 @Composable
 private fun MonthlyWidget(db: Db, q: LeituraQuery, today: LocalDate, big: Boolean) {
     var n by rememberSaveable { mutableIntStateOf(6) }
-    val read = query(db, q.chips, n, today) { d ->
+    val read = kept(db, "volta-todo-mes", q.chips, n, today) { d ->
         val cur = d.monthOf(today)
         val windows = (n downTo 1).map { d.window(cur.minus(it, DateTimeUnit.MONTH)) }
         windows to d.leituraLines(LeituraQuery(windows.first().start, windows.last().endInclusive, q.chips))
