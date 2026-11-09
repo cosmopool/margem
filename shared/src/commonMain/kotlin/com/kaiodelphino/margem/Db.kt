@@ -1100,6 +1100,20 @@ class Db(
         }
     }
 
+    /** What the Leitura leaves out of [from]..[to] ([LeftOut]): the recados are only read and parsed, not recognized (D60). */
+    suspend fun leftOut(from: LocalDate, to: LocalDate): LeftOut = read { c ->
+        val refunded = c.query(
+            "SELECT COUNT(*), COALESCE(SUM(t.total_cents), 0) FROM transactions t " +
+                "WHERE t.date BETWEEN ? AND ? AND EXISTS (SELECT 1 FROM refunds r WHERE r.transaction_id = t.id)",
+            from.low(), to.high(),
+        ) { Tally(it.getInt(0), Cents(it.getLong(1))) }.first()
+        val tally = { status: Int ->
+            val inside = notices(c, "WHERE status = $status").filter { it.parsed.date in from..to }
+            Tally(inside.size, Cents(inside.sumOf { it.parsed.cents.v }))
+        }
+        LeftOut(refunded, tally(1), tally(0))
+    }
+
     // ---- Private: shared by reads and writes ----
 
     private fun settings(c: SQLiteConnection): Settings {

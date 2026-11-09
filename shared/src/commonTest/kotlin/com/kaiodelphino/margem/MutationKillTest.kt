@@ -478,6 +478,31 @@ class MutationKillTest {
         assertEquals(emptyList(), db.chipsSeen(LocalDate(2026, 10, 4), chips))
     }
 
+    @Test
+    fun `left out of an interval - estornos by the lançamento's date at its total - riscados and pending recados by theirs`() = runTest {
+        db.addSource(BANK, "Banco", 0)
+        val b = db.createBudget("Casa", Cents(100_000), OCT_6)
+        val oct5 = LocalDate(2026, 10, 5)
+        val split = db.addManual(form(b, "A", OCT_6).copy(total = Cents(3000), installments = 3)).transaction
+        val earlier = db.addManual(form(b, "B", oct5)).transaction
+        db.addManual(form(b, "C", OCT_6))
+        for ((key, purchase) in listOf("e1" to split, "e2" to earlier)) {
+            assertTrue(capture(db, bank(key, T, "Estorno de R$ 10,00")))
+            assertTrue(db.registerRefund(db.pending().single().id, purchase))
+        }
+        assertTrue(capture(db, bank("r", T, "Compra de R$ 20,00 em D")))
+        assertTrue(db.dismiss(db.pending().single().id))
+        assertTrue(capture(db, bank("p", T + 1, "Compra de R$ 7,00 em E")))
+        assertTrue(capture(db, bank("q", T + 2, "Compra de R$ 5,00 em F")))
+        val q = db.pending().first { it.raw.key == "q" }
+        assertTrue(db.accept(q.id, form(b, "F", OCT_6)).v != 0L)
+
+        assertEquals(LeftOut(Tally(1, Cents(3000)), Tally(1, Cents(2000)), Tally(1, Cents(700))), db.leftOut(OCT_6, OCT_6))
+        assertEquals(LeftOut(Tally(2, Cents(4000)), Tally(1, Cents(2000)), Tally(1, Cents(700))), db.leftOut(oct5, OCT_6))
+        assertEquals(LeftOut(Tally(1, Cents(1000))), db.leftOut(oct5, oct5))
+        assertEquals(LeftOut(), db.leftOut(LocalDate(2026, 10, 7), LocalDate(2026, 10, 31)))
+    }
+
     // ---- Types ----
 
     @Test

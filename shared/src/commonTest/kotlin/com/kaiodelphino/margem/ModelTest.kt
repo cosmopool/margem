@@ -1306,6 +1306,14 @@ private class MtRun(val db: Db, val path: String, val seed: Int) {
                 m.txs.any { t -> !m.refunded(t.id) && t.inst.any { it.date <= until } && if (chip.kind == ChipKind.TAG) chip.key in t.tags else place(t) == chip.key }
             }
             assertEquals(seen, db.chipsSeen(until, chips), "chipsSeen $until")
+
+            // O que ficou fora (R20): estornos by the lançamento's date at its total; riscados and pending recados by their own date.
+            val refundedIn = m.txs.filter { m.refunded(it.id) && it.date in a..z }
+            val tally = { status: NoticeStatus -> m.notices.filter { m.status(it) == status && it.parsed.date in a..z }.let { ns -> Tally(ns.size, Cents(ns.sumOf { it.parsed.cents.v })) } }
+            assertEquals(
+                LeftOut(Tally(refundedIn.size, Cents(refundedIn.sumOf { it.total })), tally(NoticeStatus.DISMISSED), tally(NoticeStatus.PENDING)),
+                db.leftOut(a, z), "leftOut $a..$z",
+            )
         }
 
         // §7.3 the edit screen and the notice behind each transaction.

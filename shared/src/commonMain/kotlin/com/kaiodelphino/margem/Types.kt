@@ -533,3 +533,12 @@ data class LeituraRow(
     /** A lançamento of a previsto ([TransactionRow.fixed]). */
     val fixed: Boolean = false,
 )
+
+/** How many and their sum. */
+data class Tally(val count: Int = 0, val cents: Cents = Cents(0))
+
+/**
+ * What the Leitura's counts leave out of an interval (R20, AC-25): the refunded lançamentos by their date at their
+ * total, the recados riscados and the recados still in the Pauta by the date and value read from them.
+ */
+data class LeftOut(val refunded: Tally = Tally(), val dismissed: Tally = Tally(), val pending: Tally = Tally())

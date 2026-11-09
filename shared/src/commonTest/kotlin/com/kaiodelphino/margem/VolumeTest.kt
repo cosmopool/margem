@@ -179,6 +179,7 @@ class VolumeTest {
             Triple("spentByDay (year)", CEIL_BYDAY) { db.spentByDay(yearStart, today) },
             Triple("spentByDay (all)", CEIL_BYDAY) { db.spentByDay(fromDay, today) },
             Triple("chipsSeen (month's chips)", CEIL_SEEN) { db.chipsSeen(monthStart.minus(1, DateTimeUnit.DAY), monthChips) },
+            Triple("leftOut (month)", CEIL_LEFT_OUT) { db.leftOut(monthStart, today) },
         )
         val failures = mutableListOf<String>()
         for ((name, ceiling, read) in reads) {
@@ -327,5 +328,6 @@ class VolumeTest {
         const val CEIL_RANK_ALL = 80L
         const val CEIL_BYDAY = 40L
         const val CEIL_SEEN = 30L
+        const val CEIL_LEFT_OUT = 170L
     }
 }

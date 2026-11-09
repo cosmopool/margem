@@ -420,13 +420,11 @@ private fun sum(months: List<BudgetMonth>): BudgetMonth = months.fold(BudgetMont
 
 /** What the interval's counts leave out (R20, AC-25): estornos, recados riscados and recados still in the Pauta. */
 private suspend fun leftOut(d: Db, q: LeituraQuery): List<String> {
-    val refunded = d.transactions().filter { it.refunded && it.date in q.from..q.to }
-    val dismissed = d.dismissed().filter { it.parsed.date in q.from..q.to }
-    val pending = d.pending().filter { it.parsed.date in q.from..q.to }
+    val (refunded, dismissed, pending) = d.leftOut(q.from, q.to)
     return listOfNotNull(
-        if (refunded.isEmpty()) null else "${count(refunded.size, "estorno", "estornos")}: ${money(Cents(refunded.sumOf { it.total.v }))} estornados.",
-        if (dismissed.isEmpty()) null else "${count(dismissed.size, "recado riscado", "recados riscados")}: ${money(Cents(dismissed.sumOf { it.parsed.cents.v }))}.",
-        if (pending.isEmpty()) null else "${count(pending.size, "recado", "recados")} na Pauta: ${money(Cents(pending.sumOf { it.parsed.cents.v }))}.",
+        if (refunded.count == 0) null else "${count(refunded.count, "estorno", "estornos")}: ${money(refunded.cents)} estornados.",
+        if (dismissed.count == 0) null else "${count(dismissed.count, "recado riscado", "recados riscados")}: ${money(dismissed.cents)}.",
+        if (pending.count == 0) null else "${count(pending.count, "recado", "recados")} na Pauta: ${money(pending.cents)}.",
     )
 }
 
