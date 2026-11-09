@@ -808,24 +808,43 @@ class Db(
         ) { MonthLine(rows.getValue(it.getLong(0)), it.getInt(1), LocalDate.parse(it.getText(2)), Cents(it.getLong(3))) }
         val first = c.query("SELECT MIN(month) FROM budget_months WHERE budget_id = ?", id.v) { if (it.isNull(0)) NO_MONTH else YearMonth.parse(it.getText(0)) }
         val planned = c.long("SELECT COUNT(*) FROM planned WHERE budget_id = ?", id.v).toInt()
-        // D73: the occurrences of its previstos dated in the month, open or lançada; a lançada one at what its
-        // lançamento adds to this budget's fixed (0 when refunded or in another budget), on its date.
+        return BudgetDetail(id, name, bm, lines, first.firstOrNull() ?: NO_MONTH, planned, plannedOf(c, id.v, bm.start..bm.end, today))
+    }
+
+    /**
+     * [BudgetDetail.plannedLines] of every budget of [month], budgets in the manual order, in one read (D73): the
+     * Leitura's Previstos do mês and Meses à frente. Creates the occurrences first, like [budgetDetail] (D71).
+     */
+    suspend fun plannedLines(month: YearMonth, today: LocalDate): List<PlannedLine> {
+        fill(today)
+        return read { c ->
+            val w = monthWindow(month, settings(c).monthStartDay)
+            c.query(
+                "SELECT b.id FROM budgets b JOIN budget_months m ON m.budget_id = b.id AND m.month = ? ORDER BY b.position, b.id", month.toString(),
+            ) { it.getLong(0) }.flatMap { plannedOf(c, it, w, today) }
+        }
+    }
+
+    /**
+     * D73: the occurrences of [budget]'s previstos dated in [w], open or lançada; a lançada one at what its
+     * lançamento adds to this budget's fixed (0 when refunded or in another budget), on its date.
+     */
+    private fun plannedOf(c: SQLiteConnection, budget: Long, w: LocalDateRange, today: LocalDate): List<PlannedLine> {
         // An occurrence's date is in the calendar month of its row: the window's two calendar months hold them all.
-        val inMonth = "p.budget_id = ${id.v} AND d.month BETWEEN '${bm.start.yearMonth}' AND '${bm.end.yearMonth}'"
+        val inMonth = "p.budget_id = $budget AND d.month BETWEEN '${w.start.yearMonth}' AND '${w.endInclusive.yearMonth}'"
         val launched = HashMap<Long, Pair<Cents, LocalDate>>()
         c.query(
             "SELECT d.id, t.date, CASE WHEN t.budget_id = p.budget_id AND $NOT_REFUNDED THEN " +
                 "(SELECT COALESCE(SUM(i.cents), 0) FROM installments i WHERE i.transaction_id = t.id AND i.date BETWEEN ? AND ?) ELSE 0 END " +
                 "FROM planned_dates d JOIN planned p ON p.id = d.planned_id JOIN transactions t ON t.occurrence_id = d.id WHERE $inMonth",
-            from, to,
+            w.start.low(), w.endInclusive.high(),
         ) { launched[it.getLong(0)] = Cents(it.getLong(2)) to LocalDate.parse(it.getText(1)) }
-        val plannedLines = plannedRows(c, today, "$inMonth AND d.skipped = 0", open = false)
-            .filter { it.date in bm.start..bm.end }
+        return plannedRows(c, today, "$inMonth AND d.skipped = 0", open = false)
+            .filter { it.date in w }
             .map { p ->
                 val l = launched[p.occurrence.v]
                 if (l == null) PlannedLine(p, p.cents) else PlannedLine(p.copy(late = false), l.first, l.second)
             }
-        return BudgetDetail(id, name, bm, lines, first.firstOrNull() ?: NO_MONTH, planned, plannedLines)
     }
 
     // ---- Teto (spec §3, §7.1; D42, D46) ----

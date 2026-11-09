@@ -528,6 +528,25 @@ class MutationKillTest {
         }
     }
 
+    @Test
+    fun `the month's previstos are each budget's detail lines - budgets in the manual order - only of the month`() = runTest {
+        val a = db.createBudget("A", Cents(100_000), OCT_6)
+        val b = db.createBudget("B", Cents(100_000), OCT_6)
+        fun ahead(budget: BudgetId, name: String, date: LocalDate) = form(budget, "", date).copy(caption = name, repeats = Repeats.ONCE)
+        assertTrue(db.addManual(ahead(a, "Aluguel", LocalDate(2026, 10, 10)), OCT_6).planned.v != 0L)
+        assertTrue(db.addManual(ahead(b, "Luz", LocalDate(2026, 10, 12)), OCT_6).planned.v != 0L)
+        assertTrue(db.addManual(ahead(b, "Água", LocalDate(2026, 11, 3)), OCT_6).planned.v != 0L)
+        val luz = db.planned(OCT_6).single { it.name == "Luz" }
+        db.addManual(TransactionForm(b, listOf("x"), Cents(1700), 1, "Luz", OCT_6, NOON, occurrence = luz.occurrence), OCT_6)
+        assertTrue(db.reorderBudgets(listOf(b, a)))
+        val oct = YearMonth(2026, 10)
+        val lines = db.plannedLines(oct, OCT_6)
+        assertEquals(listOf("Luz" to 1700L, "Aluguel" to 1000L), lines.map { it.planned.name to it.cents.v })
+        assertEquals(db.budgetDetail(b, oct, OCT_6).plannedLines + db.budgetDetail(a, oct, OCT_6).plannedLines, lines)
+        db.ensureMonths(YearMonth(2026, 11))
+        assertEquals(listOf("Água"), db.plannedLines(YearMonth(2026, 11), LocalDate(2026, 11, 1)).map { it.planned.name })
+    }
+
     // ---- Types ----
 
     @Test

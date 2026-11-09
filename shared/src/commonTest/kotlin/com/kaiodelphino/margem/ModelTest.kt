@@ -1238,6 +1238,8 @@ private class MtRun(val db: Db, val path: String, val seed: Int) {
                 val bare = lines.map { it.copy(planned = it.planned.copy(occurrence = OccurrenceId(0))) }.sortedWith(MT_LINE_ORDER)
                 assertEquals(m.detail(id, month, today), got.copy(plannedLines = bare), "budgetDetail ${id.v} $month")
             }
+            // The Leitura's previstos in one read (D73): the month's budgets' detail lines (checked above), in the manual order.
+            assertEquals(exp.flatMap { db.budgetDetail(it.id, month, today).plannedLines }, db.plannedLines(month, today), "plannedLines $month")
         }
         if (!full) return
 

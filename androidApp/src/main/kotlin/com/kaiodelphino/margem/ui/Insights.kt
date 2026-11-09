@@ -1019,7 +1019,7 @@ private fun PlannedWidget(db: Db, q: LeituraQuery, today: LocalDate, big: Boolea
     val read = query(db, q.to, today) { d ->
         val m = d.monthOf(q.to)
         d.ensureMonths(m)
-        m to d.budgetsOverview(m, today, BudgetOrder.MANUAL).flatMap { d.budgetDetail(it.id, m, today).plannedLines }.sortedBy { it.planned.date }
+        m to d.plannedLines(m, today).sortedBy { it.planned.date }
     } ?: return
     // R19: a previsto has no estabelecimento nor fonte; it enters by its verba or its marcadores.
     val lines = read.second.filter { p ->
@@ -1356,7 +1356,7 @@ private fun AheadWidget(db: Db, q: LeituraQuery, today: LocalDate, big: Boolean)
         d.ensureMonths(cur)
         val windows = (1..n).map { d.window(cur.plus(it, DateTimeUnit.MONTH)) }
         // planned_dates reaches only today's month (D71): its "Todo mês" previstos are projected, nothing written.
-        val monthly = d.budgetsOverview(cur, today, BudgetOrder.MANUAL).flatMap { d.budgetDetail(it.id, cur, today).plannedLines }
+        val monthly = d.plannedLines(cur, today)
             .map { it.planned }.filter { p ->
                 p.repeats == Repeats.MONTHLY && (q.chips.isEmpty() ||
                     q.chips.any { (it.kind == ChipKind.BUDGET && it.key == p.budget.v.toString()) || (it.kind == ChipKind.TAG && it.key in p.tags) })
