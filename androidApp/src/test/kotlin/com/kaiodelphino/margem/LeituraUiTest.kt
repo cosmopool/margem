@@ -19,6 +19,7 @@ import androidx.compose.ui.test.hasText
 import androidx.compose.ui.test.junit4.createAndroidComposeRule
 import androidx.compose.ui.test.onAllNodesWithTag
 import androidx.compose.ui.test.onFirst
+import androidx.compose.ui.test.onNodeWithTag
 import androidx.compose.ui.test.performClick
 import androidx.compose.ui.test.performScrollTo
 import androidx.compose.ui.test.performScrollToNode
@@ -227,7 +228,8 @@ class LeituraUiTest {
             shows(InsightsTags.PAGE + "para-onde-foi", "padaria") && shows(InsightsTags.PAGE + "para-onde-foi", "45,00") &&
                 shows(InsightsTags.PAGE + "para-onde-foi", "café") && shows(InsightsTags.PAGE + "para-onde-foi", "30,00")
         }
-        // AC-19: Maiores, do maior para o menor, numerada.
+        // AC-19: Maiores, do maior para o menor, numerada (a lista é preguiçosa: rola até a linha).
+        composeRule.onNodeWithTag(InsightsTags.PAGE + "para-onde-foi").performScrollToNode(hasTestTag(InsightsTags.LIST_ROW + 0))
         await("lista em Maiores", InsightsTags.LIST_ROW + 0) { shows(InsightsTags.LIST_ROW + 0, "Pizzaria") && shows(InsightsTags.LIST_ROW + 0, "1") }
 
         // AC-15: Só padaria troca os chips, volta à grade, e Desfazer restaura.
@@ -449,11 +451,15 @@ class LeituraUiTest {
     }
 
     private fun tap(tag: String) {
+        // A widget's page is a lazy list: what lies below the screen exists only once scrolled to.
+        if (!exists(tag)) runCatching { composeRule.onNode(pageList).performScrollToNode(hasTestTag(tag)) }
         val n = composeRule.onAllNodesWithTag(tag, useUnmergedTree = true).onFirst()
         runCatching { n.performScrollTo() }
         n.performClick()
         composeRule.waitForIdle()
     }
+
+    private val pageList = SemanticsMatcher("a widget's page") { it.config.getOrNull(SemanticsProperties.TestTag)?.startsWith(InsightsTags.PAGE) == true }
 
     private fun await(what: String, vararg show: String, cond: () -> Boolean) {
         try {

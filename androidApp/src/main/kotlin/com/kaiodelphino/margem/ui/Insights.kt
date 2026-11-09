@@ -7,6 +7,7 @@ import androidx.compose.foundation.interaction.MutableInteractionSource
 import androidx.compose.foundation.interaction.collectIsPressedAsState
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
+import androidx.compose.foundation.layout.PaddingValues
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.ExperimentalLayoutApi
 import androidx.compose.foundation.layout.FlowRow
@@ -23,6 +24,8 @@ import androidx.compose.foundation.layout.offset
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.widthIn
+import androidx.compose.foundation.lazy.LazyColumn
+import androidx.compose.foundation.lazy.LazyListScope
 import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.verticalScroll
@@ -345,30 +348,44 @@ fun LeituraWidgetPage(db: Db, id: String, start: LeituraQuery, go: (Screen) -> U
     var raw by rememberSaveable(stateSaver = QuerySaver) { mutableStateOf(start) }
     // The piece touched: one chip, or a from..to of days.
     var piece by rememberSaveable(stateSaver = QuerySaver) { mutableStateOf(LeituraQuery()) }
+    // R13: Maiores or Recentes, here so the lazy list's rows below can follow it.
+    var recent by rememberSaveable { mutableStateOf(false) }
     val data = query(db, raw) { d -> load(d, raw, todayOf()) }
     Column(Modifier.fillMaxSize()) {
         TopBar(titleOf(id), onBack = back)
         val (q, lines, today) = data ?: return@Column
         if (q.from == NO_DATE) return@Column
-        Column(Modifier.weight(1f).testTag(InsightsTags.PAGE + id).verticalScroll(rememberScrollState()).padding(start = Margem.space.page, end = Margem.space.page, bottom = 32.dp)) {
-            Filter(db, raw, q, lines, today) { raw = it }
-            Gap()
-            Widget(db, id, q, lines, today, true, { piece = it }, go, null)
-            val chip = piece.chips.firstOrNull()
-            if (chip != null || piece.from != NO_DATE) SectionLine(chip?.label ?: span(piece.from, piece.to), aside = "o pedaço tocado")
-            if (chip != null) FlowRow(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
-                Button("Só ${chip.label}", { leituraTo(raw.copy(chips = listOf(chip)), "Leitura só com ${chip.label}.") }, Modifier.testTag(InsightsTags.ONLY), ButtonKind.SECONDARY, small = true)
-                Button("+ ou ${chip.label}", { leituraTo(raw.copy(chips = (raw.chips + chip).distinct()), "${chip.label} somado à Leitura.") }, Modifier.testTag(InsightsTags.OR), ButtonKind.SECONDARY, small = true)
-                if (id == "cresceu") Button(
-                    "Mês a mês de ${chip.label}", { go(Screen.LeituraWidget("mes-a-mes", raw.copy(chips = listOf(chip)))) },
-                    Modifier.testTag(InsightsTags.MONTHS_OF), ButtonKind.SECONDARY, small = true,
-                )
+        // Lazy: only the rows on screen are composed, however long the interval's list.
+        LazyColumn(
+            Modifier.weight(1f).testTag(InsightsTags.PAGE + id),
+            contentPadding = PaddingValues(start = Margem.space.page, end = Margem.space.page, bottom = 32.dp),
+        ) {
+            item("filter") { Filter(db, raw, q, lines, today) { raw = it } }
+            item("widget") {
+                Column {
+                    Gap()
+                    Widget(db, id, q, lines, today, true, { piece = it }, go, null)
+                }
             }
-            if (piece.from != NO_DATE) Button(
-                "Usar como intervalo", { leituraTo(raw.copy(from = piece.from, to = piece.to), "Intervalo: ${span(piece.from, piece.to)}.") },
-                Modifier.testTag(InsightsTags.AS_RANGE), ButtonKind.SECONDARY, small = true,
-            )
-            if (id !in setOf("historia", "fora", "retrato")) Lines(lines)
+            item("piece") {
+                Column {
+                    val chip = piece.chips.firstOrNull()
+                    if (chip != null || piece.from != NO_DATE) SectionLine(chip?.label ?: span(piece.from, piece.to), aside = "o pedaço tocado")
+                    if (chip != null) FlowRow(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+                        Button("Só ${chip.label}", { leituraTo(raw.copy(chips = listOf(chip)), "Leitura só com ${chip.label}.") }, Modifier.testTag(InsightsTags.ONLY), ButtonKind.SECONDARY, small = true)
+                        Button("+ ou ${chip.label}", { leituraTo(raw.copy(chips = (raw.chips + chip).distinct()), "${chip.label} somado à Leitura.") }, Modifier.testTag(InsightsTags.OR), ButtonKind.SECONDARY, small = true)
+                        if (id == "cresceu") Button(
+                            "Mês a mês de ${chip.label}", { go(Screen.LeituraWidget("mes-a-mes", raw.copy(chips = listOf(chip)))) },
+                            Modifier.testTag(InsightsTags.MONTHS_OF), ButtonKind.SECONDARY, small = true,
+                        )
+                    }
+                    if (piece.from != NO_DATE) Button(
+                        "Usar como intervalo", { leituraTo(raw.copy(from = piece.from, to = piece.to), "Intervalo: ${span(piece.from, piece.to)}.") },
+                        Modifier.testTag(InsightsTags.AS_RANGE), ButtonKind.SECONDARY, small = true,
+                    )
+                }
+            }
+            if (id !in setOf("historia", "fora", "retrato")) lines(lines, recent) { recent = it }
         }
     }
 }
@@ -721,30 +738,38 @@ private fun Ranks(rows: List<Triple<Chip, Long, String>>, onRow: ((Chip) -> Unit
     }
 }
 
-/** R13: the page's list — Maiores, numbered with each one's share, or Recentes, by day with the day's total. */
-@Composable
-private fun Lines(lines: List<LeituraRow>) {
-    val c = Margem.colors
-    var recent by rememberSaveable { mutableStateOf(false) }
-    SectionLine("Lançamentos", aside = count(lines.size, "parcela", "parcelas").takeIf { lines.any { it.k > 1 } } ?: "")
-    OptionPicker(listOf(false to "Maiores", true to "Recentes"), recent, { recent = it }, tag = "insights.list.recent.")
+/** R13: the page's list — Maiores, numbered with each one's share, or Recentes, by day with the day's total: one item per row and per day. */
+private fun LazyListScope.lines(lines: List<LeituraRow>, recent: Boolean, onRecent: (Boolean) -> Unit) {
+    item("lines") {
+        Column {
+            SectionLine("Lançamentos", aside = count(lines.size, "parcela", "parcelas").takeIf { lines.any { it.k > 1 } } ?: "")
+            OptionPicker(listOf(false to "Maiores", true to "Recentes"), recent, onRecent, tag = "insights.list.recent.")
+        }
+    }
     val sum = maxOf(total(lines).v, 1L)
     val shown = if (recent) lines.sortedWith(compareByDescending<LeituraRow> { it.date }.thenByDescending { it.time }) else lines.sortedByDescending { it.cents.v }
+    val days = if (recent) shown.groupBy { it.date }.mapValues { total(it.value) } else emptyMap()
     for ((i, r) in shown.withIndex()) {
-        if (recent && (i == 0 || shown[i - 1].date != r.date)) DayHeader("${dateShort(r.date)} · ${money(total(shown.filter { it.date == r.date }))}")
-        Row(
-            Modifier.fillMaxWidth().testTag(InsightsTags.LIST_ROW + i).semantics(mergeDescendants = true) {},
-            verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(10.dp),
+        if (recent && (i == 0 || shown[i - 1].date != r.date)) item("day" to r.date.toString()) { DayHeader("${dateShort(r.date)} · ${money(days.getValue(r.date))}") }
+        item(r.transaction.v to r.k) { LineRow(i, r, recent, sum) }
+    }
+}
+
+@Composable
+private fun LineRow(i: Int, r: LeituraRow, recent: Boolean, sum: Long) {
+    val c = Margem.colors
+    Row(
+        Modifier.fillMaxWidth().testTag(InsightsTags.LIST_ROW + i).semantics(mergeDescendants = true) {},
+        verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(10.dp),
+    ) {
+        if (!recent) Text("${i + 1}", sans(13f, 600, 17f, tabular = true), Modifier.widthIn(min = 20.dp), c.inkTertiary)
+        ListRow(
+            r.merchant, Modifier.weight(1f), (listOf(r.budgetName, r.tags.joinToString(", ")) + if (r.k > 1) listOf("parcela ${r.k}") else emptyList())
+                .filter(String::isNotEmpty).joinToString(" · "),
         ) {
-            if (!recent) Text("${i + 1}", sans(13f, 600, 17f, tabular = true), Modifier.widthIn(min = 20.dp), c.inkTertiary)
-            ListRow(
-                r.merchant, Modifier.weight(1f), (listOf(r.budgetName, r.tags.joinToString(", ")) + if (r.k > 1) listOf("parcela ${r.k}") else emptyList())
-                    .filter(String::isNotEmpty).joinToString(" · "),
-            ) {
-                Column(horizontalAlignment = Alignment.End) {
-                    Text(moneyPlain(r.cents), sans(15f, 600, 20f, tabular = true))
-                    if (!recent) Text("${(200 * r.cents.v + sum) / (2 * sum)}%", sans(12f, 500, 16f), color = c.inkTertiary)
-                }
+            Column(horizontalAlignment = Alignment.End) {
+                Text(moneyPlain(r.cents), sans(15f, 600, 20f, tabular = true))
+                if (!recent) Text("${(200 * r.cents.v + sum) / (2 * sum)}%", sans(12f, 500, 16f), color = c.inkTertiary)
             }
         }
     }

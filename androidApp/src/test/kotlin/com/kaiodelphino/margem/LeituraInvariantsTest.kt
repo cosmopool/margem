@@ -20,6 +20,7 @@ import androidx.compose.ui.test.onFirst
 import androidx.compose.ui.test.onNodeWithTag
 import androidx.compose.ui.test.performClick
 import androidx.compose.ui.test.performScrollTo
+import androidx.compose.ui.test.performScrollToNode
 import androidx.compose.ui.test.performTextReplacement
 import androidx.sqlite.driver.AndroidSQLiteDriver
 import com.kaiodelphino.margem.ui.App
@@ -210,10 +211,12 @@ class LeituraInvariantsTest {
         option("estabelecimento")
         eventually("Para onde foi por estabelecimento") { checkRanks(page, e.merchants) { shown, row -> MerchantKey.of(shown) == MerchantKey.of(row.name) } }
         eventually("lista Maiores") {
-            // LIST_ROW + index only: the Maiores/Recentes picker's tags share the prefix ("insights.list.recent.").
-            val n = nodesWithPrefix(InsightsTags.LIST_ROW).count { it.config[SemanticsProperties.TestTag].removePrefix(InsightsTags.LIST_ROW).all(Char::isDigit) }
-            check(n == e.installments.size) { "LIST_ROW: $n linhas, ${e.installments.size} parcelas no intervalo" }
+            // The list is lazy (only the rows on screen exist): one row per parcela is rows 0..n-1, reached by scrolling, and no row n.
+            val n = e.installments.size
+            check(!scrollToRow(page, n)) { "LIST_ROW.$n na lista, $n parcelas no intervalo" }
+            check(n == 0 || scrollToRow(page, n - 1)) { "LIST_ROW.${n - 1} ausente, $n parcelas no intervalo" }
             if (n > 0) {
+                check(scrollToRow(page, 0)) { "LIST_ROW.0 ausente" }
                 val top = e.installments.maxOf { it }
                 check(texts(InsightsTags.LIST_ROW + 0).any { norm(it) == norm(moneyPlain(Cents(top))) }) { "LIST_ROW.0 ${texts(InsightsTags.LIST_ROW + 0)}, esperado a maior parcela ${moneyPlain(Cents(top))}" }
             }
@@ -664,6 +667,10 @@ class LeituraInvariantsTest {
     ).fetchSemanticsNodes()
 
     private fun countPrefix(prefix: String) = nodesWithPrefix(prefix).size
+
+    /** Scrolls the lazy list of [page] to its row [i]; false when it has none. */
+    private fun scrollToRow(page: String, i: Int) =
+        runCatching { compose.onNodeWithTag(page).performScrollToNode(hasTestTag(InsightsTags.LIST_ROW + i)) }.isSuccess.also { compose.waitForIdle() }
 
     private fun subtree(n: SemanticsNode): List<SemanticsNode> = listOf(n) + n.children.flatMap { subtree(it) }
 
