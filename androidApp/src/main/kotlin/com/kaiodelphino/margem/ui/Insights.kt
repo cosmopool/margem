@@ -76,11 +76,13 @@ import com.kaiodelphino.margem.ChipKind
 import com.kaiodelphino.margem.Db
 import com.kaiodelphino.margem.LeituraQuery
 import com.kaiodelphino.margem.LeituraRow
+import com.kaiodelphino.margem.LeituraSum
 import com.kaiodelphino.margem.MerchantKey
 import com.kaiodelphino.margem.NO_DATE
 import com.kaiodelphino.margem.PaceStatus
 import com.kaiodelphino.margem.R
 import com.kaiodelphino.margem.Repeats
+import com.kaiodelphino.margem.SpendKind
 import com.kaiodelphino.margem.fold
 import com.kaiodelphino.margem.widgets.BottomSheet
 import com.kaiodelphino.margem.widgets.Button
@@ -158,7 +160,17 @@ object InsightsTags {
     /** The chips, "ou" between them; a click on one takes it off. */
     const val CHIPS = "insights.chips"
 
-    /** "R$ 130,00 · 5 lançamentos · até hoje" ("até hoje" while the interval holds today). */
+    /**
+     * Prefix: KIND + "all" | "planned" | "variable": "Tudo" · "Previstos" · "Variáveis", which gasto the Leitura reads
+     * (LeituraQuery.kind; it opens on Settings.leituraKind). The one `selected` is the query's. On the grid a click
+     * changes the Leitura; on a widget's page it changes the whole Leitura too, back on the grid, with Desfazer.
+     */
+    const val KIND = "insights.kind."
+
+    /**
+     * "R$ 130,00 · 5 lançamentos · até hoje" ("até hoje" while the interval holds today), then "· só previstos" or
+     * "· só variáveis" when the kind is not Tudo.
+     */
     const val SUMMARY = "insights.summary"
 
     /** "Separar", with 2 chips or more: one series per chip, "a + b" for a line that matches both (R5). */
@@ -172,11 +184,17 @@ object InsightsTags {
     /** Prefix: CONTEXT + "quanto" | "para-onde" | "quando": the context titles, in that order. */
     const val CONTEXT = "insights.context."
 
-    /** The bar under the TopBar with the name of the context whose title went off the top. */
+    /** The bar under the TopBar with the name of the context whose title went off the top, and "só previstos" or "só variáveis". */
     const val PINNED = "insights.pinned"
 
-    /** The lupa in the TopBar once the filter collapsed (its badge: the number of chips); click reopens the filter. */
+    /**
+     * The lupa in the TopBar once the filter collapsed (its badge: the number of chips, plus one when the kind is not
+     * Tudo); click reopens the filter.
+     */
     const val LENS = "insights.lens"
+
+    /** The lupa's badge, when there is something to count: the number of chips, plus one when the kind is not Tudo. */
+    const val LENS_BADGE = "insights.lens.badge"
 
     /**
      * Prefix: WIDGET + id: a widget of the grid, with its sentence; click opens its page. Ids: margem, total, ritmo,
@@ -271,9 +289,11 @@ fun Insights(db: Db, leitura: LeituraQuery, onLeitura: (LeituraQuery) -> Unit, g
                 Text(span(q.from, q.to), sans(13f, 500, 16f), color = c.inkTertiary)
                 Box {
                     IconButton(R.drawable.i_lupa, { open = true }, Modifier.testTag(InsightsTags.LENS))
-                    if (q.chips.isNotEmpty()) Text(
-                        q.chips.size.toString(), sans(11f, 700, 16f, tabular = true),
-                        Modifier.align(Alignment.TopEnd).offset((-4).dp, 6.dp).widthIn(min = 16.dp).background(c.brand, CircleShape).padding(horizontal = 4.dp),
+                    val n = q.chips.size + if (q.kind == SpendKind.ALL) 0 else 1
+                    if (n > 0) Text(
+                        n.toString(), sans(11f, 700, 16f, tabular = true),
+                        Modifier.align(Alignment.TopEnd).offset((-4).dp, 6.dp).widthIn(min = 16.dp).background(c.brand, CircleShape).padding(horizontal = 4.dp)
+                            .testTag(InsightsTags.LENS_BADGE),
                         c.surface,
                     )
                 }
@@ -287,8 +307,11 @@ fun Insights(db: Db, leitura: LeituraQuery, onLeitura: (LeituraQuery) -> Unit, g
             )
             return@Column
         }
-        // Widgets that come and go (§5): the grid knows before laying out its pairs.
-        val extra = data?.let { (q, lines) -> kept(db, "extra", q, lines) { d -> firstTimers(d, q, lines) to leftOut(d, q) } }
+        // Widgets that come and go (§5): the grid knows before laying out its pairs. Primeira vez comes or goes by all the
+        // interval's gasto, whatever the kind, so changing the kind keeps the grid's shape.
+        val extra = data?.let { (q, lines) ->
+            kept(db, "extra", q, lines) { d -> firstTimers(d, q, if (q.kind == SpendKind.ALL) lines else d.leituraLines(q.copy(kind = SpendKind.ALL))) to leftOut(d, q) }
+        }
         val portrait = leitura.chips.singleOrNull()?.kind == ChipKind.MERCHANT
         // Above the fold first (ordering only, each widget still reads its own, D-9): the other widgets start their reads once
         // margem, total, ritmo and dia-da-semana show something, which they do only with their data.
@@ -301,7 +324,7 @@ fun Insights(db: Db, leitura: LeituraQuery, onLeitura: (LeituraQuery) -> Unit, g
         Box(Modifier.weight(1f)) {
             Column(Modifier.fillMaxSize().testTag(InsightsTags.GRID).verticalScroll(scroll).padding(start = Margem.space.page, end = Margem.space.page, bottom = 32.dp)) {
                 if (collapsed || data == null) Spacer(Modifier.height(with(density) { filterHeight.toDp() }))
-                else Box(Modifier.onSizeChanged { filterHeight = it.height }) { Filter(db, leitura, data.first, data.second, data.third, onLeitura) }
+                else Box(Modifier.onSizeChanged { filterHeight = it.height }) { Filter(db, leitura, data.first, data.second, data.third, { onLeitura(leitura.copy(kind = it)) }, onLeitura) }
                 for ((context, widgets) in CONTEXTS) {
                     PageHeader(
                         "Contexto", context.second,
@@ -329,11 +352,16 @@ fun Insights(db: Db, leitura: LeituraQuery, onLeitura: (LeituraQuery) -> Unit, g
                 Modifier.fillMaxWidth().height(44.dp).background(c.paper).drawBehind { drawLine(c.ink, Offset(0f, size.height - 0.5f), Offset(size.width, size.height - 0.5f), 1.dp.toPx()) }
                     .testTag(InsightsTags.PINNED).padding(horizontal = Margem.space.page),
                 contentAlignment = Alignment.CenterStart,
-            ) { Text(pinned.second, serif(19, 500, 24)) }
+            ) {
+                Row(verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(10.dp)) {
+                    Text(pinned.second, serif(19, 500, 24))
+                    if (leitura.kind != SpendKind.ALL) Text(only(leitura.kind), sans(12f, 500, 16f), color = c.inkTertiary)
+                }
+            }
             if (open && collapsed && data != null) {
                 Box(Modifier.fillMaxSize().background(c.ink.copy(alpha = 0.25f)).clickable { open = false })
                 Column(Modifier.fillMaxWidth().background(c.paper).padding(start = Margem.space.page, end = Margem.space.page, bottom = 12.dp)) {
-                    Filter(db, leitura, data.first, data.second, data.third, onLeitura)
+                    Filter(db, leitura, data.first, data.second, data.third, { onLeitura(leitura.copy(kind = it)) }, onLeitura)
                 }
             }
         }
@@ -362,7 +390,8 @@ fun LeituraWidgetPage(db: Db, id: String, start: LeituraQuery, go: (Screen) -> U
             Modifier.weight(1f).testTag(InsightsTags.PAGE + id),
             contentPadding = PaddingValues(start = Margem.space.page, end = Margem.space.page, bottom = 32.dp),
         ) {
-            item("filter") { Filter(db, raw, q, lines, today) { raw = it } }
+            // The kind is the whole Leitura's, even here (R14): back on the grid, with Desfazer.
+            item("filter") { Filter(db, raw, q, lines, today, { leituraTo(raw.copy(kind = it), "Leitura agora: ${only(it).ifEmpty { "tudo" }}.") }) { raw = it } }
             item("widget") {
                 Column {
                     Gap()
@@ -540,6 +569,24 @@ private fun span(a: LocalDate, b: LocalDate) = when {
     else -> "${a.day} ${monthShort(a.month)} a ${b.day} ${monthShort(b.month)}"
 }
 
+/** "só previstos", "só variáveis"; "" for Tudo. */
+private fun only(kind: SpendKind) = when (kind) {
+    SpendKind.ALL -> ""
+    SpendKind.PLANNED -> "só previstos"
+    SpendKind.VARIABLE -> "só variáveis"
+}
+
+/**
+ * [q]'s lines of [kind], for a widget's own toggle that starts from [q]'s kind and can leave it: [lines] when it is
+ * [q]'s, [lines] filtered when [q] reads everything, read otherwise.
+ */
+@Composable
+private fun linesOf(db: Db, q: LeituraQuery, lines: List<LeituraRow>, kind: SpendKind): List<LeituraRow>? = when {
+    kind == q.kind -> lines
+    q.kind == SpendKind.ALL -> lines.filter { it.fixed == (kind == SpendKind.PLANNED) }
+    else -> kept(db, "kind", q, kind) { d -> d.leituraLines(q.copy(kind = kind)) }
+}
+
 /** "R$ 796": whole reais, rounded half up. */
 private fun reais(c: Cents) = "R$$NNBSP${moneyParts(Cents((c.v + 50) / 100 * 100)).first}"
 
@@ -547,7 +594,9 @@ private fun reais(c: Cents) = "R$$NNBSP${moneyParts(Cents((c.v + 50) / 100 * 100
 
 @OptIn(ExperimentalLayoutApi::class)
 @Composable
-private fun Filter(db: Db, raw: LeituraQuery, q: LeituraQuery, lines: List<LeituraRow>, today: LocalDate, onQuery: (LeituraQuery) -> Unit) {
+private fun Filter(
+    db: Db, raw: LeituraQuery, q: LeituraQuery, lines: List<LeituraRow>, today: LocalDate, onKind: (SpendKind) -> Unit, onQuery: (LeituraQuery) -> Unit,
+) {
     val c = Margem.colors
     var text by rememberSaveable { mutableStateOf("") }
     var ranging by rememberSaveable { mutableStateOf(false) }
@@ -572,9 +621,14 @@ private fun Filter(db: Db, raw: LeituraQuery, q: LeituraQuery, lines: List<Leitu
                 TagChip(chip.label, removable = true) { onQuery(raw.copy(chips = raw.chips - chip, separate = raw.separate && raw.chips.size > 2)) }
             }
         }
+        OptionPicker(
+            listOf(SpendKind.ALL to "Tudo", SpendKind.PLANNED to "Previstos", SpendKind.VARIABLE to "Variáveis"), q.kind, { if (it != q.kind) onKind(it) },
+            Modifier.padding(top = 4.dp), tag = InsightsTags.KIND,
+        )
         val n = transactions(lines)
         Text(
-            "${money(total(lines))} · ${count(n, "lançamento", "lançamentos")}" + if (today in q.from..q.to) " · até hoje" else "",
+            "${money(total(lines))} · ${count(n, "lançamento", "lançamentos")}" + (if (today in q.from..q.to) " · até hoje" else "") +
+                only(q.kind).let { if (it.isEmpty()) "" else " · $it" },
             sans(14f, 500, 20f, tabular = true), Modifier.padding(top = 8.dp).testTag(InsightsTags.SUMMARY), c.inkSecondary,
         )
         if (raw.chips.size >= 2) Row(
@@ -684,7 +738,7 @@ private fun Widget(db: Db, id: String, q: LeituraQuery, lines: List<LeituraRow>,
     val days: (LocalDate, LocalDate) -> Unit = { a, b -> onPiece(LeituraQuery(a, b)) }
     when (id) {
         "margem" -> MargemWidget(db, q, lines, today, big)
-        "total" -> TotalWidget(db, q, lines, today, big)
+        "total" -> TotalWidget(db, q, today, big)
         "ritmo" -> RitmoWidget(db, q, lines, today, big)
         "previstos" -> PlannedWidget(db, q, today, big)
         "historia" -> HistoryWidget(q, lines, big, go)
@@ -696,7 +750,7 @@ private fun Widget(db: Db, id: String, q: LeituraQuery, lines: List<LeituraRow>,
         "voltam" -> ReturnWidget(db, q, lines, big, chip, extra)
         "primeira-vez" -> FirstWidget(db, q, lines, big, chip, extra)
         "tamanho" -> SizeWidget(lines, big)
-        "calendario" -> CalendarWidget(q, lines, big, days)
+        "calendario" -> CalendarWidget(db, q, lines, big, days)
         "dia-da-semana" -> WeekdayWidget(db, q, lines, today, big)
         "semanas" -> WeeksWidget(db, q, lines, today, big, days)
         "mes-a-mes" -> MonthsWidget(db, q, big, days)
@@ -836,6 +890,8 @@ private fun MargemWidget(db: Db, q: LeituraQuery, lines: List<LeituraRow>, today
     val month = monthLong(read.first.month)
     Sentence(if (all.remaining.v >= 0) "Em $month, cabem ${money(all.remaining)}." else "Em $month, ${money(Cents(-all.remaining.v))} além da cota.")
     Meter(all, Modifier.padding(top = 10.dp))
+    // The margem is cota − gasto − previstos em aberto, whatever the kind.
+    if (q.kind != SpendKind.ALL) Note("a margem conta tudo")
     val places = q.chips.filter { it.kind == ChipKind.TAG || it.kind == ChipKind.MERCHANT }
     if (places.isNotEmpty()) Note("${places.joinToString(" ou ") { it.label }} cai em ${lines.map { it.budgetName }.distinct().joinToString(", ").ifEmpty { "nenhuma verba" }}.")
     if (!big) return
@@ -854,23 +910,28 @@ private fun MargemWidget(db: Db, q: LeituraQuery, lines: List<LeituraRow>, today
     }
 }
 
-/** Total e costume (AC-28): the interval's total against the mean of the same stretch before; Somar tudo · variável · previstos. */
+/**
+ * Total e costume (AC-28): the interval's total against the mean of the same stretch before; Somar tudo · variável ·
+ * previstos, which starts from the Leitura's kind and follows it again when it changes.
+ */
 @Composable
-private fun TotalWidget(db: Db, q: LeituraQuery, lines: List<LeituraRow>, today: LocalDate, big: Boolean) {
+private fun TotalWidget(db: Db, q: LeituraQuery, today: LocalDate, big: Boolean) {
     var back by rememberSaveable { mutableIntStateOf(6) }
-    var add by rememberSaveable { mutableStateOf("tudo") }
-    val keep = { r: LeituraRow -> add == "tudo" || r.fixed == (add == "previstos") }
-    val before = kept(db, "total", q, back, add, today) { d ->
-        (1..back).map {
-            val s = d.leituraSum(earlier(d, q, today, it))
-            when (add) {
-                "tudo" -> s.total.v
-                "previstos" -> s.fixed.v
-                else -> s.total.v - s.fixed.v
-            }
-        }
+    var add by rememberSaveable(q.kind) { mutableStateOf(q.kind) }
+    // Every kind's sums in one read: Somar picks its part.
+    val all = q.copy(kind = SpendKind.ALL)
+    val sums = kept(db, "total", all, back, today) { d ->
+        d.leituraSum(if (today in all.from..all.to) all.copy(to = today) else all) to (1..back).map { d.leituraSum(earlier(d, all, today, it)) }
     } ?: return
-    val now = total(lines.filter { keep(it) && (today !in q.from..q.to || it.date <= today) })
+    val part = { s: LeituraSum ->
+        when (add) {
+            SpendKind.ALL -> s.total.v
+            SpendKind.PLANNED -> s.fixed.v
+            SpendKind.VARIABLE -> s.total.v - s.fixed.v
+        }
+    }
+    val now = Cents(part(sums.first))
+    val before = sums.second.map(part)
     val usual = Cents(before.sum() / back)
     Sentence(
         when {
@@ -884,7 +945,7 @@ private fun TotalWidget(db: Db, q: LeituraQuery, lines: List<LeituraRow>, today:
     Columns(before.reversed().mapIndexed { i, v -> "−${before.size - i}" to listOf(v) } + ("agora" to listOf(now.v)), listOf(c.inkTertiary))
     if (!big) return
     OptionPicker(listOf(6 to "média de 6", 3 to "média de 3", 1 to "o anterior"), back, { back = it })
-    OptionPicker(listOf("tudo" to "tudo", "variavel" to "só variável", "previstos" to "só previstos"), add, { add = it })
+    OptionPicker(listOf(SpendKind.ALL to "tudo", SpendKind.VARIABLE to "só variável", SpendKind.PLANNED to "só previstos"), add, { add = it })
 }
 
 /**
@@ -893,6 +954,8 @@ private fun TotalWidget(db: Db, q: LeituraQuery, lines: List<LeituraRow>, today:
  */
 @Composable
 private fun RitmoWidget(db: Db, q: LeituraQuery, lines: List<LeituraRow>, today: LocalDate, big: Boolean) {
+    // The ritmo is the gasto variável's (glossary): there is none of previstos.
+    if (q.kind == SpendKind.PLANNED) return Note("O ritmo mede só o gasto variável.")
     var compare by rememberSaveable { mutableStateOf("") }
     val bm = kept(db, "ritmo", q, today) { d -> plan(d, q, today) } ?: return
     val whole = bm.limit.v > 0
@@ -1059,6 +1122,7 @@ private fun DrawScope.grid(measurer: TextMeasurer, label: TextStyle, left: Float
 /** Previstos do mês the interval ends in (D-10, AC-30): Vieram, with the difference from the previsto, and A caminho. */
 @Composable
 private fun PlannedWidget(db: Db, q: LeituraQuery, today: LocalDate, big: Boolean) {
+    if (q.kind == SpendKind.VARIABLE) return Note("Em Variáveis, os previstos ficam fora.")
     val c = Margem.colors
     val read = kept(db, "previstos", q.to, today) { d ->
         val m = d.monthOf(q.to)
@@ -1249,7 +1313,9 @@ private fun ReturnWidget(db: Db, q: LeituraQuery, lines: List<LeituraRow>, big: 
 /** Primeira vez (AC-36): estabelecimentos and marcadores first seen in the interval. */
 @Composable
 private fun FirstWidget(db: Db, q: LeituraQuery, lines: List<LeituraRow>, big: Boolean, onPiece: (Chip) -> Unit, extra: Pair<List<Chip>, List<String>>?) {
-    val fresh = (if (big) kept(db, "first-timers", q, lines) { d -> firstTimers(d, q, lines) } else extra?.first) ?: return
+    // The grid's are of all the interval's gasto (the grid keeps its shape); shown, only those of the kind's lines.
+    val fresh = ((if (big) kept(db, "first-timers", q, lines) { d -> firstTimers(d, q, lines) } else extra?.first) ?: return)
+        .filter { chip -> lines.any { hits(it, chip) } }
     Sentence(if (fresh.isEmpty()) "Nada novo no intervalo." else "${count(fresh.size, "novidade", "novidades")}: ${fresh.take(3).joinToString(", ") { it.label }}.")
     if (big) Ranks(
         fresh.map { chip -> Triple(chip, total(lines.filter { hits(it, chip) }).v, moneyPlain(total(lines.filter { hits(it, chip) }))) }, onPiece,
@@ -1272,15 +1338,17 @@ private fun SizeWidget(lines: List<LeituraRow>, big: Boolean) {
 
 private val weekdayPlural = listOf("segundas", "terças", "quartas", "quintas", "sextas", "sábados", "domingos")
 
-/** Calendário (AC-39): heat by day, soma or contagem, com previstos or only the variável; the heaviest days on the page. */
+/**
+ * Calendário (AC-39): heat by day, soma or contagem; "Com previstos" starts from the Leitura's kind (off only in
+ * Variáveis) and follows it again when it changes. The heaviest days on the page.
+ */
 @Composable
-private fun CalendarWidget(q: LeituraQuery, lines: List<LeituraRow>, big: Boolean, onDays: (LocalDate, LocalDate) -> Unit) {
+private fun CalendarWidget(db: Db, q: LeituraQuery, lines: List<LeituraRow>, big: Boolean, onDays: (LocalDate, LocalDate) -> Unit) {
     val c = Margem.colors
     var counting by rememberSaveable { mutableStateOf(false) }
-    var planned by rememberSaveable { mutableStateOf(false) }
-    // R19: the variável by default; "com previstos" adds the lançamentos of previstos.
-    val kept = if (planned) lines else lines.filter { !it.fixed }
-    val byDay = kept.groupBy { it.date }.mapValues { (_, rs) -> if (counting) transactions(rs).toLong() else total(rs).v }
+    var planned by rememberSaveable(q.kind) { mutableStateOf(q.kind != SpendKind.VARIABLE) }
+    val rows = linesOf(db, q, lines, if (!planned) SpendKind.VARIABLE else if (q.kind == SpendKind.PLANNED) SpendKind.PLANNED else SpendKind.ALL) ?: return
+    val byDay = rows.groupBy { it.date }.mapValues { (_, rs) -> if (counting) transactions(rs).toLong() else total(rs).v }
     val heaviest = byDay.maxByOrNull { it.value }
     Sentence(heaviest?.let { "O dia mais pesado foi ${dateShort(it.key)}: ${if (counting) count(it.value.toInt(), "lançamento", "lançamentos") else money(Cents(it.value))}." } ?: "Nada lançado no intervalo.")
     if (big) {
@@ -1311,7 +1379,7 @@ private fun CalendarWidget(q: LeituraQuery, lines: List<LeituraRow>, big: Boolea
             ) { if (big) Text(day.day.toString(), sans(10.5f, 600, 13f, tabular = true), color = if (level >= 3) c.paper else c.inkSecondary) }
         }
     }
-    Series(q, lines)
+    Series(q, rows)
     if (big) {
         SectionLine("Dias mais pesados")
         for ((day, v) in byDay.entries.sortedByDescending { it.value }.take(5)) ListRow(dateShort(day), onClick = { onDays(day, day) }) {
@@ -1356,16 +1424,19 @@ private fun WeeksWidget(db: Db, q: LeituraQuery, lines: List<LeituraRow>, today:
     Series(q, lines)
 }
 
-/** Mês a mês (AC-42): 3, 6 or 12 budget months ending in the interval's; divided or not into previstos and variável or by verba. */
+/**
+ * Mês a mês (AC-42): 3, 6 or 12 budget months ending in the interval's; divided or not into previstos and variável or
+ * by verba. Dividir starts at não with every change of the Leitura's kind; previstos e variável reads everything.
+ */
 @Composable
 private fun MonthsWidget(db: Db, q: LeituraQuery, big: Boolean, onDays: (LocalDate, LocalDate) -> Unit) {
     val c = Margem.colors
     var n by rememberSaveable { mutableIntStateOf(6) }
-    var split by rememberSaveable { mutableStateOf("nao") }
-    val read = kept(db, "mes-a-mes", q, n) { d ->
+    var split by rememberSaveable(q.kind) { mutableStateOf("nao") }
+    val read = kept(db, "mes-a-mes", q.copy(kind = if (split == "previstos") SpendKind.ALL else q.kind), n) { d ->
         val end = d.monthOf(q.to)
         val windows = (n - 1 downTo 0).map { end.minus(it, DateTimeUnit.MONTH).let { m -> m to d.window(m) } }
-        windows to d.leituraLines(q.copy(from = windows.first().second.start, to = windows.last().second.endInclusive))
+        windows to d.leituraLines(q.copy(from = windows.first().second.start, to = windows.last().second.endInclusive, kind = if (split == "previstos") SpendKind.ALL else q.kind))
     } ?: return
     val (windows, lines) = read
     val budgets = lines.map { it.budget }.distinct()
@@ -1407,9 +1478,16 @@ private fun AheadWidget(db: Db, q: LeituraQuery, today: LocalDate, big: Boolean)
             }
         Triple(windows, d.leituraLines(LeituraQuery(windows.first().start, windows.last().endInclusive, q.chips)), Cents(monthly.sumOf { it.cents.v }))
     } ?: return
-    val (windows, lines, monthly) = read
-    val bars = windows.map { w -> monthShort(w.start.month) to listOf(total(lines.filter { it.date in w }).v, monthly.v) }
-    Sentence("${money(total(lines))} em parcelas e ${money(Cents(monthly.v * n))} em previstos nos próximos $n meses, de hoje em diante.")
+    // Previstos: only the previstos; Variáveis: only the parcelas.
+    val lines = if (q.kind == SpendKind.PLANNED) emptyList() else read.second
+    val monthly = if (q.kind == SpendKind.VARIABLE) 0L else read.third.v
+    val windows = read.first
+    val bars = windows.map { w -> monthShort(w.start.month) to listOf(total(lines.filter { it.date in w }).v, monthly) }
+    val parts = listOfNotNull(
+        if (q.kind == SpendKind.PLANNED) null else "${money(total(lines))} em parcelas",
+        if (q.kind == SpendKind.VARIABLE) null else "${money(Cents(monthly * n))} em previstos",
+    )
+    Sentence("${parts.joinToString(" e ")} nos próximos $n meses, de hoje em diante.")
     if (big) OptionPicker(listOf(3 to "3", 6 to "6", 12 to "12"), n, { n = it })
     Columns(bars, listOf(c.inkSecondary, c.inkTertiary.copy(alpha = 0.3f)))
 }
@@ -1417,6 +1495,8 @@ private fun AheadWidget(db: Db, q: LeituraQuery, today: LocalDate, big: Boolean)
 /** Volta todo mês (AC-44): estabelecimentos in every month of the last 6 or 12, at a similar value, not from a previsto. */
 @Composable
 private fun MonthlyWidget(db: Db, q: LeituraQuery, today: LocalDate, big: Boolean) {
+    // It reads everything in every kind: what returns without a previsto.
+    if (q.kind == SpendKind.PLANNED) return Note("Procura o que volta sem previsto.")
     var n by rememberSaveable { mutableIntStateOf(6) }
     val read = kept(db, "volta-todo-mes", q.chips, n, today) { d ->
         val cur = d.monthOf(today)
@@ -1441,6 +1521,7 @@ private fun MonthlyWidget(db: Db, q: LeituraQuery, today: LocalDate, big: Boolea
  */
 @Composable
 private fun HourWidget(q: LeituraQuery, lines: List<LeituraRow>, big: Boolean) {
+    if (q.kind == SpendKind.PLANNED) return Note("Previsto tem dia marcado; a hora não diz nada.")
     val c = Margem.colors
     var summing by rememberSaveable { mutableStateOf(false) }
     var small by rememberSaveable { mutableStateOf(true) }

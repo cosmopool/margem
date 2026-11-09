@@ -48,6 +48,7 @@ import com.kaiodelphino.margem.Db
 import com.kaiodelphino.margem.MargemApp
 import com.kaiodelphino.margem.NoticeId
 import com.kaiodelphino.margem.OccurrenceId
+import com.kaiodelphino.margem.SpendKind
 import com.kaiodelphino.margem.Theme
 import com.kaiodelphino.margem.TransactionId
 import com.kaiodelphino.margem.isAccessGranted
@@ -156,9 +157,9 @@ private fun decode(s: String): Screen {
     }
 }
 
-/** "from|to|separate|KIND,key,label;…", key and label URI-encoded: no ':' for [encode], no '|', ';' or ','. */
+/** "from|to|separate|KIND,key,label;…|kind", key and label URI-encoded: no ':' for [encode], no '|', ';' or ','. */
 private fun encodeQuery(q: LeituraQuery): String =
-    "${q.from}|${q.to}|${if (q.separate) 1 else 0}|" + q.chips.joinToString(";") { "${it.kind},${Uri.encode(it.key)},${Uri.encode(it.label)}" }
+    "${q.from}|${q.to}|${if (q.separate) 1 else 0}|" + q.chips.joinToString(";") { "${it.kind},${Uri.encode(it.key)},${Uri.encode(it.label)}" } + "|${q.kind}"
 
 private fun decodeQuery(s: String): LeituraQuery {
     val p = s.split('|')
@@ -166,7 +167,7 @@ private fun decodeQuery(s: String): LeituraQuery {
         val c = it.split(',')
         Chip(ChipKind.valueOf(c[0]), Uri.decode(c[1]), Uri.decode(c[2]))
     }
-    return LeituraQuery(LocalDate.parse(p[0]), LocalDate.parse(p[1]), chips, p[2] == "1")
+    return LeituraQuery(LocalDate.parse(p[0]), LocalDate.parse(p[1]), chips, p[2] == "1", p.getOrNull(4)?.let(SpendKind::valueOf) ?: SpendKind.ALL)
 }
 
 /** The Leitura's query across recreation and process death (AC-F3). */

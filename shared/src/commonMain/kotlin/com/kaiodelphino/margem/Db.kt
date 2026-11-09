@@ -1068,6 +1068,7 @@ class Db(
     /**
      * The installments dated in [q]'s from..to (dates, not NO_DATE), oldest first (date, time, id), refunded
      * lançamentos left out. The chips add up with OR, in SQL: a lançamento enters once when it matches any of them.
+     * [LeituraQuery.kind] PLANNED keeps only the lançamentos of previstos, VARIABLE only the others.
      */
     suspend fun leituraLines(q: LeituraQuery): List<LeituraRow> = read { c ->
         val (from, args) = leituraFrom(q)
@@ -1094,7 +1095,7 @@ class Db(
         }.first()
     }
 
-    /** [leituraLines]' FROM and WHERE for [q], with its arguments: the interval, refunded lançamentos out, the chips with OR. */
+    /** [leituraLines]' FROM and WHERE for [q], with its arguments: the interval, refunded lançamentos out, the kind, the chips with OR. */
     private fun leituraFrom(q: LeituraQuery): Pair<String, Array<Any>> {
         val args = arrayListOf<Any>(q.from.low(), q.to.high())
         val any = q.chips.groupBy { it.kind }.map { (kind, chips) ->
@@ -1110,6 +1111,11 @@ class Db(
         return "FROM installments i JOIN transactions t ON t.id = i.transaction_id JOIN budgets b ON b.id = t.budget_id " +
             "LEFT JOIN merchant_aliases a ON a.merchant_key = t.merchant_key LEFT JOIN notices n ON n.id = t.notice_id " +
             "LEFT JOIN sources s ON s.package = n.package WHERE i.date BETWEEN ? AND ? AND $NOT_REFUNDED" +
+            when (q.kind) {
+                SpendKind.ALL -> ""
+                SpendKind.PLANNED -> " AND t.fixed = 1"
+                SpendKind.VARIABLE -> " AND t.fixed = 0"
+            } +
             (if (any.isEmpty()) "" else " AND (${any.joinToString(" OR ")})") to args.toTypedArray()
     }
 

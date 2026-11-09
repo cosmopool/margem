@@ -497,14 +497,21 @@ enum class ChipKind { BUDGET, TAG, MERCHANT, NOTICE }
 data class Chip(val kind: ChipKind = ChipKind.BUDGET, val key: String = "", val label: String = "")
 
 /**
+ * Which gasto the Leitura reads: all of it, only the lançamentos of previstos ([TransactionRow.fixed]), or only the
+ * gasto variável (the others).
+ */
+enum class SpendKind { ALL, PLANNED, VARIABLE }
+
+/**
  * The Leitura's query: the interval [from]..[to] (NO_DATE: the budget month of today) and the chips, which add up
- * with OR (none: everything). [separate]: one series per chip in the widgets that split (R5).
+ * with OR (none: everything). [separate]: one series per chip in the widgets that split (R5). [kind]: which gasto.
  */
 data class LeituraQuery(
     val from: LocalDate = NO_DATE,
     val to: LocalDate = NO_DATE,
     val chips: List<Chip> = emptyList(),
     val separate: Boolean = false,
+    val kind: SpendKind = SpendKind.ALL,
 )
 
 /** One installment of a lançamento in the Leitura, on its own date (spec §6: each parcela in its month). */
