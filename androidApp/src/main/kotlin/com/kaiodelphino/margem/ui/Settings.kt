@@ -43,6 +43,7 @@ import com.kaiodelphino.margem.BudgetOrder
 import com.kaiodelphino.margem.CobudgetImport
 import com.kaiodelphino.margem.Db
 import com.kaiodelphino.margem.R
+import com.kaiodelphino.margem.SpendKind
 import com.kaiodelphino.margem.TagRow
 import com.kaiodelphino.margem.Theme
 import com.kaiodelphino.margem.accessSettingsIntent
@@ -138,6 +139,12 @@ object SettingsTags {
      * Settings.widgetOrder; click saves it (Db.setWidgetOrder).
      */
     const val WIDGET_ORDER = "settings.widget."
+
+    /**
+     * Prefix: LEITURA_KIND + "all" / "planned" / "variable": "tudo" · "previstos" · "variáveis", under "A Leitura abre
+     * em". The one `selected` is Settings.leituraKind; click saves it (Db.setLeituraKind), and the Leitura opens on it.
+     */
+    const val LEITURA_KIND = "settings.leitura."
 
     /** "Backup" · "exportar · importar". Click opens Backup. */
     const val BACKUP = "settings.backup"
@@ -311,6 +318,12 @@ fun Settings(db: Db, granted: Boolean, go: (Screen) -> Unit) {
             OptionPicker(
                 listOf(BudgetOrder.RISK to "risco", BudgetOrder.MANUAL to "manual", BudgetOrder.AZ to "A–Z"), settings.widgetOrder,
                 { scope.launch { db.setWidgetOrder(it) } }, tag = SettingsTags.WIDGET_ORDER,
+            )
+            SectionLine("Leitura")
+            Text("A Leitura abre em", sans(13f, 400, 17f), Modifier.padding(top = 6.dp), Margem.colors.inkSecondary)
+            OptionPicker(
+                listOf(SpendKind.ALL to "tudo", SpendKind.PLANNED to "previstos", SpendKind.VARIABLE to "variáveis"), settings.leituraKind,
+                { scope.launch { db.setLeituraKind(it) } }, tag = SettingsTags.LEITURA_KIND,
             )
             SectionLine("Dados")
             Entry("Backup", "exportar · importar", SettingsTags.BACKUP) { go(Screen.Backup) }

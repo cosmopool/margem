@@ -125,6 +125,8 @@ data class Settings(
     val budgetOrder: BudgetOrder = BudgetOrder.RISK,
     /** Order of the Verbas widget. */
     val widgetOrder: BudgetOrder = BudgetOrder.RISK,
+    /** What the Leitura reads when it opens (spec §7.5, §7.6): tudo, de fábrica. */
+    val leituraKind: SpendKind = SpendKind.ALL,
     /** Epoch ms of the last time the Pauta was opened; notices posted after it are new. */
     val pautaSeenAt: Long = 0,
 )

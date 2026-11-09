@@ -249,12 +249,14 @@ fun App(db: Db, tabRequest: Screen?, onTabOpened: () -> Unit) {
     // D18: the screens under the top keep their rememberSaveable state (a form while Nova verba is on top, D66);
     // a screen that leaves the stack drops it.
     val saved = rememberSaveableStateHolder()
-    // The Leitura's query lives while its tab is open (D-5): leaving the tab resets it.
+    // The Leitura's query lives while its tab is open (D-5): leaving the tab resets it, and entering it opens on
+    // today's month with the kind of Ajustes, read here, once, so the first frame already reads that kind.
     var leitura by rememberSaveable(stateSaver = QuerySaver) { mutableStateOf(LeituraQuery()) }
     fun keyOf(i: Int, s: List<Screen>) = "$i:${encode(s[i])}"
     fun move(next: List<Screen>) {
         for (i in stack.indices) if (i >= next.size || next[i] != stack[i]) saved.removeState(keyOf(i, stack))
         if (next.first() != Screen.Insights) leitura = LeituraQuery()
+        else if (stack.first() != Screen.Insights) leitura = LeituraQuery(kind = runBlocking { db.settings().leituraKind })
         stack = next
     }
     LaunchedEffect(tabRequest) {

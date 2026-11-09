@@ -295,6 +295,9 @@ class Db(
 
     suspend fun setWidgetOrder(order: BudgetOrder): Unit = write { setSetting(it, "widget_order", order.name) }
 
+    /** What the Leitura reads when it opens (Settings.leituraKind). */
+    suspend fun setLeituraKind(kind: SpendKind): Unit = write { setSetting(it, "leitura_kind", kind.name) }
+
     /** Opening the Pauta: notices posted up to [now] stop being new. Doesn't bump [version]: the open Pauta has nothing to re-read. */
     suspend fun markPautaSeen(now: Long): Unit = write(bump = false) { setSetting(it, "pauta_seen_at", now.toString()) }
 
@@ -1163,6 +1166,7 @@ class Db(
             theme = m["theme"]?.let { v -> Theme.entries.firstOrNull { it.name == v } } ?: d.theme,
             budgetOrder = m["budget_order"]?.let { v -> BudgetOrder.entries.firstOrNull { it.name == v } } ?: d.budgetOrder,
             widgetOrder = m["widget_order"]?.let { v -> BudgetOrder.entries.firstOrNull { it.name == v } } ?: d.widgetOrder,
+            leituraKind = m["leitura_kind"]?.let { v -> SpendKind.entries.firstOrNull { it.name == v } } ?: d.leituraKind,
             pautaSeenAt = m["pauta_seen_at"]?.toLongOrNull() ?: d.pautaSeenAt,
         )
     }
