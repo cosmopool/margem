@@ -1081,6 +1081,25 @@ class Db(
         }
     }
 
+    /**
+     * The marcador and estabelecimento chips of [chips] (others are left out) that some lançamento not refunded
+     * matches with an installment dated up to [until], in [chips]' order: one `SELECT 1 … LIMIT 1` per chip, which
+     * stops at the first such lançamento (Primeira vez, AC-36).
+     */
+    suspend fun chipsSeen(until: LocalDate, chips: List<Chip>): List<Chip> = read { c ->
+        val old = "$NOT_REFUNDED AND EXISTS (SELECT 1 FROM installments i WHERE i.transaction_id = t.id AND i.date <= ?) LIMIT 1"
+        chips.filter { chip ->
+            val from = when {
+                chip.kind == ChipKind.TAG -> "tags g JOIN transaction_tags l ON l.tag_id = g.id JOIN transactions t ON t.id = l.transaction_id WHERE g.name = ?"
+                chip.kind != ChipKind.MERCHANT -> return@filter false
+                chip.key.startsWith("a") -> "merchant_aliases a JOIN transactions t ON t.merchant_key = a.merchant_key WHERE a.alias_key = ?"
+                else -> "transactions t WHERE t.merchant_key = ? AND NOT EXISTS (SELECT 1 FROM merchant_aliases a WHERE a.merchant_key = t.merchant_key)"
+            }
+            val key = if (chip.kind == ChipKind.TAG) chip.key else chip.key.drop(1)
+            c.query("SELECT 1 FROM $from AND $old", key, until.high()) { 1 }.isNotEmpty()
+        }
+    }
+
     // ---- Private: shared by reads and writes ----
 
     private fun settings(c: SQLiteConnection): Settings {

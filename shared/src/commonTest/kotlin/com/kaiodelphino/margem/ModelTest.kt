@@ -1295,6 +1295,17 @@ private class MtRun(val db: Db, val path: String, val seed: Int) {
             val fixedByDay = LinkedHashMap<LocalDate, Long>()
             for ((t, inside) in counted) if (t.fixed) for (i in inside) fixedByDay[i.date] = (fixedByDay[i.date] ?: 0L) + i.cents.v
             assertEquals(fixedByDay.filterValues { it > 0 }.mapValues { Cents(it.value) }, db.spentByDay(a, z, fixedOnly = true), "spentByDay fixed $a..$z")
+
+            // Leitura's Primeira vez (AC-36): a marcador or estabelecimento (one alias is one, D61) is seen by the day before
+            // the interval when a lançamento not refunded it matches has an installment up to that day.
+            val place = { t: MtTx -> m.aliases[mtKey(t.merchant)]?.let { "a" + MerchantKey.of(it).v } ?: ("k" + MerchantKey.of(t.merchant).v) }
+            val chips = m.tags.map { Chip(ChipKind.TAG, it, it) } + m.txs.map { Chip(ChipKind.MERCHANT, place(it), it.merchant) }.distinctBy { it.key } +
+                Chip(ChipKind.TAG, "nunca usado", "nunca usado")
+            val until = a.minus(1, DAY)
+            val seen = chips.filter { chip ->
+                m.txs.any { t -> !m.refunded(t.id) && t.inst.any { it.date <= until } && if (chip.kind == ChipKind.TAG) chip.key in t.tags else place(t) == chip.key }
+            }
+            assertEquals(seen, db.chipsSeen(until, chips), "chipsSeen $until")
         }
 
         // §7.3 the edit screen and the notice behind each transaction.

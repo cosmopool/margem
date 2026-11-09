@@ -15,6 +15,7 @@ import kotlinx.datetime.LocalTime
 import kotlinx.datetime.TimeZone
 import kotlinx.datetime.YearMonth
 import kotlinx.datetime.atTime
+import kotlinx.datetime.minus
 import kotlinx.datetime.minusMonth
 import kotlinx.datetime.onDay
 import kotlinx.datetime.plus
@@ -158,6 +159,9 @@ class VolumeTest {
         val fromDay = LocalDate(2021, 10, 1)
         val monthStart = LocalDate(2026, 10, 5)
         val yearStart = LocalDate(2025, 10, 16)
+        // Leitura's Primeira vez: every estabelecimento and marcador of the month, seen before it?
+        val monthLines = db.leituraLines(LeituraQuery(monthStart, today))
+        val monthChips = (monthLines.map { Chip(ChipKind.MERCHANT, it.merchantKey, it.merchant) } + monthLines.flatMap { r -> r.tags.map { Chip(ChipKind.TAG, it, it) } }).distinct()
         val reads = listOf<Triple<String, Long, suspend () -> Unit>>(
             Triple("budgetsOverview", CEIL_OVERVIEW) { db.budgetsOverview(current, today, BudgetOrder.RISK) },
             Triple("budgetDetail (every budget)", CEIL_DETAIL) { for (b in budgets) db.budgetDetail(b, current, today) },
@@ -174,6 +178,7 @@ class VolumeTest {
             Triple("merchantRanking (all)", CEIL_RANK_ALL) { db.merchantRanking(fromDay, today) },
             Triple("spentByDay (year)", CEIL_BYDAY) { db.spentByDay(yearStart, today) },
             Triple("spentByDay (all)", CEIL_BYDAY) { db.spentByDay(fromDay, today) },
+            Triple("chipsSeen (month's chips)", CEIL_SEEN) { db.chipsSeen(monthStart.minus(1, DateTimeUnit.DAY), monthChips) },
         )
         val failures = mutableListOf<String>()
         for ((name, ceiling, read) in reads) {
@@ -321,5 +326,6 @@ class VolumeTest {
         const val CEIL_RANK_MONTH = 10L
         const val CEIL_RANK_ALL = 80L
         const val CEIL_BYDAY = 40L
+        const val CEIL_SEEN = 30L
     }
 }

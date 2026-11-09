@@ -434,9 +434,8 @@ private suspend fun leftOut(d: Db, q: LeituraQuery): List<String> {
 private suspend fun firstTimers(d: Db, q: LeituraQuery, lines: List<LeituraRow>): List<Chip> {
     val seen = (groups(lines, ChipKind.MERCHANT) + groups(lines, ChipKind.TAG)).map { it.first }
     if (seen.isEmpty()) return seen
-    val before = d.leituraLines(LeituraQuery(LocalDate(1, 1, 1), q.from.minus(1, DateTimeUnit.DAY), seen))
-    val old = (groups(before, ChipKind.MERCHANT) + groups(before, ChipKind.TAG)).map { it.first.kind to it.first.key }.toSet()
-    return seen.filter { (it.kind to it.key) !in old }
+    val old = d.chipsSeen(q.from.minus(1, DateTimeUnit.DAY), seen).toSet()
+    return seen.filter { it !in old }
 }
 
 /** The chips a line matches in [kind] (key, label): one budget, each of its tags, its estabelecimento, its fonte. */

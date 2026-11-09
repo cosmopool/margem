@@ -452,6 +452,32 @@ class MutationKillTest {
         assertFalse(SystemFileSystem.exists(Path(missing)))
     }
 
+    // ---- Leitura (new-leitura-page) ----
+
+    @Test
+    fun `a chip is seen by a day only through a lançamento not refunded with an installment up to that day`() = runTest {
+        db.addSource(BANK, "Banco", 0)
+        val b = db.createBudget("Casa", Cents(100_000), OCT_6)
+        val oct5 = LocalDate(2026, 10, 5)
+        db.addManual(form(b, "Feira", oct5, tags = listOf("feira"), alias = "Feira Livre"))
+        db.addManual(form(b, "Padaria", OCT_6, tags = listOf("pão")))
+        db.addManual(form(b, "Açougue", oct5, tags = listOf("carne")))
+        val refunded = db.addManual(form(b, "Bar", oct5, tags = listOf("bar"))).transaction
+        assertTrue(capture(db, bank("e", T, "Estorno de R$ 10,00")))
+        assertTrue(db.registerRefund(db.pending().single().id, refunded))
+        val chips = listOf(
+            Chip(ChipKind.TAG, "pão", "pão"), Chip(ChipKind.MERCHANT, "a" + MerchantKey.of("Feira Livre").v, "Feira Livre"),
+            Chip(ChipKind.TAG, "feira", "feira"), Chip(ChipKind.MERCHANT, "k" + MerchantKey.of("Feira").v, "Feira"),
+            Chip(ChipKind.MERCHANT, "k" + MerchantKey.of("Açougue").v, "Açougue"), Chip(ChipKind.TAG, "bar", "bar"),
+            Chip(ChipKind.MERCHANT, "k" + MerchantKey.of("Bar").v, "Bar"), Chip(ChipKind.BUDGET, b.v.toString(), "Casa"),
+            Chip(ChipKind.TAG, "nunca", "nunca"),
+        )
+        // Up to Oct 5, in the order asked: not Padaria (Oct 6), not the aliased Feira by its bank key, not the refunded Bar, no verba.
+        assertEquals(listOf(chips[1], chips[2], chips[4]), db.chipsSeen(oct5, chips))
+        assertEquals(listOf(chips[0], chips[1], chips[2], chips[4]), db.chipsSeen(OCT_6, chips))
+        assertEquals(emptyList(), db.chipsSeen(LocalDate(2026, 10, 4), chips))
+    }
+
     // ---- Types ----
 
     @Test
