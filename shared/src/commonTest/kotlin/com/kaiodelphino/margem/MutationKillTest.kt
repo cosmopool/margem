@@ -339,6 +339,16 @@ class MutationKillTest {
     }
 
     @Test
+    fun `the leitura's kind is saved and reads back, tudo when never set`() = runTest {
+        assertEquals(SpendKind.ALL, db.settings().leituraKind)
+        for (kind in listOf(SpendKind.VARIABLE, SpendKind.PLANNED, SpendKind.ALL)) {
+            db.setLeituraKind(kind)
+            assertEquals(kind, db.settings().leituraKind)
+        }
+        assertEquals(3L, db.version.value)
+    }
+
+    @Test
     fun `a source keeps the time it was added when relabeled`() = runTest {
         db.addSource(BANK, "Banco", 123)
         assertEquals(123L, db.sources().single().addedAt)
@@ -526,6 +536,43 @@ class MutationKillTest {
             val lines = db.leituraLines(q)
             assertEquals(LeituraSum(Cents(lines.sumOf { it.cents.v }), Cents(lines.filter { it.fixed }.sumOf { it.cents.v })), db.leituraSum(q), "$q")
         }
+    }
+
+    @Test
+    fun `the leitura's kind keeps only the lançamentos of previstos or only the others, inside the interval and the chips`() = runTest {
+        db.addSource(BANK, "Banco", 0)
+        val b = db.createBudget("B", Cents(100_000), OCT_6)
+        db.addManual(form(b, "Bar", OCT_6, tags = listOf("bar")))
+        db.addManual(form(b, "Feira", LocalDate(2026, 10, 5), tags = listOf("feira")))
+        assertTrue(db.addManual(form(b, "", LocalDate(2026, 10, 10), tags = listOf("conta")).copy(total = Cents(500), caption = "Luz", repeats = Repeats.MONTHLY), OCT_6).planned.v != 0L)
+        val luz = db.planned(OCT_6).single { it.name == "Luz" }
+        db.addManual(TransactionForm(b, listOf("conta"), Cents(700), 1, "Luz", OCT_6, NOON, occurrence = luz.occurrence), OCT_6)
+        // A lançamento of a previsto outside the interval, and one refunded inside it.
+        assertTrue(db.addManual(form(b, "", LocalDate(2026, 10, 12), tags = listOf("agua")).copy(total = Cents(300), caption = "Água", repeats = Repeats.MONTHLY), OCT_6).planned.v != 0L)
+        val agua = db.planned(OCT_6).single { it.name == "Água" }
+        assertTrue(db.addManual(TransactionForm(b, listOf("agua"), Cents(300), 1, "Água", LocalDate(2026, 10, 5), NOON, occurrence = agua.occurrence), OCT_6).transaction.v != 0L)
+        assertTrue(db.addManual(form(b, "", LocalDate(2026, 10, 14), tags = listOf("gas")).copy(total = Cents(200), caption = "Gás", repeats = Repeats.MONTHLY), OCT_6).planned.v != 0L)
+        val gas = db.planned(OCT_6).single { it.name == "Gás" }
+        val refunded = db.addManual(TransactionForm(b, listOf("gas"), Cents(200), 1, "Gás", OCT_6, NOON, occurrence = gas.occurrence), OCT_6).transaction
+        assertTrue(refunded.v != 0L)
+        assertTrue(capture(db, bank("e", T, "Estorno de R$ 2,00")))
+        assertTrue(db.registerRefund(db.pending().single().id, refunded))
+
+        val oct = LeituraQuery(OCT_6, OCT_6)
+        assertEquals(listOf("Luz"), db.leituraLines(oct.copy(kind = SpendKind.PLANNED)).map { it.merchant })
+        assertEquals(listOf("Bar"), db.leituraLines(oct.copy(kind = SpendKind.VARIABLE)).map { it.merchant })
+        assertEquals(setOf("Bar", "Luz"), db.leituraLines(oct).map { it.merchant }.toSet())
+        assertEquals(LeituraSum(Cents(700), Cents(700)), db.leituraSum(oct.copy(kind = SpendKind.PLANNED)))
+        assertEquals(LeituraSum(Cents(1000), Cents(0)), db.leituraSum(oct.copy(kind = SpendKind.VARIABLE)))
+        // With chips: the kind and the chips both hold.
+        val conta = oct.copy(chips = listOf(Chip(ChipKind.TAG, "conta", "conta"), Chip(ChipKind.TAG, "bar", "bar")))
+        assertEquals(listOf("Luz"), db.leituraLines(conta.copy(kind = SpendKind.PLANNED)).map { it.merchant })
+        assertEquals(listOf("Bar"), db.leituraLines(conta.copy(kind = SpendKind.VARIABLE)).map { it.merchant })
+        assertEquals(emptyList(), db.leituraLines(oct.copy(chips = listOf(Chip(ChipKind.TAG, "feira", "feira")), kind = SpendKind.PLANNED)))
+        // Oct 5: the previsto Água and Feira; PLANNED reads only Água, VARIABLE only Feira.
+        val oct5 = LeituraQuery(LocalDate(2026, 10, 5), LocalDate(2026, 10, 5))
+        assertEquals(listOf("Água"), db.leituraLines(oct5.copy(kind = SpendKind.PLANNED)).map { it.merchant })
+        assertEquals(listOf("Feira"), db.leituraLines(oct5.copy(kind = SpendKind.VARIABLE)).map { it.merchant })
     }
 
     @Test

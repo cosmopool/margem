@@ -996,10 +996,11 @@ private class MtRun(val db: Db, val path: String, val seed: Int) {
     }
 
     suspend fun settingsAction() {
-        when (rnd.nextInt(4)) {
+        when (rnd.nextInt(5)) {
             0 -> Theme.entries.random(rnd).let { db.setTheme(it); m = m.copy(settings = m.settings.copy(theme = it)) }
             1 -> BudgetOrder.entries.random(rnd).let { db.setBudgetOrder(it); m = m.copy(settings = m.settings.copy(budgetOrder = it)) }
             2 -> BudgetOrder.entries.random(rnd).let { db.setWidgetOrder(it); m = m.copy(settings = m.settings.copy(widgetOrder = it)) }
+            3 -> SpendKind.entries.random(rnd).let { db.setLeituraKind(it); m = m.copy(settings = m.settings.copy(leituraKind = it)) }
             else -> {
                 // §2.11: opening the Pauta; notices posted after it are new.
                 val at = m.notices.randomOrNull(rnd)?.raw?.postedAt ?: 0L
@@ -1317,11 +1318,12 @@ private class MtRun(val db: Db, val path: String, val seed: Int) {
                 db.leftOut(a, z), "leftOut $a..$z",
             )
 
-            // Total e costume: Σ of the interval's installments, and of the lançamentos of previstos; a marcador chip keeps its lançamentos.
-            for (tag in listOf(null) + m.tags.take(2)) {
-                val kept = counted.filter { tag == null || tag in it.first.tags }
+            // Total e costume: Σ of the interval's installments, and of the lançamentos of previstos; a marcador chip keeps its
+            // lançamentos; the kind keeps only the lançamentos of previstos (PLANNED) or only the others (VARIABLE).
+            for (tag in listOf(null) + m.tags.take(2)) for (kind in SpendKind.entries) {
+                val kept = counted.filter { (tag == null || tag in it.first.tags) && (kind == SpendKind.ALL || it.first.fixed == (kind == SpendKind.PLANNED)) }
                 val want = LeituraSum(Cents(kept.sumOf { (_, i) -> i.sumOf { it.cents.v } }), Cents(kept.filter { it.first.fixed }.sumOf { (_, i) -> i.sumOf { it.cents.v } }))
-                assertEquals(want, db.leituraSum(LeituraQuery(a, z, listOfNotNull(tag?.let { Chip(ChipKind.TAG, it, it) }))), "leituraSum $a..$z $tag")
+                assertEquals(want, db.leituraSum(LeituraQuery(a, z, listOfNotNull(tag?.let { Chip(ChipKind.TAG, it, it) }), kind = kind)), "leituraSum $a..$z $tag $kind")
             }
         }
 

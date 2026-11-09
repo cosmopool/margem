@@ -28,6 +28,7 @@ import androidx.sqlite.driver.AndroidSQLiteDriver
 import com.kaiodelphino.margem.ui.App
 import com.kaiodelphino.margem.ui.InsightsTags
 import com.kaiodelphino.margem.ui.LocalToday
+import com.kaiodelphino.margem.ui.SettingsTags
 import com.kaiodelphino.margem.widgets.MargemTheme
 import com.kaiodelphino.margem.widgets.SnackTags
 import kotlinx.coroutines.Dispatchers
@@ -69,6 +70,8 @@ import org.robolectric.annotation.Config
  *   mes-a-mes, meses-a-frente, volta-todo-mes, dia-e-hora.
  * - PAGE + id: a página do widget; LIST_ROW + i: linha i da lista da página (0 = primeira).
  * - ONLY, OR, AS_RANGE, MONTHS_OF: as ações sobre o pedaço tocado; DAY + data ISO: um dia tocável.
+ * - KIND + "all" | "planned" | "variable": o seletor Tudo · Previstos · Variáveis; LENS_BADGE: o selo da lupa.
+ * - SettingsTags.LEITURA_KIND + o mesmo valor: "A Leitura abre em", nos Ajustes.
  * As opções da página são OptionPicker (Role.RadioButton) tocadas pelo rótulo.
  *
  * Hoje fixo: sexta, 6/11/2026; mês da verba de 1 a 30 (padrão). Dados de [seed]:
@@ -76,6 +79,7 @@ import org.robolectric.annotation.Config
  * - novembro: padaria R$ 15 (Delivery, 1/11), padaria + café R$ 30 (Mercado, 2/11), pizza R$ 40 (Delivery, 3/11),
  *   feira R$ 20 com legenda "padaria do lado" (4/11), recado da LOJA CENTRO R$ 25 (Mercado, 5/11 19h30)
  *   = R$ 130,00 em 5 lançamentos. Fora da conta: presente R$ 60 estornado e um recado riscado de R$ 99.
+ * Com [aluguel]: o previsto Aluguel (Mercado, R$ 500, todo dia 15) lançado em 5/11, e novembro tem R$ 630,00 em 6.
  */
 @RunWith(RobolectricTestRunner::class)
 @Config(application = Application::class, qualifiers = "w411dp-h891dp")
@@ -296,6 +300,110 @@ class LeituraUiTest {
         await("gasto igual", InsightsTags.SUMMARY) { shows(InsightsTags.SUMMARY, "R$ 20,00") }
     }
 
+    // ---- Tudo · Previstos · Variáveis ----
+
+    @Test
+    fun `o seletor muda o resumo e os widgets, a margem conta tudo e o Ritmo não mede previsto`() {
+        seed()
+        aluguel()
+        composeRule.setContent { Content() }
+        openInsights()
+        await("Tudo de fábrica", InsightsTags.SUMMARY) {
+            shows(InsightsTags.SUMMARY, "R$ 630,00") && shows(InsightsTags.SUMMARY, "6 lançamentos") && !shows(InsightsTags.SUMMARY, "só") &&
+                selected(InsightsTags.KIND + "all")
+        }
+        assertFalse("em Tudo, sem a nota da margem", shows(InsightsTags.WIDGET + "margem", "a margem conta tudo"))
+
+        kind("variable")
+        await("só variáveis", InsightsTags.SUMMARY) {
+            shows(InsightsTags.SUMMARY, "R$ 130,00") && shows(InsightsTags.SUMMARY, "5 lançamentos") && shows(InsightsTags.SUMMARY, "até hoje · só variáveis")
+        }
+        await("a margem conta tudo", InsightsTags.WIDGET + "margem") { shows(InsightsTags.WIDGET + "margem", "a margem conta tudo") }
+        scrollTo(InsightsTags.WIDGET + "previstos")
+        await("Previstos do mês fica com uma linha", InsightsTags.WIDGET + "previstos") {
+            shows(InsightsTags.WIDGET + "previstos", "Em Variáveis, os previstos ficam fora.")
+        }
+
+        kind("planned")
+        await("só previstos", InsightsTags.SUMMARY) {
+            shows(InsightsTags.SUMMARY, "R$ 500,00") && shows(InsightsTags.SUMMARY, "1 lançamento") && shows(InsightsTags.SUMMARY, "só previstos")
+        }
+        await("Ritmo vira uma linha", InsightsTags.WIDGET + "ritmo") {
+            shows(InsightsTags.WIDGET + "ritmo", "O ritmo mede só o gasto variável.") && !exists(InsightsTags.PACE_CHART)
+        }
+        assertTrue("a margem continua contando tudo", shows(InsightsTags.WIDGET + "margem", "a margem conta tudo"))
+        scrollTo(InsightsTags.WIDGET + "previstos")
+        await("Previstos do mês igual a Tudo", InsightsTags.WIDGET + "previstos") { shows(InsightsTags.WIDGET + "previstos", "1 veio") }
+
+        // Recolhido: o selo conta o seletor como um item do filtro, e a barra presa diz o tipo.
+        scrollTo(InsightsTags.WIDGET + "semanas")
+        await("lupa com selo 1 e barra com o tipo", InsightsTags.LENS_BADGE, InsightsTags.PINNED) {
+            shows(InsightsTags.LENS_BADGE, "1") && shows(InsightsTags.PINNED, "só previstos")
+        }
+        scrollTo(InsightsTags.WIDGET + "dia-e-hora")
+        assertTrue("Dia e hora fica com uma linha", shows(InsightsTags.WIDGET + "dia-e-hora", "Previsto tem dia marcado"))
+    }
+
+    @Test
+    fun `a Leitura abre no tipo dos Ajustes, e volta a ele ao trocar de aba`() {
+        seed()
+        aluguel()
+        composeRule.setContent { Content() }
+        tapTab("Ajustes")
+        await("A Leitura abre em", SettingsTags.LEITURA_KIND + "all") { selected(SettingsTags.LEITURA_KIND + "all") }
+        composeRule.onNodeWithTag(SettingsTags.LIST).performScrollToNode(hasTestTag(SettingsTags.LEITURA_KIND + "variable"))
+        tap(SettingsTags.LEITURA_KIND + "variable")
+        await("gravado") { fora { db.settings() }.leituraKind == SpendKind.VARIABLE && selected(SettingsTags.LEITURA_KIND + "variable") }
+
+        openInsights()
+        await("abre em Variáveis", InsightsTags.SUMMARY) { shows(InsightsTags.SUMMARY, "só variáveis") && selected(InsightsTags.KIND + "variable") }
+        kind("all")
+        await("Tudo nesta visita", InsightsTags.SUMMARY) { shows(InsightsTags.SUMMARY, "R$ 630,00") && !shows(InsightsTags.SUMMARY, "só") }
+
+        tapTab("Verbas")
+        openInsights()
+        await("de volta em Variáveis", InsightsTags.SUMMARY) { shows(InsightsTags.SUMMARY, "R$ 130,00") && shows(InsightsTags.SUMMARY, "só variáveis") }
+    }
+
+    @Test
+    fun `a opção do widget começa no tipo da Leitura, pode sair dele e volta a segui-lo, e mudar na página tem Desfazer`() {
+        seed()
+        aluguel()
+        composeRule.setContent { Content() }
+        openInsights()
+        await("resumo", InsightsTags.SUMMARY) { shows(InsightsTags.SUMMARY, "R$ 630,00") }
+
+        // Total e costume: Somar começa em tudo e pode ler só o variável, sem mudar a Leitura.
+        openPage("total")
+        await("Somar começa em tudo") { selectedRadio("tudo") }
+        assertTrue("total de tudo", shows(InsightsTags.PAGE + "total", "R$ 630,00"))
+        option("só variável")
+        await("só o variável no widget", InsightsTags.PAGE + "total") { shows(InsightsTags.PAGE + "total", "R$ 130,00") }
+        assertTrue("o filtro da página segue em Tudo", selected(InsightsTags.KIND + "all"))
+
+        // Mudar o tipo na página muda a Leitura inteira, volta à grade e oferece Desfazer.
+        tap(InsightsTags.KIND + "planned")
+        await("Leitura só de previstos", InsightsTags.SUMMARY) {
+            !exists(InsightsTags.PAGE + "total") && shows(InsightsTags.SUMMARY, "R$ 500,00") && shows(InsightsTags.SUMMARY, "só previstos")
+        }
+        await("Desfazer", SnackTags.ACTION) { shows(SnackTags.ACTION, "Desfazer") }
+        tap(SnackTags.ACTION)
+        await("de volta a Tudo", InsightsTags.SUMMARY) { shows(InsightsTags.SUMMARY, "R$ 630,00") && !shows(InsightsTags.SUMMARY, "só") }
+
+        // O tipo mudou na grade: o Somar do widget volta a segui-lo.
+        kind("planned")
+        await("só previstos", InsightsTags.SUMMARY) { shows(InsightsTags.SUMMARY, "só previstos") }
+        openPage("total")
+        await("Somar segue o tipo", InsightsTags.PAGE + "total") { selectedRadio("só previstos") && shows(InsightsTags.PAGE + "total", "R$ 500,00") }
+        back()
+
+        // Calendário: "Com previstos" começa ligado fora de Variáveis; desligado, lê o variável mesmo em Previstos.
+        openPage("calendario")
+        await("com previstos ligado", InsightsTags.PAGE + "calendario") { shows(InsightsTags.PAGE + "calendario", "5 nov") && shows(InsightsTags.PAGE + "calendario", "R$ 500,00") }
+        tapText("Com previstos")
+        await("só o variável no Calendário", InsightsTags.PAGE + "calendario") { shows(InsightsTags.PAGE + "calendario", "R$ 40,00") }
+    }
+
     // ---- Cenário ----
 
     private fun seed() {
@@ -316,6 +424,16 @@ class LeituraUiTest {
         assertTrue("estorno", fora { db.registerRefund(e, presente) })
         val riscado = compra("c2", 9_900, "LOJA RISCADA", 4, 10, 0)
         assertTrue("riscar", fora { db.dismiss(riscado) })
+    }
+
+    /** O previsto Aluguel (Mercado, a primeira verba de [seed], R$ 500, todo dia 15), lançado em 5/11 pela ocorrência de novembro. */
+    private fun aluguel() {
+        val mercado = BudgetId(1)
+        val planned = fora { db.addManual(form(mercado, 50_000, LocalDate(2026, 11, 15), listOf("aluguel"), "", caption = "Aluguel").copy(repeats = Repeats.MONTHLY), NOV_6) }.planned
+        assertNotEquals("previsto", 0L, planned.v)
+        val occurrence = fora { db.planned(NOV_6) }.single { it.name == "Aluguel" }.occurrence
+        val saved = fora { db.addManual(form(mercado, 50_000, LocalDate(2026, 11, 5), listOf("aluguel"), "Imobiliaria").copy(occurrence = occurrence), NOV_6) }
+        assertNotEquals("lançar o previsto", 0L, saved.transaction.v)
     }
 
     private fun ensureSource() {
@@ -361,6 +479,23 @@ class LeituraUiTest {
         composeRule.onAllNodes(hasText("Leitura") and tabRole).onFirst().performClick()
         await("Leitura aberta") { exists(InsightsTags.EMPTY) || exists(InsightsTags.SUMMARY) }
     }
+
+    private fun tapTab(label: String) {
+        await("aba $label") { composeRule.onAllNodes(hasText(label) and tabRole).fetchSemanticsNodes().isNotEmpty() }
+        composeRule.onAllNodes(hasText(label) and tabRole).onFirst().performClick()
+        composeRule.waitForIdle()
+    }
+
+    /** Toca [value] no seletor de tipo da grade, reabrindo o filtro pela lupa se ele recolheu. */
+    private fun kind(value: String) {
+        if (!exists(InsightsTags.KIND + value) && exists(InsightsTags.LENS)) tap(InsightsTags.LENS)
+        await("seletor de tipo", InsightsTags.KIND + value) { exists(InsightsTags.KIND + value) }
+        tap(InsightsTags.KIND + value)
+    }
+
+    private fun selected(tag: String) = nodes(tag).firstOrNull()?.config?.getOrNull(SemanticsProperties.Selected) == true
+
+    private fun selectedRadio(label: String) = radio(label)?.config?.getOrNull(SemanticsProperties.Selected) == true
 
     private fun sectionTag(kind: ChipKind) = InsightsTags.SECTION + kind.name
 
