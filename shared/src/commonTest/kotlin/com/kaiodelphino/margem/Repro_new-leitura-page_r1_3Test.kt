@@ -29,7 +29,7 @@ import kotlinx.io.files.SystemFileSystem
 import kotlinx.io.files.SystemTemporaryDirectory
 
 /**
- * Repro: a Leitura widget read cancelled while it waits for one of the two readers (its produceState restarted
+ * Repro: a Leitura widget read cancelled while it waits for one of the readers (its produceState restarted
  * on a version bump) must not run its SQL once a reader frees up: the stale query only delays the fresh ones.
  *
  * The SQLite driver (the I/O boundary) is real, wrapped only to hold the readers' BEGIN until released and to
@@ -78,9 +78,9 @@ class `Repro_new-leitura-page_r1_3Test` {
             withTimeout(20.seconds) {
                 val db = Db(driver, path).also { db = it }
 
-                // Two screens' reads hold both readers.
-                val busy = List(2) { launch { db.settings() } }
-                while (held.load() < 2) delay(10)
+                // Other screens' reads hold all four readers (D29).
+                val busy = List(4) { launch { db.settings() } }
+                while (held.load() < 4) delay(10)
 
                 // A Leitura widget's read parks waiting for a reader, then its produceState restarts (version bump).
                 val stale = launch { db.leituraLines(LeituraQuery(LocalDate(2000, 1, 1), LocalDate(2100, 12, 31))) }
