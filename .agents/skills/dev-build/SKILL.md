@@ -3,14 +3,14 @@ name: dev-build
 description: Stage 1 of the feature pipeline. Agrees a file manifest with the user, then runs the dev-build workflow — AC tests first, N competing implementations, smallest passing one wins, minimality review. Use after /req-gather has produced a requirement.md.
 ---
 
-Before starting, read `.claude/pipeline/config.json` as `config`. It is the source for
+Before starting, read `.agents/pipeline/config.json` as `config`. It is the source for
 project paths, commands, review instructions, budgets and workflow limits. Pass the
 entire parsed object as `config` in every Workflow call. Use its commands and test
 naming conventions; do not infer a stack from examples below.
 
 # Stage 1 — build it small
 
-Read `.claude/pipeline/RULES.md` first.
+Read `.agents/pipeline/RULES.md` first.
 
 The manifest gate below is the cheapest checkpoint in the whole pipeline: eight lines of
 review here prevents the invented service layer that would otherwise cost a full diff
@@ -60,7 +60,7 @@ Run `scripts/pipeline/lint-feature.sh --slug <slug>` and fix what it reports unt
 exits 0; keep its `budget` and `api`. Show the manifest and ask the user with
 `AskUserQuestion`: approve, edit, or cancel. If they edit, rewrite the file, lint and
 ask again. Nothing runs until it is approved. On approval, checkpoint `open/approved` as
-the "Commits" section of `.claude/skills/feature/SKILL.md` describes, with
+the "Commits" section of `.agents/skills/feature/SKILL.md` describes, with
 `--set budget='<budget>' --set api='"<api>"'`.
 
 This is the moment to push back. If the manifest lists four new files for a feature

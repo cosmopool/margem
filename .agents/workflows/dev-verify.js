@@ -13,7 +13,7 @@ export const meta = {
 
 // The caller reads the single project configuration before invoking a workflow.
 const config = args.config
-if (!config || config.version !== 1) throw new Error('Pass .claude/pipeline/config.json as args.config')
+if (!config || config.version !== 1) throw new Error('Pass .agents/pipeline/config.json as args.config')
 
 const {
   slug, base, root,
@@ -27,7 +27,7 @@ const {
 const W = `${root}/.work/${slug}`
 const S = `${root}/scripts/pipeline`
 const DIFF = scope.to ? `git diff ${scope.from} ${scope.to}` : `git diff ${scope.from}`
-const PRELUDE = `Read ${root}/.claude/pipeline/config.json and ${root}/.claude/pipeline/RULES.md first and obey it. Feature slug: ${slug}.
+const PRELUDE = `Read ${root}/.agents/pipeline/config.json and ${root}/.agents/pipeline/RULES.md first and obey it. Feature slug: ${slug}.
 Requirement and acceptance criteria: ${W}/requirement.md. Base ref: ${base}.
 Pipeline scripts live in ${S}/. This is stage 2, round ${round}.`
 
@@ -145,7 +145,7 @@ const checkpoint = (step, what, pending = null, loop = null) => agent(`${PRELUDE
 
 Close the stage 2 step "${step}": ${what}
 
-1. Read ${root}/.claude/skills/caveman-commit/SKILL.md and write messages by its rules,
+1. Read ${root}/.agents/skills/caveman-commit/SKILL.md and write messages by its rules,
    with the overrides in the "Commits and checkpoints" section of RULES.md.
 2. If \`git status --porcelain\` shows changes outside .work/, write a message for them
    (scope ${slug}) and run \`${S}/commit-progress.sh -m "<message>"\`. Report the sha it
@@ -183,7 +183,7 @@ if (!fixOnly) {
       LENSES,
       lens => agent(`${PRELUDE}
 
-You are one bug hunter. Read ${root}/.claude/skills/mr-review/SKILL.md: the section
+You are one bug hunter. Read ${root}/.agents/skills/mr-review/SKILL.md: the section
 "Regra de evidência — não especular" in full, the "Regras comuns a todos os agentes",
 and the dimension "${lens.agent}". Hunt through that dimension and no other, including
 the AGENTS.md checklist for every AGENTS.md that applies to the changed files.
@@ -221,7 +221,7 @@ smallest fix needs.`,
 
     round === 1 ? agent(`${PRELUDE}
 
-Close acceptance-criteria gaps in the test suite. ${root}/.claude/pipeline/TESTING.md is
+Close acceptance-criteria gaps in the test suite. ${root}/.agents/pipeline/TESTING.md is
 the authority on how they are written — read it first.
 
 1. Run \`${S}/ac-map.sh --slug ${slug}\` for the AC -> tests map.
@@ -259,7 +259,7 @@ ${JSON.stringify({ title: f.title, file: f.file, line: f.line, failureScenario: 
 Write ONE new integration test file, alone in its own file, named
 \`<the closest test directory>/${config.patterns.repro_file.replace('{slug}', slug).replace('{round}', round).replace('{n}', n + 1)}\`, that triggers the
 failure through a path a real user can reach: public entry points, real collaborators,
-mocks only at the I/O boundaries in RULES.md. ${root}/.claude/pipeline/TESTING.md applies.
+mocks only at the I/O boundaries in RULES.md. ${root}/.agents/pipeline/TESTING.md applies.
 Run it and confirm it fails for the reason claimed.
 
 - reproduced: the test fails for that reason. Report its path.

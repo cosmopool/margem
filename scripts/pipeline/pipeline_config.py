@@ -11,7 +11,7 @@ def read():
     path = os.environ.get('PIPELINE_CONFIG')
     if not path:
         root = Path(subprocess.check_output(['git', 'rev-parse', '--path-format=absolute', '--git-common-dir'], text=True).strip()).parent
-        path = root / '.claude/pipeline/config.json'
+        path = root / '.agents/pipeline/config.json'
     try:
         config = json.loads(Path(path).read_text())
         if config.get('version') != 1:

@@ -1,0 +1,1510 @@
+<!doctype html>
+<html lang="pt-BR">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Margem · Proposta A · O mês como plano</title>
+<meta name="description" content="Proposta A de redesenho do Margem: organizar o dinheiro como um ciclo — planejar, acompanhar, corrigir e fechar o mês — sem perder a profundidade da Leitura.">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Newsreader:ital,opsz,wght@0,6..72,300..700;1,6..72,300..700&family=Source+Sans+3:ital,wght@0,300..800;1,400..600&display=swap" rel="stylesheet">
+<style>
+/* ===== TOKENS: design_system.html §4 = widgets/Theme.kt ===== */
+:root,.t-light{
+  color-scheme:light;
+  --papel:#F3EEE4; --folha:#FBF8F1; --folha-2:#ECE5D8;
+  --fio:#DDD3C2; --fio-forte:#8A7E6A;
+  --tinta:#1E1B16; --tinta-2:#514A40; --tinta-3:#6B6254;
+  --argila:#A44D29;
+  --musgo:#3E5E38; --musgo-fundo:#E3EADB;
+  --ocre:#85590F;  --ocre-fundo:#F4E7CC;
+  --lacre:#9A2A20; --lacre-fundo:#F6E3DC;
+  --anil:#2D4C6E;  --anil-fundo:#DFE6EE;
+  --acao:#1E1B16; --sobre-acao:#FBF8F1; --acao-press:#3A352D;
+  --snack-acao:#E09470;
+  --scrim:rgba(30,27,22,.45);
+  --sombra:0 1px 2px rgba(30,27,22,.06),0 12px 30px -12px rgba(30,27,22,.28);
+  --c1:#2F5FA8; --c2:#D0682E; --c3:#139488; --c4:#7E2F78; --c5:#B8860B; --c6:#C25C7E; --c0:#8C8270;
+  --s0:#F1E4D6; --s1:#E3C3A6; --s2:#CF9871; --s3:#B46A43; --s4:#8A4422; --s-ink-hi:#FBF8F1;
+  --parede:radial-gradient(120% 70% at 85% 8%,#E8D9BF 0%,transparent 60%),radial-gradient(90% 60% at 0% 100%,#C9CFB4 0%,transparent 65%),linear-gradient(165deg,#E4E2D2 0%,#EDE4D2 50%,#D9C6AA 100%);
+  --wg-fundo:rgba(251,248,241,.94);
+}
+:root[data-theme="dark"],.t-dark{
+  color-scheme:dark;
+  --papel:#171512; --folha:#201D19; --folha-2:#2A2621;
+  --fio:#36312A; --fio-forte:#7C7262;
+  --tinta:#EEE7DA; --tinta-2:#BDB3A3; --tinta-3:#988E7F;
+  --argila:#E09470;
+  --musgo:#A3C092; --musgo-fundo:#24301F;
+  --ocre:#DDB063;  --ocre-fundo:#382C17;
+  --lacre:#EE937E; --lacre-fundo:#3A221C;
+  --anil:#A3BCDB;  --anil-fundo:#1F2A36;
+  --acao:#EEE7DA; --sobre-acao:#171512; --acao-press:#CFC6B6;
+  --snack-acao:#A44D29;
+  --scrim:rgba(0,0,0,.6);
+  --sombra:0 1px 0 rgba(0,0,0,.35),0 14px 34px -10px rgba(0,0,0,.7);
+  --c1:#5584D0; --c2:#D06A30; --c3:#20A898; --c4:#8E4A8A; --c5:#B98A14; --c6:#CC6487; --c0:#7A7163;
+  --s0:#2B231E; --s1:#4E3324; --s2:#7E4A2E; --s3:#B66C44; --s4:#E6A27C; --s-ink-hi:#171512;
+  --parede:radial-gradient(110% 70% at 90% 0%,#2E3A2C 0%,transparent 60%),radial-gradient(90% 60% at 0% 100%,#3A2618 0%,transparent 60%),linear-gradient(165deg,#1B211B 0%,#13120F 55%,#211913 100%);
+  --wg-fundo:rgba(32,29,25,.94);
+}
+@media (prefers-color-scheme:dark){
+  :root:not([data-theme="light"]){
+    color-scheme:dark;
+    --papel:#171512; --folha:#201D19; --folha-2:#2A2621; --fio:#36312A; --fio-forte:#7C7262;
+    --tinta:#EEE7DA; --tinta-2:#BDB3A3; --tinta-3:#988E7F; --argila:#E09470;
+    --musgo:#A3C092; --musgo-fundo:#24301F; --ocre:#DDB063; --ocre-fundo:#382C17;
+    --lacre:#EE937E; --lacre-fundo:#3A221C; --anil:#A3BCDB; --anil-fundo:#1F2A36;
+    --acao:#EEE7DA; --sobre-acao:#171512; --acao-press:#CFC6B6; --snack-acao:#A44D29;
+    --c1:#5584D0; --c2:#D06A30; --c3:#20A898; --c4:#8E4A8A; --c5:#B98A14; --c6:#CC6487; --c0:#7A7163;
+    --s0:#2B231E; --s1:#4E3324; --s2:#7E4A2E; --s3:#B66C44; --s4:#E6A27C; --s-ink-hi:#171512;
+  }
+}
+
+/* ===== BASE ===== */
+*{box-sizing:border-box;margin:0;padding:0}
+html{-webkit-text-size-adjust:100%;scroll-behavior:smooth}
+body{background:var(--papel);color:var(--tinta);font:400 17px/1.6 'Source Sans 3',system-ui,sans-serif;overflow-x:hidden;transition:background-color .3s,color .3s}
+h1,h2,h3,h4{font-family:'Newsreader',Georgia,serif;font-weight:400}
+.num{font-variant-numeric:lining-nums tabular-nums}
+a{color:var(--anil);text-underline-offset:3px;text-decoration-thickness:1px}
+svg{display:block}
+.ico{width:24px;height:24px;fill:none;stroke:currentColor;stroke-width:1.5;stroke-linecap:round;stroke-linejoin:round;flex:none}
+.ico.s20{width:20px;height:20px}.ico.s18{width:18px;height:18px}.ico.s16{width:16px;height:16px}
+.vh{position:absolute;width:1px;height:1px;overflow:hidden;clip:rect(0 0 0 0)}
+
+/* ===== PÁGINA (fora do telefone) ===== */
+body::before{content:"";position:fixed;left:8px;top:0;bottom:0;width:4px;border-left:1px solid var(--argila);border-right:1px solid var(--argila);opacity:.5;pointer-events:none;z-index:4}
+.wrap{max-width:1260px;margin:0 auto;padding:0 16px 96px 26px}
+@media (min-width:760px){body::before{left:28px;width:5px}.wrap{padding:0 40px 120px 72px}}
+#tema{position:fixed;bottom:14px;right:14px;z-index:20;min-height:44px;padding:0 14px;border-radius:4px;border:1px solid var(--fio-forte);background:var(--folha);color:var(--tinta);font:600 12.5px 'Source Sans 3';letter-spacing:.06em;text-transform:uppercase;cursor:pointer;display:flex;align-items:center;gap:8px}
+#tema:focus-visible{outline:2px solid var(--anil);outline-offset:2px}
+.cover{padding:40px 0 34px}
+.kick{font:600 12px/1.3 'Source Sans 3';letter-spacing:.14em;text-transform:uppercase;color:var(--argila)}
+h1{font:italic 400 clamp(46px,9vw,96px)/.95 'Newsreader';letter-spacing:-.03em;margin:14px 0 20px}
+.lede{font:300 clamp(19px,2.5vw,24px)/1.45 'Newsreader';color:var(--tinta-2);max-width:40em}
+.lede em{color:var(--tinta)}
+.meta{display:flex;flex-wrap:wrap;gap:6px 18px;margin-top:22px;padding:10px 0;border-top:2px solid var(--tinta);border-bottom:1px solid var(--tinta);font:600 11.5px/1.45 'Source Sans 3';letter-spacing:.1em;text-transform:uppercase;color:var(--tinta-2)}
+.toc{display:grid;grid-template-columns:repeat(auto-fill,minmax(min(230px,100%),1fr));column-gap:32px;margin-top:20px}
+.toc a{display:flex;gap:10px;align-items:baseline;padding:7px 0;border-bottom:1px solid var(--fio);color:var(--tinta);text-decoration:none;font:400 18px/1.3 'Newsreader'}
+.toc a b{font:600 12px 'Source Sans 3';letter-spacing:.08em;color:var(--argila);min-width:22px}
+.toc a:hover{color:var(--argila)}
+section.s{padding:52px 0 28px;border-top:2px solid var(--tinta);margin-top:28px}
+.sn{display:block;font:italic 300 54px/1 'Newsreader';color:var(--argila);font-variant-numeric:lining-nums}
+h2{font:400 clamp(30px,4.6vw,48px)/1.05 'Newsreader';letter-spacing:-.015em;margin:6px 0 18px;max-width:20em}
+h2 em{color:var(--argila)}
+h3.sub{font:500 clamp(22px,2.8vw,28px)/1.2 'Newsreader';margin:44px 0 10px;padding-top:12px;border-top:1px solid var(--tinta);display:flex;gap:12px;align-items:baseline;flex-wrap:wrap}
+h3.sub .k{font:600 12px 'Source Sans 3';letter-spacing:.1em;color:var(--argila)}
+h4.min{font:600 12px/1.3 'Source Sans 3';letter-spacing:.14em;text-transform:uppercase;color:var(--tinta);margin:26px 0 10px}
+p{max-width:44em;margin-bottom:14px}
+.intro{color:var(--tinta-2);max-width:44em}
+.muted{color:var(--tinta-2)}
+ul.plain,ol.plain{padding-left:20px;max-width:46em}
+ul.plain li,ol.plain li{margin-bottom:8px}
+.quote{font:300 italic clamp(24px,3.2vw,38px)/1.25 'Newsreader';max-width:22em;padding:6px 0 6px 22px;border-left:5px double var(--argila);margin:10px 0 30px}
+code,.code{font:500 12.5px/1.4 ui-monospace,'SFMono-Regular',Menlo,Consolas,monospace;color:var(--anil);background:var(--anil-fundo);padding:1px 5px;border-radius:3px;overflow-wrap:anywhere}
+
+/* diagnóstico */
+.dx{display:grid;grid-template-columns:repeat(auto-fill,minmax(min(340px,100%),1fr));gap:22px 30px;margin-top:10px}
+.dxc{border-top:2px solid var(--tinta);padding-top:10px}
+.dxc .n{font:600 12px 'Source Sans 3';letter-spacing:.1em;color:var(--argila)}
+.dxc h4{font:500 21px/1.25 'Newsreader';margin:4px 0 8px}
+.dxc p{font-size:15.5px;line-height:1.5;color:var(--tinta-2);margin-bottom:8px}
+.dxc .refs{font-size:13px;line-height:1.9;color:var(--tinta-3)}
+
+/* princípio, ciclo, IA */
+.rules{display:grid;grid-template-columns:repeat(auto-fill,minmax(min(300px,100%),1fr));gap:22px 30px}
+.rules div{border-top:2px solid var(--musgo);padding-top:10px}
+.rules b{display:block;font:500 21px/1.25 'Newsreader';margin-bottom:6px}
+.rules p{font-size:15.5px;line-height:1.5;color:var(--tinta-2)}
+.loop{display:grid;grid-template-columns:repeat(auto-fill,minmax(min(250px,100%),1fr));gap:14px;margin:18px 0 10px;counter-reset:passo}
+.loop>div{background:var(--folha);border:1px solid var(--fio);border-radius:8px;padding:14px 16px 12px;position:relative}
+.loop .k{font:600 11px 'Source Sans 3';letter-spacing:.12em;text-transform:uppercase;color:var(--argila)}
+.loop b{display:block;font:500 22px/1.2 'Newsreader';margin:2px 0 4px}
+.loop .w{display:block;font:600 12px 'Source Sans 3';letter-spacing:.06em;text-transform:uppercase;color:var(--tinta-3)}
+.loop p{font-size:15px;line-height:1.45;color:var(--tinta-2);margin:6px 0 0}
+.loop .ex{display:block;font:italic 16px/1.35 'Newsreader';color:var(--tinta);margin-top:8px}
+.loopnote{font:italic 16px/1.45 'Newsreader';color:var(--tinta-2);max-width:44em}
+.ia{display:grid;grid-template-columns:repeat(auto-fit,minmax(min(380px,100%),1fr));gap:26px 40px;margin-top:14px}
+.ia h4{font:600 12px 'Source Sans 3';letter-spacing:.14em;text-transform:uppercase;padding-bottom:6px;border-bottom:2px solid var(--tinta);margin-bottom:6px}
+.tabc{display:grid;grid-template-columns:118px minmax(0,1fr);gap:4px 14px;padding:9px 0;border-bottom:1px solid var(--fio)}
+.tabc b{font:500 18px/1.25 'Newsreader'}
+.tabc b small{display:block;font:600 10.5px 'Source Sans 3';letter-spacing:.1em;text-transform:uppercase;color:var(--tinta-3)}
+.tabc span{font-size:14.5px;line-height:1.45;color:var(--tinta-2)}
+.tabc.gone b{color:var(--tinta-3);text-decoration:line-through;text-decoration-color:var(--lacre)}
+@media (max-width:420px){.tabc{grid-template-columns:minmax(0,1fr)}}
+.moves{display:grid;grid-template-columns:repeat(auto-fill,minmax(min(320px,100%),1fr));gap:2px 30px;margin-top:10px}
+.moves div{display:flex;gap:10px;padding:7px 0;border-bottom:1px solid var(--fio);font-size:15px;line-height:1.4}
+.moves div b{font-weight:600;min-width:7.5em}
+.moves div span{color:var(--tinta-2)}
+
+/* tabelas */
+.tblw{overflow-x:auto;margin:10px 0 18px}
+.tbl{width:100%;border-collapse:collapse;font-size:14.5px;line-height:1.45}
+.tbl th{font:600 11px/1.3 'Source Sans 3';letter-spacing:.12em;text-transform:uppercase;color:var(--tinta);text-align:left;padding:9px 12px 9px 0;border-top:2px solid var(--tinta);border-bottom:1px solid var(--tinta)}
+.tbl td{padding:9px 12px 9px 0;border-bottom:1px solid var(--fio);vertical-align:top}
+.tbl td.t{font:500 16px/1.3 'Newsreader'}
+.tbl td.r,.tbl th.r{text-align:right;white-space:nowrap}
+.tbl td.dim{color:var(--tinta-2)}
+.tbl tr.g td{font:600 11px/1.3 'Source Sans 3';letter-spacing:.12em;text-transform:uppercase;color:var(--argila);padding-top:20px;border-bottom:1px solid var(--tinta)}
+.tbl tr.tot td{border-top:2px solid var(--tinta);font-weight:600}
+.pl{display:inline-block;font:700 10px/1 'Source Sans 3';letter-spacing:.1em;text-transform:uppercase;padding:3px 6px;border-radius:3px;margin-right:6px;vertical-align:1px;white-space:nowrap}
+.pl.fica{color:var(--musgo);background:var(--musgo-fundo)}
+.pl.muda{color:var(--ocre);background:var(--ocre-fundo)}
+.pl.junta{color:var(--anil);background:var(--anil-fundo)}
+.pl.sai{color:var(--lacre);background:var(--lacre-fundo)}
+.pl.novo{color:var(--papel);background:var(--tinta)}
+.cuts{display:grid;grid-template-columns:repeat(auto-fill,minmax(min(340px,100%),1fr));gap:18px 30px;margin-top:8px}
+.cuts div{border-top:2px solid var(--lacre);padding-top:8px}
+.cuts b{display:block;font:500 19px/1.25 'Newsreader';margin-bottom:4px}
+.cuts p{font-size:15px;line-height:1.5;color:var(--tinta-2);margin-bottom:6px}
+.cuts p i{font-style:normal;font-weight:600;color:var(--tinta)}
+.dec{list-style:none;counter-reset:d;max-width:52em}
+.dec li{counter-increment:d;padding:14px 0 12px 46px;border-bottom:1px solid var(--fio);position:relative}
+.dec li::before{content:"P" counter(d);position:absolute;left:0;top:15px;font:600 12px 'Source Sans 3';letter-spacing:.08em;color:var(--argila)}
+.dec li b{display:block;font:500 19px/1.3 'Newsreader';margin-bottom:4px}
+.dec li p{font-size:15px;line-height:1.5;color:var(--tinta-2);margin-bottom:4px}
+.dec li .reco{display:block;font-size:15px;line-height:1.5;color:var(--tinta);margin-top:6px;padding:8px 12px;background:var(--folha);border:1px solid var(--fio);border-radius:6px}
+.dec li .reco::before{content:"Recomendo: ";font-weight:700;color:var(--musgo)}
+
+/* ===== TELAS — moldura 360 × 800 ===== */
+.shots{display:flex;flex-wrap:wrap;gap:44px 30px;align-items:flex-start;margin:24px 0 8px}
+.shot{margin:0;max-width:100%}
+.shot figcaption{margin-top:12px;font:italic 15px/1.5 'Newsreader';color:var(--tinta-2);max-width:380px}
+.shot figcaption b{display:block;font:600 11px 'Source Sans 3';letter-spacing:.12em;text-transform:uppercase;color:var(--tinta);font-style:normal;margin-bottom:4px}
+.ph{width:380px;padding:10px;border-radius:48px;background:#0D0C0A;box-shadow:0 0 0 1px #3a352e,0 40px 70px -40px rgba(20,16,10,.55);flex:none}
+.scr{width:360px;height:800px;border-radius:38px;overflow:hidden;position:relative;background:var(--papel);color:var(--tinta);font:400 15px/1.45 'Source Sans 3';display:flex;flex-direction:column}
+.ph.tall .scr{height:auto;min-height:800px}
+@media (max-width:440px){.ph,.wall{zoom:.9}}
+@media (max-width:400px){.ph,.wall{zoom:.86}}
+@media (max-width:380px){.ph,.wall{zoom:.82}}
+@media (max-width:340px){.ph,.wall{zoom:.74}}
+.sbar{height:34px;padding:4px 26px 0;display:flex;justify-content:space-between;align-items:center;font:600 13px 'Source Sans 3';flex:none;font-variant-numeric:tabular-nums}
+.sbar .r{display:flex;gap:6px;align-items:center}
+.gbar{height:22px;flex:none;display:grid;place-items:center;background:var(--papel)}
+.gbar::after{content:"";width:108px;height:4px;border-radius:2px;background:var(--tinta);opacity:.35}
+.bd{flex:1;overflow:hidden;padding:0 24px 22px;position:relative}
+.tb{height:56px;display:flex;align-items:center;gap:2px;padding:0 4px 0 8px;flex:none}
+.tb .t{font:500 21px 'Newsreader';flex:1;padding-left:4px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.tb .t.root{font-size:24px;padding-left:16px}
+.tb .wmk{font:italic 500 24px 'Newsreader';letter-spacing:-.02em;flex:1;padding-left:16px;display:flex;align-items:center;gap:8px}
+.ib{width:48px;height:48px;display:grid;place-items:center;border-radius:24px;color:var(--tinta);flex:none}
+.ib.dim{color:var(--tinta-3)}
+.navb{height:72px;display:grid;grid-template-columns:repeat(4,1fr);border-top:1px solid var(--fio);background:var(--papel);flex:none}
+.navb a{display:flex;flex-direction:column;align-items:center;justify-content:center;gap:3px;font:500 11.5px 'Source Sans 3';white-space:nowrap;min-width:0;color:var(--tinta-3);position:relative;text-decoration:none}
+.navb a.on{color:var(--tinta);font-weight:700}
+.navb a.on::before{content:"";position:absolute;top:-1px;left:24%;right:24%;height:2px;background:var(--tinta)}
+.bdg{position:absolute;top:9px;left:calc(50% + 7px);min-width:18px;height:18px;border-radius:9px;background:var(--argila);color:var(--folha);font:700 11px/18px 'Source Sans 3';text-align:center;padding:0 5px;font-variant-numeric:tabular-nums}
+.over-r{font:600 11px/1.3 'Source Sans 3';letter-spacing:.12em;text-transform:uppercase;color:var(--tinta-3)}
+.over-r.t{color:var(--tinta)}
+.hl{font:400 29px/1.15 'Newsreader';letter-spacing:-.01em;margin:6px 0 8px}
+.hl .num{white-space:nowrap}
+.dek{font:15px/1.45 'Source Sans 3';color:var(--tinta-2)}
+.secline{display:flex;justify-content:space-between;align-items:baseline;gap:8px;margin-top:20px;padding-bottom:6px;border-bottom:1px solid var(--tinta)}
+.amt{font:500 17px/1.2 'Newsreader';font-variant-numeric:lining-nums tabular-nums;white-space:nowrap}
+.amt .cur{font:500 .7em 'Source Sans 3';color:var(--tinta-2);margin-right:.18em}
+.amt.dim{color:var(--tinta-2)}
+.mer{font:500 17px/1.2 'Newsreader'}
+.mer.alias{text-decoration:underline dotted var(--argila);text-decoration-thickness:1.5px;text-underline-offset:5px}
+.id{width:9px;height:9px;flex:none;display:inline-block;background:var(--c1)}
+
+/* botões, chips, campos */
+.btn{display:inline-flex;align-items:center;justify-content:center;gap:8px;min-height:48px;padding:0 18px;border-radius:4px;font:600 15px/1 'Source Sans 3';letter-spacing:.01em;border:1px solid transparent;background:none;color:var(--tinta);white-space:nowrap}
+.btn.pri{background:var(--acao);color:var(--sobre-acao)}
+.btn.sec{border-color:var(--fio-forte)}
+.btn.txt{padding:0 10px;color:var(--anil)}
+.btn.risco{border-color:var(--fio-forte)}
+.btn.risco .ico{color:var(--lacre)}
+.btn.sm{min-height:40px;padding:0 13px;font-size:14px}
+.btn.ic{width:40px;padding:0}
+.chips{display:flex;flex-wrap:wrap;gap:8px}
+.chip{display:inline-flex;align-items:center;gap:7px;height:32px;padding:0 12px 0 10px;border:1px solid var(--fio-forte);border-radius:3px;font:500 14px/1 'Source Sans 3';color:var(--tinta);background:var(--folha);white-space:nowrap}
+.chip::before{content:"";width:7px;height:7px;border-radius:50%;box-shadow:inset 0 0 0 1.5px currentColor;opacity:.75;flex:none}
+.chip.sug{border-style:dashed;color:var(--tinta-2);background:transparent}
+.chip .x{font-size:12px;opacity:.7;margin-left:2px}
+.fld{padding:7px 0 5px}
+.fld>label,.fld>.lab{display:block;font:600 11px/1.3 'Source Sans 3';letter-spacing:.12em;text-transform:uppercase;color:var(--tinta-3)}
+.fld .in{display:flex;align-items:center;gap:10px;min-height:46px;border-bottom:1px solid var(--fio-forte);font:400 18px/1.2 'Newsreader';color:var(--tinta)}
+.fld .in.sb{font:400 15.5px/1.2 'Source Sans 3';color:var(--tinta-3)}
+.fld .in.sb .ico{color:var(--tinta-3)}
+.fld.foc .in{border-bottom:2px solid var(--tinta)}
+.fld .hint{font:13px/1.35 'Source Sans 3';color:var(--tinta-3);margin-top:5px}
+.fld.money .in{font:400 36px/1 'Newsreader';min-height:52px;padding-top:6px;font-variant-numeric:lining-nums tabular-nums;align-items:baseline;gap:0}
+.fld.money .cur{font:500 16px 'Source Sans 3';color:var(--tinta-2);margin-right:10px}
+.fld.money .cts{color:var(--tinta-2)}
+.fld.pick .vm{margin-left:auto;font:400 13.5px 'Source Sans 3';color:var(--tinta-3);white-space:nowrap}
+.fld.pick .sg{border:1px dashed var(--fio-forte);border-radius:3px;padding:1px 8px;color:var(--tinta-2)}
+.caret{display:inline-block;width:2px;height:.9em;background:var(--anil);margin-left:2px;vertical-align:-.08em;animation:pisca 1.1s steps(1) infinite}
+@keyframes pisca{50%{opacity:0}}
+@media (prefers-reduced-motion:reduce){.caret{animation:none}}
+.rb{font:600 11px/1.3 'Source Sans 3';letter-spacing:.12em;text-transform:uppercase;color:var(--tinta-3);margin-top:12px}
+.bos{display:flex;flex-wrap:wrap;gap:8px;margin-top:6px}
+.bo{display:inline-flex;align-items:center;height:36px;padding:0 12px;border:1px solid var(--fio-forte);border-radius:4px;font:600 14px 'Source Sans 3';color:var(--tinta);background:var(--folha);white-space:nowrap}
+.bo.on{background:var(--tinta);color:var(--papel);border-color:var(--tinta)}
+.quoteblk{background:var(--folha-2);border-radius:6px;padding:9px 13px;font:italic 14px/1.45 'Newsreader';color:var(--tinta-2)}
+.quoteblk b{display:block;font:600 11px 'Source Sans 3';letter-spacing:.1em;text-transform:uppercase;font-style:normal;color:var(--tinta-3);margin-bottom:3px}
+.prev{display:flex;gap:10px;align-items:flex-start;padding:10px 12px;border:1px solid var(--fio);border-radius:6px;font:14px/1.45 'Source Sans 3';color:var(--tinta-2);background:var(--folha)}
+.prev b{color:var(--tinta);font-weight:600}
+.prev .ico{margin-top:1px}
+.dock{padding:12px 24px 12px;background:var(--papel);border-top:1px solid var(--fio);display:flex;gap:10px;flex:none}
+.dock .btn{flex:1}
+.lk{font:600 14px 'Source Sans 3';color:var(--anil);text-decoration:none;display:inline-flex;align-items:center;gap:4px;min-height:40px}
+
+/* régua — simplificada: trilho, gasto na cor do estado, marca de hoje, fio duplo da cota, hachura */
+.meter{padding-right:9%;position:relative}
+.rail{position:relative;height:14px}
+.rail::before{content:"";position:absolute;left:0;right:0;top:6px;height:2px;background:var(--fio)}
+.rail::after{content:"";position:absolute;right:-3px;top:0;bottom:0;width:5px;border-left:1px solid var(--argila);border-right:1px solid var(--argila)}
+.rail .fill{position:absolute;left:0;top:3px;height:8px;width:calc(var(--g,0)*100%);background:var(--musgo);border-radius:1px 0 0 1px}
+.rail .pace{position:absolute;left:calc(var(--p,0)*100%);top:-1px;bottom:-1px;width:2px;margin-left:-1px;background:var(--tinta)}
+.rail .over{position:absolute;left:100%;margin-left:3px;top:3px;height:8px;width:calc(min(var(--x,0),.1)*100%);background:repeating-linear-gradient(-45deg,var(--lacre) 0 1.6px,transparent 1.6px 4px);box-shadow:inset 0 0 0 1px var(--lacre)}
+.meter.at .fill{background:var(--ocre)}
+.meter.ov .fill{background:var(--lacre);width:100%}
+.meter.tall .rail{height:22px}.meter.tall .rail::before{top:10px}.meter.tall .fill,.meter.tall .over{top:5px;height:12px}
+.meter.teto .rail{height:10px}
+.meter.teto .rail::before{top:4px;height:1px;background:var(--fio-forte)}
+.meter.teto .fill{top:3px;height:3px;background:var(--tinta);border-radius:0}
+.axl{display:flex;justify-content:space-between;font:600 12px 'Source Sans 3';color:var(--tinta-3);margin-top:6px;padding-right:2px;font-variant-numeric:tabular-nums}
+.axl .o{color:var(--lacre)}
+.st{font:600 13px/1.2 'Source Sans 3';display:inline-flex;align-items:center;gap:5px}
+.st::before{content:"";width:8px;height:8px;flex:none}
+.st.ok{color:var(--musgo)}.st.ok::before{border-radius:50%;background:var(--musgo)}
+.st.at{color:var(--ocre)}.st.at::before{background:var(--ocre);clip-path:polygon(50% 0,100% 100%,0 100%)}
+.st.ov{color:var(--lacre)}.st.ov::before{background:repeating-linear-gradient(-45deg,var(--lacre) 0 1.5px,transparent 1.5px 3px);box-shadow:inset 0 0 0 1px var(--lacre)}
+.st.nt{color:var(--tinta-3)}.st.nt::before{border-radius:50%;box-shadow:inset 0 0 0 1.5px var(--tinta-3)}
+.tlab2{display:grid;gap:1px;margin-top:6px;font:13px/1.35 'Source Sans 3';color:var(--tinta-2);font-variant-numeric:tabular-nums}
+.tlab2 b{font:500 16px/1.3 'Newsreader';color:var(--tinta)}
+
+.seg{display:flex;border-bottom:1px solid var(--fio)}
+.seg span{flex:1;min-height:44px;display:grid;place-items:center;font:500 14px 'Source Sans 3';color:var(--tinta-3);position:relative;white-space:nowrap;padding:0 6px}
+.seg span.on{color:var(--tinta);font-weight:700}
+.seg span.on::after{content:"";position:absolute;left:14%;right:14%;bottom:-1px;height:2px;background:var(--tinta)}
+/* Mês */
+.tot{margin:12px -12px 0;padding:2px 12px 8px;border-radius:6px}
+.strip{display:flex;align-items:center;gap:12px;margin:14px 0 4px;padding:9px 4px 9px 14px;background:var(--folha-2);border-radius:6px;position:relative}
+.strip::before{content:"";position:absolute;left:5px;top:10px;bottom:10px;width:4px;border-left:1px solid var(--argila);border-right:1px solid var(--argila)}
+.strip>.ico{color:var(--argila);margin-left:6px}
+.strip .t{flex:1;font:500 15px/1.3 'Source Sans 3'}
+.strip .t small{display:block;color:var(--tinta-3);font-size:13px;font-weight:400}
+.vr{padding:11px 0 10px;border-bottom:1px solid var(--fio)}
+.vr .l1{display:flex;align-items:baseline;justify-content:space-between;gap:12px}
+.vr .nm{font:500 19px/1.2 'Newsreader';display:flex;align-items:center;gap:9px}
+.vr .vv{text-align:right;font:500 17px/1.2 'Newsreader';font-variant-numeric:lining-nums tabular-nums;white-space:nowrap}
+.vr .vv small{font:400 12.5px 'Source Sans 3';color:var(--tinta-3);margin-left:4px}
+.vr .meter{margin:9px 0 6px}
+.vr .l3{display:flex;justify-content:space-between;gap:8px;font:13px/1.2 'Source Sans 3';color:var(--tinta-2);font-variant-numeric:tabular-nums}
+.vr .l3 .o{color:var(--lacre);font-weight:600}
+.why{display:flex;justify-content:space-between;align-items:center;gap:10px;margin-top:6px;font:13.5px/1.35 'Source Sans 3';color:var(--tinta-2)}
+.why .lk{min-height:32px;font-size:13.5px;white-space:nowrap}
+.foot-n{font:italic 13.5px/1.4 'Newsreader';color:var(--tinta-3);margin-top:12px}
+
+/* listas */
+.lrow{display:flex;justify-content:space-between;align-items:center;gap:12px;padding:9px 0;border-bottom:1px solid var(--fio)}
+.lrow>span:first-child{min-width:0;flex:1}
+.lrow .w{font:13px/1.3 'Source Sans 3';color:var(--tinta-3);display:block;margin-top:2px}
+.lrow .sum{display:block;text-align:right;font:500 12px 'Source Sans 3';color:var(--tinta-3);font-variant-numeric:tabular-nums}
+.lrow .sum.o{color:var(--lacre)}
+.dayh{display:flex;align-items:center;gap:10px;margin:16px 0 4px;font:600 11px 'Source Sans 3';letter-spacing:.12em;text-transform:uppercase;color:var(--tinta-3)}
+.dayh::after{content:"";flex:1;height:1px;background:var(--fio)}
+.leg{display:block;font:italic 500 17px/22px 'Newsreader';color:var(--tinta)}
+.by{display:block;margin-top:1px;line-height:20px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.by .em{font:400 13px 'Source Sans 3';color:var(--tinta-3);margin-right:4px}
+.by .mer{font:500 15px/20px 'Newsreader';color:var(--tinta-2)}
+.cutline{display:flex;align-items:center;gap:8px;margin:2px 0;font:600 10.5px 'Source Sans 3';letter-spacing:.12em;text-transform:uppercase;color:var(--lacre)}
+.cutline::after{content:"";height:0;border-top:1.5px dashed var(--lacre);flex:1}
+.bridge{display:flex;align-items:center;gap:10px;margin:12px 0 2px;padding:8px 4px 8px 12px;background:var(--folha-2);border-radius:6px;font:14px/1.35 'Source Sans 3'}
+.bridge>.ico{color:var(--tinta-2)}
+.bridge .bt{flex:1}
+.bridge b{display:block;font:500 16px/1.3 'Newsreader'}
+.bridge small{display:block;font-size:12.5px;color:var(--tinta-2)}
+
+/* recado */
+.stack{display:flex;flex-direction:column;gap:10px;margin-top:10px}
+.rec{background:var(--folha);border:1px solid var(--fio);border-radius:8px;padding:11px 14px 10px 16px;position:relative}
+.rec.novo{padding-left:24px}
+.rec.novo::before{content:"";position:absolute;left:8px;top:14px;bottom:14px;width:5px;border-left:1px solid var(--argila);border-right:1px solid var(--argila)}
+.rec .src{display:flex;justify-content:space-between;gap:8px;font:600 11px/1.3 'Source Sans 3';letter-spacing:.1em;text-transform:uppercase;color:var(--tinta-3)}
+.rec .raw{font:italic 400 14px/1.4 'Newsreader';color:var(--tinta-2);margin:5px 0 8px}
+.rec .ex{display:flex;justify-content:space-between;align-items:baseline;gap:12px;padding-top:8px;border-top:1px dotted var(--fio-forte)}
+.rec .act{display:flex;justify-content:flex-end;gap:8px;align-items:center;margin-top:8px}
+.rec .flag{display:inline-flex;gap:6px;align-items:center;font:600 12px 'Source Sans 3';color:var(--ocre);background:var(--ocre-fundo);padding:4px 8px;border-radius:3px}
+.rec.prop{background:transparent;border-style:dashed}
+.liga{display:flex;gap:10px;align-items:flex-start;margin-top:10px;padding:8px 12px;border-radius:6px;background:var(--anil-fundo);font:13.5px/1.35 'Source Sans 3';color:var(--tinta-2)}
+.liga .ico{color:var(--anil);margin-top:2px}
+.liga b{display:block;font:500 16px/1.25 'Newsreader';color:var(--tinta)}
+
+/* previsto */
+.dia{width:42px;flex:none;border:1px dashed var(--fio-forte);border-radius:3px;text-align:center;padding:3px 0 4px;align-self:center}
+.dia small{display:block;font:700 9.5px/1.2 'Source Sans 3';letter-spacing:.12em;text-transform:uppercase;color:var(--tinta-3)}
+.dia b{display:block;font:500 20px/1.05 'Newsreader';font-variant-numeric:lining-nums tabular-nums;color:var(--tinta)}
+.dia.done{border-style:solid}
+.prow{display:flex;gap:12px;align-items:center;padding:8px 0;border-bottom:1px solid var(--fio)}
+.prow>.tx{flex:1;min-width:0}
+.prow .nm{display:block;font:500 17px/22px 'Newsreader'}
+.prow .w{display:block;font:13px/17px 'Source Sans 3';color:var(--tinta-3);white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.prow .w.lk2{color:var(--anil);font-weight:600}
+.addrow{display:flex;align-items:center;gap:10px;min-height:48px;color:var(--anil);font:600 15px 'Source Sans 3'}
+
+/* folha, opções */
+.veil{position:absolute;inset:0;background:var(--scrim);z-index:5}
+.sheet{position:absolute;left:0;right:0;bottom:0;z-index:6;background:var(--folha);border-radius:16px 16px 0 0;box-shadow:var(--sombra);padding:10px 24px 16px}
+.sheet::before{content:"";display:block;width:32px;height:4px;border-radius:2px;background:var(--fio-forte);margin:0 auto 12px}
+.sheet h4{font:500 22px/1.25 'Newsreader';margin-bottom:2px}
+.opt{display:flex;gap:12px;align-items:center;min-height:46px;border-bottom:1px solid var(--fio);padding:4px 0}
+.opt .rd{width:20px;height:20px;border-radius:50%;box-shadow:inset 0 0 0 1.5px var(--fio-forte);flex:none}
+.opt.on .rd{box-shadow:inset 0 0 0 6px var(--tinta)}
+.opt .tx{flex:1;min-width:0;font:500 15px/1.25 'Source Sans 3'}
+.opt .tx small{display:block;font:400 12.5px/1.35 'Source Sans 3';color:var(--tinta-3);font-variant-numeric:tabular-nums}
+.opt.dim .tx{color:var(--tinta-3)}
+.opt.more{color:var(--anil);font:600 14px 'Source Sans 3';min-height:40px;border-bottom:0}
+
+/* Plano */
+.eqbar{padding-right:9%;margin:14px 0 2px}
+.eqbar .r{position:relative;height:12px;display:flex;align-items:center}
+.eqbar .r::before{content:"";position:absolute;left:0;right:0;top:5px;height:2px;background:var(--fio)}
+.eqbar .r::after{content:"";position:absolute;right:-3px;top:-1px;bottom:-1px;width:5px;border-left:1px solid var(--argila);border-right:1px solid var(--argila)}
+.eqbar i{position:relative;height:10px;display:block}
+.eqbar .pv{background:var(--tinta-3)}
+.eqbar .ct{background:var(--tinta);margin-left:2px}
+.eqleg{display:flex;flex-wrap:wrap;gap:3px 12px;font:12.5px/1.3 'Source Sans 3';color:var(--tinta-2);margin-top:7px}
+.eqleg span{display:inline-flex;align-items:center;gap:5px}
+.eqleg span::before{content:"";width:9px;height:9px;background:var(--k,var(--tinta));box-shadow:inset 0 0 0 1px var(--fio-forte)}
+.erow{display:flex;justify-content:space-between;align-items:baseline;gap:10px;padding:7px 0;border-bottom:1px solid var(--fio);font:15px/1.3 'Source Sans 3'}
+.erow .w{display:block;font-size:12.5px;color:var(--tinta-3)}
+.erow.sum{border-top:2px solid var(--tinta);border-bottom:0;font-weight:600}
+.crow{display:flex;align-items:center;gap:10px;padding:9px 0;border-bottom:1px solid var(--fio)}
+.crow .nm{flex:1;min-width:0;font:500 18px/1.2 'Newsreader';display:flex;gap:9px;align-items:baseline}
+.crow .nm .id{align-self:center}
+.crow .nm small{display:block;font:400 12.5px/1.35 'Source Sans 3';color:var(--tinta-3);margin-top:2px}
+.crow .nm small .o{color:var(--lacre);font-weight:600}
+.crow>.ico{color:var(--tinta-3)}
+.fcl{display:flex;justify-content:space-between;align-items:center;gap:10px;min-height:44px;border-bottom:1px solid var(--fio);font:15px 'Source Sans 3'}
+.fcl .o{color:var(--lacre);font-weight:600}
+.fcl>span:last-child{display:flex;align-items:center;gap:6px;color:var(--tinta-2);font-variant-numeric:tabular-nums}
+
+/* Fechamento */
+.frow{display:grid;grid-template-columns:minmax(0,1fr) 34px auto;gap:10px;align-items:center;padding:8px 0;border-bottom:1px solid var(--fio)}
+.frow .nm{font:500 17px/1.2 'Newsreader';display:flex;gap:8px;align-items:center}
+.frow .nm small{display:block;font:400 12.5px 'Source Sans 3';color:var(--tinta-3)}
+.frow .rs{text-align:right;font:600 13px/1.25 'Source Sans 3';white-space:nowrap;font-variant-numeric:tabular-nums}
+.frow .rs.o{color:var(--lacre)}
+.frow .rs small{display:block;font-weight:400;color:var(--tinta-3)}
+.spk{display:flex;gap:3px;align-items:flex-end;height:24px;position:relative}
+.spk i{width:8px;display:flex;flex-direction:column;justify-content:flex-end}
+.spk i b{display:block;background:var(--tinta-3)}
+.spk i u{display:block;background:repeating-linear-gradient(-45deg,var(--lacre) 0 1.2px,transparent 1.2px 3px);box-shadow:inset 0 0 0 1px var(--lacre)}
+.spk .tk{position:absolute;left:-2px;right:-2px;height:0;border-top:1.5px solid var(--argila)}
+.dcard{margin-top:10px;padding:11px 13px 10px;border:1px solid var(--fio);border-radius:8px;background:var(--folha)}
+.dcard .dh{display:flex;justify-content:space-between;align-items:baseline;gap:10px}
+.dcard .dh b{font:500 18px/1.2 'Newsreader'}
+.dcard .dh span{font:12.5px 'Source Sans 3';color:var(--tinta-3);white-space:nowrap}
+.dcard p{font:14px/1.45 'Source Sans 3';color:var(--tinta-2);margin:4px 0 2px}
+.dcard .fld{padding-bottom:0}
+.dcard .bo{height:34px;padding:0 11px;font-size:13.5px}
+.feito{display:flex;gap:8px;align-items:center;margin-top:4px;font:13.5px/1.4 'Source Sans 3';color:var(--tinta-2)}
+.feito .ico{color:var(--musgo)}
+.okst{display:inline-flex;align-items:center;gap:5px;font:600 13px 'Source Sans 3';color:var(--musgo);white-space:nowrap}
+.chg{font:14px/1.45 'Source Sans 3';color:var(--tinta-2);padding:7px 0;border-bottom:1px solid var(--fio);margin:0}
+.chg b{color:var(--tinta);font-weight:600}
+
+/* gráficos */
+.sen{font:italic 400 15px/21px 'Newsreader';color:var(--tinta-2);margin:2px 0 0}
+.sen.big{font-size:16.5px;line-height:23px;color:var(--tinta)}
+.legd{display:flex;flex-wrap:wrap;gap:4px 14px;font:12px/1.3 'Source Sans 3';color:var(--tinta-2);margin:8px 0 4px}
+.legd span{display:inline-flex;align-items:center;gap:6px}
+.chart{width:100%;height:auto;overflow:visible}
+.chart .gl{stroke:var(--fio);stroke-width:1}
+.chart .bl{stroke:var(--tinta-3);stroke-width:1}
+.chart .cr{stroke:var(--argila);stroke-width:1}
+.chart .rt{stroke:var(--tinta-3);stroke-width:1.25;stroke-dasharray:4 3;fill:none}
+.chart .cs{stroke:var(--tinta-2);stroke-width:1.75;stroke-dasharray:.5 3.5;stroke-linecap:round;fill:none}
+.chart .rl{stroke:var(--tinta);stroke-width:2;fill:none;stroke-linejoin:round}
+.chart .hj{stroke:var(--tinta-3);stroke-width:1;stroke-dasharray:2 2}
+.chart .hz line{stroke:var(--lacre);stroke-width:1.2}
+.chart text{font:600 10.5px 'Source Sans 3';fill:var(--tinta-3)}
+.chart text.an{font:italic 400 12px 'Newsreader';fill:var(--tinta-2)}
+.chart text.ov{fill:var(--lacre)}
+.chart text.lb{font:600 10px 'Source Sans 3';fill:var(--tinta-2)}
+.chart text.lb.hi{fill:var(--tinta)}
+.chart .ld{stroke:var(--tinta-2);stroke-width:.75}
+.cols{display:flex;align-items:flex-end;gap:12px;border-bottom:1px solid var(--tinta-3);padding:0 4px}
+.col{flex:1;display:flex;flex-direction:column;justify-content:flex-end;align-items:stretch;position:relative}
+.col .v{font:600 11px/1.2 'Source Sans 3';text-align:center;color:var(--tinta-2);margin-bottom:3px;font-variant-numeric:tabular-nums;white-space:nowrap}
+.col .b{background:var(--k,var(--tinta-3))}
+.col .x{background:repeating-linear-gradient(-45deg,var(--lacre) 0 1.5px,transparent 1.5px 4px);box-shadow:inset 0 0 0 1px var(--lacre)}
+.col .b.part{opacity:.55}
+.col .tk{position:absolute;left:-4px;right:-4px;height:0;border-top:1.5px dashed var(--argila)}
+.collab{display:flex;gap:12px;padding:0 4px;margin-top:4px}
+.collab span{flex:1;text-align:center;font:600 11px 'Source Sans 3';color:var(--tinta-3);white-space:nowrap}
+.rk{padding-top:7px}
+.rk .h{display:flex;align-items:baseline;gap:8px;font:13.5px/1.3 'Source Sans 3'}
+.rk .h b{font:500 15.5px/1.2 'Newsreader';font-weight:500}
+.rk .h small{flex:1;color:var(--tinta-3);font-size:12px}
+.rk .h span{font-weight:600;font-variant-numeric:tabular-nums;margin-left:auto}
+.rk .bar{height:5px;margin-top:3px;background:var(--k,var(--tinta-3));width:calc(var(--w)*100%)}
+.two{display:grid;grid-template-columns:1fr 1fr;height:5px;margin-top:3px}
+.two i{display:block;height:5px}
+.two .ng{justify-self:end;background:var(--musgo)}
+.two .ps{background:var(--tinta-3)}
+
+/* Leitura */
+.filt{padding-bottom:6px}
+.rng{display:flex;align-items:center;gap:8px;min-height:40px;font:600 14px 'Source Sans 3';color:var(--tinta)}
+.rng .ico{color:var(--tinta-2)}
+.summ{font:13.5px/1.4 'Source Sans 3';color:var(--tinta-2);margin-top:8px;font-variant-numeric:tabular-nums}
+.summ b{color:var(--tinta);font-weight:600}
+.ctx{margin-top:26px;padding-top:2px}
+.ctx b{display:block;font:400 29px/1.1 'Newsreader';margin:2px 0 2px}
+.ctx .q{font:14px/1.3 'Source Sans 3';color:var(--tinta-2)}
+.wd{border-left:2px solid var(--fio-forte);padding:1px 0 2px 11px;margin-top:18px;min-width:0}
+.wd.fx{border-left:5px double var(--argila);padding-left:9px}
+.wd .rub{font:600 10.5px/1.3 'Source Sans 3';letter-spacing:.12em;text-transform:uppercase;color:var(--tinta-3)}
+.wd .lk{min-height:34px;font-size:13px}
+.wpair{display:grid;grid-template-columns:minmax(0,1fr) minmax(0,1fr);gap:14px}
+.wpair .wd{margin-top:18px}
+.calh,.calg{display:grid;grid-template-columns:repeat(7,minmax(0,1fr)) 46px;gap:3px}
+.calh{margin-top:8px}
+.calh span{font:600 9.5px 'Source Sans 3';color:var(--tinta-3);text-align:center;letter-spacing:.04em}
+.calh span:last-child{text-align:right}
+.calg{margin-top:3px}
+.calg .d{height:24px;border-radius:2px;background:var(--s0);font:500 11px/24px 'Newsreader';text-align:center;color:var(--tinta-2);font-variant-numeric:lining-nums tabular-nums}
+.calg .d.l1{background:var(--s1)}
+.calg .d.l2{background:var(--s2)}
+.calg .d.l3{background:var(--s3);color:var(--s-ink-hi)}
+.calg .d.l4{background:var(--s4);color:var(--s-ink-hi)}
+.calg .d.out{background:transparent;color:var(--tinta-3);opacity:.45}
+.calg .d.fut{background:transparent;box-shadow:inset 0 0 0 1px var(--fio)}
+.calg .d.hoje{box-shadow:inset 0 -2px 0 var(--argila);color:var(--argila);font-weight:700}
+.calg .wk{font:600 10.5px/24px 'Source Sans 3';color:var(--tinta-2);text-align:right;font-variant-numeric:tabular-nums}
+.hh{display:grid;grid-template-columns:24px repeat(6,minmax(0,1fr)) 14px;gap:2px;align-items:center;margin-top:8px}
+.hh span{font:600 9px 'Source Sans 3';color:var(--tinta-3)}
+.hh span.n{text-align:right;color:var(--tinta-2)}
+.hh i{height:10px;border-radius:1px;background:var(--s0);display:block}
+.hh i.l1{background:var(--s2)}
+.hh i.l2{background:var(--s4)}
+.chipl{display:flex;flex-wrap:wrap;gap:6px;margin-top:8px}
+.chipl span{font:500 12.5px/1 'Source Sans 3';padding:6px 8px;border:1px solid var(--fio-forte);border-radius:3px;background:var(--folha)}
+
+/* widget da tela inicial */
+.wall{width:380px;border-radius:40px;padding:22px 18px 22px;background:var(--parede);color:var(--tinta);flex:none;box-shadow:0 0 0 1px var(--fio)}
+.wall .clock{font:300 64px/1 'Newsreader';letter-spacing:-.02em;padding:4px 6px 0}
+.wall .date{font:500 14px 'Source Sans 3';color:var(--tinta-2);padding:4px 8px 18px}
+.wg{background:var(--wg-fundo);border-radius:22px;padding:14px 16px;color:var(--tinta);box-shadow:var(--sombra);overflow:hidden;position:relative}
+.w42{width:344px;height:178px}
+.w22{width:164px;height:164px}
+.wgrid{display:flex;flex-wrap:wrap;gap:16px}
+.wg .wh{display:flex;justify-content:space-between;align-items:center;font:600 10.5px/1.2 'Source Sans 3';letter-spacing:.12em;text-transform:uppercase;color:var(--tinta-3)}
+.wg .big{font:400 32px/1.05 'Newsreader';font-variant-numeric:lining-nums tabular-nums;letter-spacing:-.01em;margin-top:6px}
+.wg .big .cur{font:500 .44em 'Source Sans 3';color:var(--tinta-2);vertical-align:.3em;margin-right:.12em}
+.wg .s{font:13px/1.3 'Source Sans 3';color:var(--tinta-2)}
+.wrow{display:grid;grid-template-columns:92px minmax(0,1fr) 78px;align-items:center;gap:10px;min-height:26px}
+.wrow .n{font:500 15px 'Newsreader';display:flex;align-items:center;gap:7px;white-space:nowrap;overflow:hidden}
+.wrow .v{text-align:right;font:500 13.5px 'Source Sans 3';font-variant-numeric:tabular-nums;white-space:nowrap}
+.wrow .v.ov{color:var(--lacre)}
+.wrow .v.at{color:var(--ocre)}
+.wrow .meter{padding-right:12%}
+
+
+@media (max-width:640px){
+  .tbl.stk thead{display:none}
+  .tbl.stk,.tbl.stk tbody{display:block}
+  .tbl.stk tr{display:block;padding:9px 0 8px;border-bottom:1px solid var(--fio)}
+  .tbl.stk td{display:block;border:0;padding:2px 0}
+  .tbl.stk td.t{font-size:17px;padding-bottom:3px}
+  .tbl.stk tr.g{border-bottom:1px solid var(--tinta);padding:0}
+  .tbl.stk tr.g td{border:0;padding:18px 0 6px}
+  .smap td:nth-child(3)::before{content:"Perde: ";font-weight:600;color:var(--tinta)}
+  .sdep td:nth-child(2)::before{content:"Hoje: ";font-weight:600;color:var(--tinta-2)}
+  .sdep td:nth-child(3)::before{content:"Na proposta: ";font-weight:600}
+  .sglo td:nth-child(3)::before{content:"Exemplo: ";font-weight:600;color:var(--tinta-2)}
+  .sglo td:nth-child(4)::before{content:"Evitar: ";font-weight:600}
+  .sglo tr td:nth-child(3):empty,.sglo tr td:nth-child(4):empty{display:none}
+  .tbl{font-size:13.5px}
+  .tbl td,.tbl th{padding-right:6px}
+}
+/* dados */
+.data{display:grid;grid-template-columns:repeat(auto-fit,minmax(min(460px,100%),1fr));gap:8px 40px}
+</style>
+</head>
+<body>
+<button id="tema" type="button" aria-label="Alternar entre leitura clara e escura"><svg class="ico s18" viewBox="0 0 24 24"><circle cx="12" cy="12" r="8"/><path d="M12 4a8 8 0 0 0 0 16z" fill="currentColor"/></svg><span>Ler no escuro</span></button>
+
+<!-- Ícones do livro (6.3): grade 24, traço 1,5 -->
+<svg width="0" height="0" style="position:absolute" aria-hidden="true">
+  <defs>
+    <symbol id="i-pauta" viewBox="0 0 24 24"><path d="M3.5 13.5L6 5h12l2.5 8.5V19.5h-17z"/><path d="M3.5 13.5H8l1 2h6l1-2h4.5"/><path d="M9 8.5h6M8.5 11h7"/></symbol>
+    <symbol id="i-lancar" viewBox="0 0 24 24"><path d="M5.5 11.5l4 4L18.5 6"/><path d="M3.5 20h17"/></symbol>
+    <symbol id="i-riscar" viewBox="0 0 24 24"><path d="M6 7.5h12M6 16.5h8"/><path d="M3 12.5c2.5-1.8 4.5-1.8 6.5-.2s4 1.6 6 0 3.8-1.6 5.5-.3"/></symbol>
+    <symbol id="i-lancamento" viewBox="0 0 24 24"><path d="M4 4.5h16v15H4z"/><path d="M8 4.5v15M9.5 4.5v15"/><path d="M12.5 9h5M12.5 12.5h5M12.5 16h3"/></symbol>
+    <symbol id="i-apelido" viewBox="0 0 24 24"><path d="M10 7.5c-2.6.6-4.5 2.8-4.5 6"/><circle cx="8" cy="15" r="2.5"/><path d="M18.5 7.5c-2.6.6-4.5 2.8-4.5 6"/><circle cx="16.5" cy="15" r="2.5"/></symbol>
+    <symbol id="i-verba" viewBox="0 0 24 24"><path d="M6 3.5h12v17H6z"/><path d="M6 11h12"/><path d="M9 14.5h6M9 17.5h6" /></symbol>
+    <symbol id="i-periodo" viewBox="0 0 24 24"><path d="M4 6h16v14H4z"/><path d="M4 10h16M8 3.5V7.5M16 3.5V7.5"/><path d="M8 14h3v3H8z"/></symbol>
+    <symbol id="i-ritmo" viewBox="0 0 24 24"><path d="M3 15h18"/><path d="M4 12.5v5M20 12.5v5M8 14v2M12 14v2M16 14v2"/><path d="M14 6.5l-2 3-2-3z"/></symbol>
+    <symbol id="i-leitura" viewBox="0 0 24 24"><path d="M3.5 20h17"/><path d="M7 20v-6M12 20V7M17 20v-9"/><path d="M5 9l5-4 4 3 5-4" stroke-dasharray="1.5 2.2"/></symbol>
+    <symbol id="i-margem" viewBox="0 0 24 24"><path d="M5 3.5v17M7.5 3.5v17"/><path d="M11 8h9M11 12.5h7M11 17h4"/></symbol>
+    <symbol id="i-mais" viewBox="0 0 24 24"><path d="M12 5v14M5 12h14"/></symbol>
+    <symbol id="i-voltar" viewBox="0 0 24 24"><path d="M14.5 5.5L8 12l6.5 6.5"/></symbol>
+    <symbol id="i-avancar" viewBox="0 0 24 24"><path d="M9.5 5.5L16 12l-6.5 6.5"/></symbol>
+    <symbol id="i-fechar" viewBox="0 0 24 24"><path d="M6 6l12 12M18 6L6 18"/></symbol>
+    <symbol id="i-ajustes" viewBox="0 0 24 24"><path d="M4 7h9M17 7h3M4 17h3M11 17h9"/><circle cx="15" cy="7" r="2"/><circle cx="9" cy="17" r="2"/></symbol>
+    <symbol id="i-lupa" viewBox="0 0 24 24"><circle cx="10.5" cy="10.5" r="6"/><path d="M15 15l5 5"/></symbol>
+    <symbol id="i-sinal" viewBox="0 0 24 24"><path d="M3 18h3v2H3zM8 14h3v6H8zM13 10h3v10h-3zM18 6h3v14h-3z" fill="currentColor" stroke="none"/></symbol>
+    <symbol id="i-bat" viewBox="0 0 24 24"><rect x="3" y="7" width="16" height="10" rx="2"/><path d="M21 10.5v3"/><rect x="5" y="9" width="10" height="6" rx="1" fill="currentColor" stroke="none"/></symbol>
+    <symbol id="i-ligar" viewBox="0 0 24 24"><path d="M10 14l4-4"/><path d="M8.5 11.5l-2 2a3 3 0 0 0 4.2 4.2l2-2"/><path d="M15.5 12.5l2-2a3 3 0 0 0-4.2-4.2l-2 2"/></symbol>
+    <symbol id="i-previsto" viewBox="0 0 24 24"><path d="M4 6h16v14H4z" stroke-dasharray="2.2 2.2"/><path d="M8 3.5V7.5M16 3.5V7.5"/><path d="M9 13.5l2 2 4-4.5"/></symbol>
+    <symbol id="marca" viewBox="0 0 48 48">
+      <path d="M13 6v36M17.5 6v36" stroke="var(--marca-fio,#A44D29)" stroke-width="1.8" fill="none"/>
+      <path d="M22 15h18M22 24h14M22 33h7" stroke="var(--marca-tinta,#1E1B16)" stroke-width="3.4" fill="none"/>
+      <circle cx="34" cy="33" r="2.1" fill="var(--marca-fio,#A44D29)"/>
+    </symbol>
+  </defs>
+</svg>
+
+<main class="wrap">
+
+<!-- ================= CAPA ================= -->
+<header class="cover" id="capa">
+  <div class="kick">Margem · redesenho v3 · proposta A — organizar</div>
+  <h1>O mês como plano.</h1>
+  <p class="lede">Simplificar sem perder fundo, pelo lado de quem quer se organizar: <em>escrever o mês antes, acompanhar todo dia, corrigir quando desvia e fechar com o próximo plano na mão.</em> A análise não some: cada leitura termina numa decisão do plano.</p>
+  <div class="meta"><span>Cenário: quarta, 4 de novembro de 2026, 9h41</span><span>Mês de 1 a 30 · semana começa na segunda</span><span>Seis verbas · seis previstos · teto R$&nbsp;6.000,00</span><span>Contas conferidas com Month.kt</span></div>
+  <nav class="toc" aria-label="Sumário">
+    <a href="#diag"><b>1</b>Diagnóstico</a>
+    <a href="#principio"><b>2</b>Princípio e arquitetura</a>
+    <a href="#mapa"><b>3</b>Mapa de conceitos</a>
+    <a href="#fundo"><b>4</b>Profundidade mantida</a>
+    <a href="#telas"><b>5</b>Telas</a>
+    <a href="#glossario"><b>6</b>Glossário</a>
+    <a href="#decisoes"><b>7</b>Decisões em aberto</a>
+    <a href="#dados"><b>A</b>Dados do cenário</a>
+  </nav>
+</header>
+
+<!-- ================= 1 DIAGNÓSTICO ================= -->
+<section class="s" id="diag">
+  <span class="sn">1</span>
+  <h2>Uma régua precisa, <em>um plano sem casa.</em></h2>
+  <p class="intro">O app de hoje mede muito bem o mês que está correndo. Falta o resto do ciclo: escrever o plano num lugar só, saber o que fazer quando ele desvia, fechar o mês e levar o que se aprendeu para o próximo. A Leitura tem o fundo, mas não devolve nada ao plano. Cada ponto abaixo cita o código ou o spec.</p>
+  <div class="dx">
+    <article class="dxc"><span class="n">1</span><h4>O plano mora em quatro lugares e não tem um momento.</h4>
+      <p>A cota nasce em Nova verba; o teto é um toque escondido no cabeçalho de Verbas; os passos semanais ficam no detalhe da verba; os previstos nascem no formulário de lançamento (data à frente ou “Repete”) e moram num grupo recolhido de Lançamentos. Nenhuma tela mostra teto, contas e cotas juntos, nem quanto do teto ainda não tem destino.</p>
+      <p class="refs"><code>Budgets.kt:466–484</code> cabeçalho que abre o teto · <code>Budgets.kt:618</code> BudgetForm · <code>Budgets.kt:940–941</code> passos · <code>Transactions.kt:538</code>, <code>613–676</code> A caminho · spec §2.13, §7.3</p></article>
+    <article class="dxc"><span class="n">2</span><h4>A virada é muda.</h4>
+      <p>“A cota recomeça inteira… sobra e excesso ficam só no histórico.” O <code>ensureMonths</code> copia a cota anterior sem perguntar. No cenário, Delivery passou da cota em agosto, setembro e outubro, e em nenhum momento o app disse isso numa frase ou perguntou se a cota de novembro devia mudar.</p>
+      <p class="refs">spec §3, l. 56 · <code>Db.kt:213</code> ensureMonths · architecture D30</p></article>
+    <article class="dxc"><span class="n">3</span><h4>Previsto dentro da cota pede quatro números derivados.</h4>
+      <p>Para o aluguel não parecer gasto, a margem honesta criou cota livre, gasto variável, previstos em aberto × lançados e uma régua de cinco partes. Com os números do cenário, Casa apareceria hoje como “R$&nbsp;37,80 de 2.599,90”, e a margem real é R$&nbsp;362,20. Na Leitura, a mesma costura virou o seletor Tudo · Previstos · Variáveis, com regras por widget, e um ajuste próprio.</p>
+      <p class="refs"><code>Month.kt:63–65</code>, <code>118–119</code> · <code>Types.kt:343–384</code> BudgetMonth · <code>Components.kt:755–785</code> Meter · spec §7.5, l. 205–211 · <code>Settings.kt:328–331</code></p></article>
+    <article class="dxc"><span class="n">4</span><h4>O ritmo diz onde você está, não o que fazer.</h4>
+      <p>O ritmo ideal depende de passos semanais com nove regras: semana automática, travada, máximo, centavos, edição que deixa de valer, aviso ao mudar o início da semana. O estado avisa “acima do ritmo”, mas nenhuma tela diz quanto cabe daqui até o fim do mês; a projeção “no passo atual” só existe dentro de um widget da Leitura.</p>
+      <p class="refs">spec §4, l. 71–91 · <code>Month.kt:83–104</code>, <code>122–131</code> · <code>Insights.kt:1020</code> · <code>Settings.kt:315</code></p></article>
+    <article class="dxc"><span class="n">5</span><h4>O desvio não tem saída.</h4>
+      <p>Fora da margem, o detalhe diz com calma “Nada foi bloqueado. O mês recomeça…”. Mas cobrir um excesso com a sobra de outra verba exige mudar duas cotas “do mês atual em diante” e lembrar de desfazer no mês seguinte. A folga entre as cotas e o teto não serve de reserva.</p>
+      <p class="refs"><code>Budgets.kt:976–979</code> Headline · spec §3, l. 55 · <code>Db.kt:679</code> setLimit</p></article>
+    <article class="dxc"><span class="n">6</span><h4>A Leitura é funda, mas não volta ao plano.</h4>
+      <p>Vinte widgets em três contextos, cada um com suas opções. As ações sobre um pedaço tocado só mudam a consulta (Só X, + ou X, Usar como intervalo). Volta todo mês acha o que devia ser previsto e não oferece criá-lo; O que cresceu acha a verba que estoura e não leva à cota.</p>
+      <p class="refs"><code>Insights.kt:236–248</code> CONTEXTS · <code>Insights.kt:406–414</code> · MonthlyWidget, GrewWidget</p></article>
+    <article class="dxc"><span class="n">7</span><h4>Repetições, e duas medidas de costume.</h4>
+      <p>O widget Margem repete Verbas; Ritmo acumulado repete o detalhe; Previstos do mês repete A caminho; quatro grades respondem “quando” (Calendário, Semanas, Dia da semana, Dia e hora); “o dia mais pesado” sai em História e no Calendário. O costume é média de 6 meses no Total e de 3 no Ritmo.</p>
+      <p class="refs"><code>Insights.kt:868</code> MargemWidget · <code>Insights.kt:1165–1168</code> História · TotalWidget <code>back = 6</code> · RitmoWidget <code>n = 3</code></p></article>
+    <article class="dxc"><span class="n">8</span><h4>Cinco abas para duas rotinas.</h4>
+      <p>Pauta e Lançamentos são a mesma fila em dois estados (recado → lançamento). Ajustes ocupa uma aba para uso raro. E há duas escolhas de ordem para a mesma lista de verbas: Ordenar, na tela, e Ordem do widget, em Ajustes.</p>
+      <p class="refs"><code>MainActivity.kt:181–195</code> · <code>Components.kt:932–938</code> Tab · <code>Budgets.kt:492</code> · <code>Settings.kt:322</code></p></article>
+  </div>
+</section>
+
+<!-- ================= 2 PRINCÍPIO E ARQUITETURA ================= -->
+<section class="s" id="principio">
+  <span class="sn">2</span>
+  <h2>Planejar, acompanhar, corrigir, <em>fechar.</em></h2>
+  <p class="quote">O mês é um plano: escrito uma vez, acompanhado todo dia, fechado no fim. Toda leitura termina numa decisão do plano.</p>
+  <div class="rules">
+    <div><b>Um número para agir.</b><p><i>Cabe por dia</i> = margem ÷ dias que faltam. O estado diz se você está no ritmo; o número diz quanto cabe daqui para frente. A marca do ritmo vira a marca de hoje, no mesmo ponto de toda régua.</p></div>
+    <div><b>Compromisso no plano, escolha na cota.</b><p>Previstos têm valor próprio no Plano; a cota é só o dia a dia. Margem = cota − gasto. Saem cota livre, gasto variável e o seletor de tipo da Leitura.</p></div>
+    <div><b>Toda leitura tem saída.</b><p>Cada análise termina num verbo do plano quando há um: Ajustar a cota, Remanejar, Virar previsto. A Leitura alimenta o Fechamento, e o Fechamento escreve o mês seguinte.</p></div>
+  </div>
+
+  <h3 class="sub"><span class="k">2.1</span>O ciclo e onde cada momento mora</h3>
+  <div class="loop">
+    <div><span class="k">1 · Planejar</span><b>Plano</b><span class="w">no começo do mês, ou quando a vida muda</span><p>Teto − previstos − cotas = folga. Cotas com o costume ao lado; previstos com o estado de cada um.</p><span class="ex">“Folga de R$&nbsp;644,00 até o teto.”</span></div>
+    <div><span class="k">2 · Acompanhar</span><b>Mês e widget</b><span class="w">todo dia</span><p>Quanto cabe por dia, verbas que pedem atenção primeiro, régua com a marca de hoje.</p><span class="ex">“Cabem R$&nbsp;85,80 por dia.”</span></div>
+    <div><span class="k">3 · Corrigir</span><b>Verba</b><span class="w">quando uma verba sai do ritmo</span><p>O que pesou, o ritmo contra o costume, o mês a mês. Remanejar da folga ou de outra verba, só neste mês.</p><span class="ex">“R$&nbsp;14,30 além da cota.”</span></div>
+    <div><span class="k">4 · Fechar</span><b>Fechamento</b><span class="w">na virada, até o dia 7</span><p>Como cada verba fechou, o que mudou, o que volta todo mês sem previsto, e as decisões do próximo plano.</p><span class="ex">“Outubro fechou com R$&nbsp;240,90 de margem.”</span></div>
+  </div>
+  <p class="loopnote">Do 4 volta-se ao 1. A Leitura atravessa o ciclo: responde o “por quê” do 3 e do 4 e, em cada widget que aponta para uma decisão, leva direto a ela.</p>
+
+  <h3 class="sub"><span class="k">2.2</span>Arquitetura: cinco abas → quatro</h3>
+  <div class="ia">
+    <div>
+      <h4>Hoje</h4>
+      <div class="tabc"><b>Verbas<small>início</small></b><span>cabeçalho do mês e do teto (toque abre o teto) · faixa da Pauta · Ordenar · verbas → detalhe (passos semanais, previstos do mês, lançamentos) · “+” Nova verba</span></div>
+      <div class="tabc"><b>Pauta</b><span>recados → Lançar, Lançar previsto, Registrar estorno, Riscar</span></div>
+      <div class="tabc"><b>Lançamentos</b><span>A caminho (previstos, recolhido) · lançamentos por dia · Novo lançamento</span></div>
+      <div class="tabc"><b>Leitura</b><span>intervalo, busca com chips, Tudo · Previstos · Variáveis, Separar · 20 widgets em 3 contextos → página do widget</span></div>
+      <div class="tabc"><b>Ajustes</b><span>Fontes · Riscados · Marcadores · Início do mês e da semana · Tema · Ordem do widget · A Leitura abre em · Backup · Importar do cobudget</span></div>
+    </div>
+    <div>
+      <h4>Proposta A</h4>
+      <div class="tabc"><b>Mês<small>início · acompanhar</small></b><span>cabe por dia · dia a dia × cotas · previstos a caminho · faixa da Pauta · verbas, “pede atenção” primeiro → <b>Verba</b> (ritmo × costume, o que pesou, mês a mês, lançamentos com soma; Remanejar) · engrenagem → Ajustes</span></div>
+      <div class="tabc"><b>Lançamentos<small>anotar</small></b><span>Pauta no topo (o selo vai junto) · lançamentos por dia · Novo lançamento</span></div>
+      <div class="tabc"><b>Plano<small>planejar · fechar</small></b><span>teto − previstos − cotas = folga · previstos do mês · cotas com costume · próximos meses · fechamentos · Nova verba, Novo previsto</span></div>
+      <div class="tabc"><b>Leitura<small>entender</small></b><span>intervalo, busca com chips, Separar · 11 widgets em 3 contextos, cada um com uma saída no plano quando há</span></div>
+      <div class="tabc gone"><b>Ajustes</b><span>sai da barra: engrenagem do Mês, sem Ordem do widget nem A Leitura abre em</span></div>
+    </div>
+  </div>
+  <h4 class="min">O que muda de lugar</h4>
+  <div class="moves">
+    <div><b>Teto</b><span>cabeçalho de Verbas → topo do Plano</span></div>
+    <div><b>A caminho</b><span>Lançamentos → Plano › Previstos do mês</span></div>
+    <div><b>Nova verba</b><span>“+” de Verbas → Plano › Cotas</span></div>
+    <div><b>Passos semanais</b><span>detalhe da verba → saem</span></div>
+    <div><b>Pauta</b><span>aba → topo de Lançamentos</span></div>
+    <div><b>Margem, Ritmo</b><span>widgets da Leitura → Mês e Verba</span></div>
+    <div><b>Previstos do mês, Meses à frente</b><span>widgets da Leitura → Plano</span></div>
+    <div><b>Ajustes</b><span>aba → engrenagem do Mês</span></div>
+  </div>
+</section>
+
+<!-- ================= 3 MAPA DE CONCEITOS ================= -->
+<section class="s" id="mapa">
+  <span class="sn">3</span>
+  <h2>Cada conceito, <em>onde fica.</em></h2>
+  <p class="intro">Todo conceito de hoje (glossário, spec e a lista de widgets em <code>Insights.kt:236–248</code>), com o que acontece com ele e a profundidade que se perde quando sai.</p>
+  <div class="tblw"><table class="tbl stk smap">
+    <thead><tr><th style="width:21%">Conceito</th><th style="width:43%">Na proposta</th><th>Profundidade perdida</th></tr></thead>
+    <tbody>
+      <tr class="g"><td colspan="3">Plano e verba</td></tr>
+      <tr><td class="t">Verba</td><td><span class="pl fica">fica</span>Nasce no Plano; no Mês, uma linha por verba.</td><td class="dim">Nenhuma.</td></tr>
+      <tr><td class="t">Cota</td><td><span class="pl muda">muda</span>Só o dia a dia: os previstos ficam fora. Mudar pergunta “só este mês” ou “deste mês em diante”, como o teto já pergunta.</td><td class="dim">Nenhuma; ganha “só este mês”.</td></tr>
+      <tr><td class="t">Cota livre</td><td><span class="pl junta">junta</span>É a própria cota.</td><td class="dim">Nenhuma informação. Muda um efeito: previsto que vem mais caro não aperta o dia a dia da verba; aparece no Plano (folga) e na linha do previsto.</td></tr>
+      <tr><td class="t">Gasto variável</td><td><span class="pl junta">junta</span>Vira “gasto”; o lançamento de previsto é “previsto lançado”.</td><td class="dim">Nenhuma.</td></tr>
+      <tr><td class="t">Margem</td><td><span class="pl muda">muda</span>Cota − gasto. Os previstos em aberto saem da margem da verba e entram na folga do Plano.</td><td class="dim">Nenhuma: o que estava reservado continua à vista, no Plano e no Mês (“a caminho”).</td></tr>
+      <tr><td class="t">Teto</td><td><span class="pl muda">muda</span>Topo do Plano: teto − previstos − cotas = folga. “Só este mês / deste mês em diante” igual.</td><td class="dim">Nenhuma.</td></tr>
+      <tr><td class="t">Folga</td><td><span class="pl novo">novo</span>O que o teto ainda não destinou; fonte de remanejamento.</td><td class="dim">Nada: é novo.</td></tr>
+      <tr><td class="t">Remanejar</td><td><span class="pl novo">novo</span>Passar cota da folga ou de uma verba para outra, só neste mês por padrão. Mesma folha que ajusta a cota.</td><td class="dim">Nada: é novo.</td></tr>
+      <tr><td class="t">Mês, virada</td><td><span class="pl fica">fica</span>A virada abre o Fechamento; sem resposta, o plano se repete (D30).</td><td class="dim">Nenhuma.</td></tr>
+      <tr><td class="t">Fechamento</td><td><span class="pl novo">novo</span>Página do mês que acabou, no Plano; convite no Mês do dia 1 ao 7.</td><td class="dim">Nada: é novo.</td></tr>
+      <tr><td class="t">Ordenar · risco, manual, A–Z</td><td><span class="pl sai">sai</span>O Mês e o widget usam sempre a ordem de risco (spec §8.1), em dois grupos; a ordem manual mora no Plano (arrastar).</td><td class="dim">A–Z e ordem manual na tela inicial. O Plano mantém a manual.</td></tr>
+      <tr class="g"><td colspan="3">Ritmo</td></tr>
+      <tr><td class="t">Ritmo, ritmo ideal</td><td><span class="pl muda">muda</span>Linha reta da cota: cota × dias corridos ÷ dias do mês. Na régua, a marca de hoje, no mesmo ponto em toda verba (4 de 30).</td><td class="dim">O desenho por semanas (ver passo semanal).</td></tr>
+      <tr><td class="t">Passo semanal · semana editada, automática, travada, máximo</td><td><span class="pl sai">sai</span>Compra grande que já se sabe vira previsto (a feira do mês); o “cabe por dia” refaz o plano a cada dia. As 9 regras de spec §4 e o aviso ao mudar o início da semana somem.</td><td class="dim">Moldar o mês por semana (“gastar menos no começo”). Aceitável: o caso comum é uma compra conhecida, que o previsto cobre melhor.</td></tr>
+      <tr><td class="t">No ritmo · Acima do ritmo · Fora da margem · Sem gasto</td><td><span class="pl fica">fica</span>Mesmas regras, sem tolerância. Com a linha reta, “acima do ritmo” equivale a “no passo atual, fecha além da cota”.</td><td class="dim">Nenhuma.</td></tr>
+      <tr><td class="t">No passo atual</td><td><span class="pl muda">muda</span>Gasto × dias do mês ÷ dias corridos, na página da verba, do dia 8 em diante; antes, o costume.</td><td class="dim">A projeção dos 7 primeiros dias, que é ruído: no dia 4, Delivery projetaria R$&nbsp;1.607,25.</td></tr>
+      <tr><td class="t">Cabe por dia</td><td><span class="pl novo">novo</span>Margem ÷ dias que faltam, contando hoje. Manchete do Mês, linha de cada verba, prévia do lançar, widget.</td><td class="dim">Nada: é novo.</td></tr>
+      <tr><td class="t">Régua</td><td><span class="pl muda">muda</span>Trilho, gasto na cor do estado, marca de hoje, fio duplo da cota, hachura do excesso. Sem previstos.</td><td class="dim">A reserva dos previstos desenhada na régua; os previstos ficam no Plano e na página da verba.</td></tr>
+      <tr><td class="t">Costume</td><td><span class="pl muda">muda</span>Uma medida só: média dos 3 meses anteriores no mesmo trecho.</td><td class="dim">Nenhuma: “média de 6” e “o anterior” seguem como opção na página do Resumo; só o padrão passa a ser 3.</td></tr>
+      <tr class="g"><td colspan="3">Previsto</td></tr>
+      <tr><td class="t">Previsto</td><td><span class="pl muda">muda</span>Fora da cota, com valor próprio no Plano. Nasce em “Novo previsto” (Plano), por “Repete · Todo mês” ou por data à frente no lançamento, como hoje.</td><td class="dim">Ver cota livre.</td></tr>
+      <tr><td class="t">A caminho</td><td><span class="pl junta">junta</span>Vira “Previstos de novembro” no Plano, com o estado de cada um; Lançamentos guarda uma linha que leva até lá.</td><td class="dim">Nenhuma.</td></tr>
+      <tr><td class="t">Ligar · Reconhecer · Lançar previsto · Não é · Pular este mês · Atrasado · Repete</td><td><span class="pl fica">fica</span>Iguais.</td><td class="dim">Nenhuma.</td></tr>
+      <tr class="g"><td colspan="3">Anotação e lançamento</td></tr>
+      <tr><td class="t">Anotação automática · Fonte · Recado · Novo · Parece propaganda · Riscar · Riscados</td><td><span class="pl fica">fica</span>Iguais.</td><td class="dim">Nenhuma.</td></tr>
+      <tr><td class="t">Pauta</td><td><span class="pl muda">muda</span>Sai da barra; vira o topo de Lançamentos. O selo vai para a aba Lançamentos.</td><td class="dim">Nenhuma.</td></tr>
+      <tr><td class="t">Lançar · Lançamento · Lançamento manual</td><td><span class="pl fica">fica</span>A prévia ganha o estado e o cabe por dia.</td><td class="dim">Nenhuma.</td></tr>
+      <tr><td class="t">Marcador · sugerido · Valor sugerido · Emenda · Texto do banco · Apelido · Legenda</td><td><span class="pl fica">fica</span>Iguais.</td><td class="dim">Nenhuma.</td></tr>
+      <tr><td class="t">Parcela</td><td><span class="pl fica">fica</span>A do mês sai da margem desde o dia 1 e entra no ritmo no dia dela (hoje entra no ritmo desde o dia 1, <code>Month.kt:109–118</code>). Próximos meses aparecem no Plano.</td><td class="dim">Nenhuma.</td></tr>
+      <tr><td class="t">Estorno · Registrar estorno</td><td><span class="pl fica">fica</span>Iguais.</td><td class="dim">Nenhuma.</td></tr>
+      <tr class="g"><td colspan="3">Leitura</td></tr>
+      <tr><td class="t">Intervalo · busca com chips (OU) · Separar · página do widget · pedaço tocado</td><td><span class="pl fica">fica</span>O pedaço tocado ganha ações no plano: “Ajustar a cota de X”, “Virar previsto”.</td><td class="dim">Nenhuma.</td></tr>
+      <tr><td class="t">Tipo de gasto · “A Leitura abre em”</td><td><span class="pl sai">sai</span>Widgets de valor mostram previstos lançados à parte, em tinta 3, com a opção “com previstos”; widgets de hábito leem só o dia a dia.</td><td class="dim">O interruptor que vira a Leitura inteira de uma vez.</td></tr>
+      <tr><td class="t">Margem (widget)</td><td><span class="pl junta">junta</span>É o Mês; mês passado, o Fechamento.</td><td class="dim">Nenhuma.</td></tr>
+      <tr><td class="t">Ritmo acumulado</td><td><span class="pl junta">junta</span>Vai para a página da verba, com o costume. Comparar um intervalo qualquer com o anterior fica no Resumo.</td><td class="dim">Nenhuma.</td></tr>
+      <tr><td class="t">Previstos do mês · Meses à frente</td><td><span class="pl junta">junta</span>Plano: Previstos de novembro e Próximos meses.</td><td class="dim">Nenhuma.</td></tr>
+      <tr><td class="t">Total e costume · História · O que ficou fora</td><td><span class="pl junta">junta</span>Resumo: total contra o costume, três frases e a nota do que ficou fora.</td><td class="dim">Nenhuma.</td></tr>
+      <tr><td class="t">Estabelecimentos que voltam · Volta todo mês</td><td><span class="pl junta">junta</span>Onde você volta; o que volta todo mês sem previsto oferece “Virar previsto”.</td><td class="dim">Nenhuma.</td></tr>
+      <tr><td class="t">Semanas · Dia da semana</td><td><span class="pl junta">junta</span>Semanas viram a soma no fim de cada linha do Calendário; Dia da semana, a soma de cada linha de Dia e hora.</td><td class="dim">A marca do passo nas Semanas (o passo sai).</td></tr>
+      <tr><td class="t">Para onde foi · Fluxo · O que cresceu · Primeira vez · Tamanho · Retrato · Calendário · Mês a mês · Dia e hora</td><td><span class="pl fica">fica</span>Iguais; Mês a mês e O que cresceu ganham a cota e a saída para ela.</td><td class="dim">Nenhuma.</td></tr>
+      <tr class="g"><td colspan="3">Navegação e widgets</td></tr>
+      <tr><td class="t">Cinco abas</td><td><span class="pl muda">muda</span>Mês · Lançamentos · Plano · Leitura.</td><td class="dim">Nenhuma.</td></tr>
+      <tr><td class="t">Ajustes (aba)</td><td><span class="pl muda">muda</span>Engrenagem do Mês.</td><td class="dim">Nenhuma.</td></tr>
+      <tr><td class="t">Ordem do widget</td><td><span class="pl sai">sai</span>O widget usa a ordem de risco.</td><td class="dim">Escolher a ordem do widget.</td></tr>
+      <tr><td class="t">Widget de Verbas · widget da Pauta</td><td><span class="pl muda">muda</span>Widget “Margem”: cabe por dia e as 3 verbas mais em risco. O da Pauta abre Lançamentos no topo.</td><td class="dim">Nenhuma.</td></tr>
+    </tbody>
+  </table></div>
+</section>
+
+<!-- ================= 4 PROFUNDIDADE ================= -->
+<section class="s" id="fundo">
+  <span class="sn">4</span>
+  <h2>As perguntas de hoje, <em>respondidas onde se decide.</em></h2>
+  <p class="intro">Cada pergunta que o app atual responde, e onde ela é respondida na proposta. As três últimas são novas.</p>
+  <div class="tblw"><table class="tbl stk sdep">
+    <thead><tr><th style="width:36%">Pergunta</th><th style="width:30%">Hoje</th><th>Na proposta</th></tr></thead>
+    <tbody>
+      <tr><td class="t">Quanto ainda cabe em cada verba?</td><td class="dim">Verbas, margem por linha</td><td>Mês, margem e cabe por dia por linha</td></tr>
+      <tr><td class="t">Estou no ritmo? Quanto acima?</td><td class="dim">Estado em Verbas; linha fina do detalhe</td><td>Mês (estado, frase em “Pede atenção”); manchete da Verba</td></tr>
+      <tr><td class="t">Onde o mês fecha no passo atual?</td><td class="dim">Leitura › Ritmo</td><td>Verba, gráfico do ritmo (do dia 8 em diante)</td></tr>
+      <tr><td class="t">Isso é normal para mim, a esta altura do mês?</td><td class="dim">Leitura › Total e costume; Ritmo › costume</td><td>Verba (linha fina e gráfico); Leitura › Resumo</td></tr>
+      <tr><td class="t">Em que dia passou da cota?</td><td class="dim">Detalhe, “cota atingida aqui”</td><td>Verba, igual</td></tr>
+      <tr><td class="t">O que pesou nesta verba?</td><td class="dim">Leitura com o chip da verba</td><td>Verba › O que pesou</td></tr>
+      <tr><td class="t">Quanto do mês já está comprometido com previstos?</td><td class="dim">Régua tracejada; cabeçalho de Verbas</td><td>Plano (previstos); Mês (“a caminho”)</td></tr>
+      <tr><td class="t">Que previstos chegaram, quais têm recado, quais atrasaram?</td><td class="dim">Lançamentos › A caminho; detalhe</td><td>Plano › Previstos do mês; Pauta</td></tr>
+      <tr><td class="t">O previsto veio com outro valor?</td><td class="dim">Leitura › Previstos do mês</td><td>Plano (linha do previsto lançado); Fechamento</td></tr>
+      <tr><td class="t">O plano cabe no teto?</td><td class="dim">Fio do teto no cabeçalho</td><td>Plano, a conta da folga</td></tr>
+      <tr><td class="t">A cota é realista? Quantas vezes passei?</td><td class="dim">Leitura › Mês a mês, com esforço</td><td>Plano (costume, “passou 3 de 3”); Verba › Mês a mês; Fechamento</td></tr>
+      <tr><td class="t">Como cada mês fechou?</td><td class="dim">Seletor de mês do detalhe; Leitura › Mês a mês</td><td>Fechamento de cada mês; Leitura › Mês a mês</td></tr>
+      <tr><td class="t">O que mudou de um mês para o outro?</td><td class="dim">O que cresceu</td><td>Leitura › O que cresceu; Fechamento › O que mudou</td></tr>
+      <tr><td class="t">Para onde foi, por verba, marcador, estabelecimento?</td><td class="dim">Para onde foi; Fluxo</td><td>Iguais</td></tr>
+      <tr><td class="t">Onde eu volto? O que é novo?</td><td class="dim">Estabelecimentos que voltam; Primeira vez</td><td>Onde você volta; Primeira vez</td></tr>
+      <tr><td class="t">O que pago todo mês sem previsto?</td><td class="dim">Volta todo mês</td><td>Onde você volta (todo mês); Fechamento › Virar previsto</td></tr>
+      <tr><td class="t">Qual o tamanho típico das compras?</td><td class="dim">Tamanho</td><td>Igual</td></tr>
+      <tr><td class="t">Em que dias, semanas, dias da semana e horas?</td><td class="dim">Calendário; Semanas; Dia da semana; Dia e hora</td><td>Calendário (com as semanas); Dia e hora (com os dias da semana)</td></tr>
+      <tr><td class="t">Quanto já está comprometido nos próximos meses?</td><td class="dim">Meses à frente</td><td>Plano › Próximos meses</td></tr>
+      <tr><td class="t">O que ficou de fora (estornos, riscados, Pauta)?</td><td class="dim">O que ficou fora</td><td>Leitura › Resumo, nota</td></tr>
+      <tr><td class="t">Retrato de um estabelecimento</td><td class="dim">Retrato</td><td>Igual</td></tr>
+      <tr><td class="t">Comparar dois marcadores ou estabelecimentos</td><td class="dim">Separar</td><td>Igual</td></tr>
+      <tr><td class="t">Só previstos × só dia a dia</td><td class="dim">Tipo de gasto</td><td>Plano (previstos); widgets com previstos à parte e opção “com previstos”</td></tr>
+      <tr><td class="t">Quanto cabe nesta semana?</td><td class="dim">Passos semanais</td><td>Verba no ritmo: “até domingo, cabem R$&nbsp;194,10” (cabe por dia × dias que faltam na semana)</td></tr>
+      <tr><td class="t">Quanto cabe por dia daqui até o fim do mês?</td><td class="dim">—</td><td>Mês, manchete e linhas; widget; prévia do lançar</td></tr>
+      <tr><td class="t">Como cobrir um excesso sem mexer nos próximos meses?</td><td class="dim">—</td><td>Remanejar (só neste mês)</td></tr>
+      <tr><td class="t">O que mudar no plano do mês que vem?</td><td class="dim">—</td><td>Fechamento › Para novembro</td></tr>
+    </tbody>
+  </table></div>
+
+  <h3 class="sub"><span class="k">4.1</span>O que se perde, e por que dá</h3>
+  <div class="cuts">
+    <div><b>Moldar o mês por semana</b><p><i>Perde:</i> editar o passo de uma semana (“gastar menos no começo”, “a feira está na semana 1”).</p><p><i>Por que dá:</i> a feira do mês é uma compra conhecida, que vira previsto e sai da linha; para o resto, o cabe por dia se refaz a cada lançamento. Saem 9 regras, um diálogo e um aviso em Ajustes.</p></div>
+    <div><b>A reserva do previsto dentro da cota</b><p><i>Perde:</i> o previsto que vem mais caro (a luz de R$&nbsp;190,00 prevista em R$&nbsp;180,00) apertar o dia a dia da própria verba.</p><p><i>Por que dá:</i> a diferença continua à vista, na linha do previsto e na folga do Plano; quem quer cobrir com uma verba remaneja, só naquele mês.</p></div>
+    <div><b>O interruptor Tudo · Previstos · Variáveis</b><p><i>Perde:</i> virar todos os widgets de uma vez para só previstos ou só dia a dia, e o ajuste de como a Leitura abre.</p><p><i>Por que dá:</i> previstos têm casa própria (Plano); os widgets de valor mostram as duas partes, os de hábito leem o dia a dia, e a opção por widget continua.</p></div>
+    <div><b>Projeção nos primeiros 7 dias</b><p><i>Perde:</i> “no passo atual” do dia 1 ao 7.</p><p><i>Por que dá:</i> com poucos dias ela grita (R$&nbsp;1.607,25 para Delivery no dia 4); o costume, no mesmo trecho dos meses anteriores, responde melhor.</p></div>
+    <div><b>Ordem manual e A–Z na tela inicial</b><p><i>Perde:</i> arrumar a tela inicial e o widget à mão.</p><p><i>Por que dá:</i> a tela inicial é para agir; o que pede atenção vem primeiro. A ordem manual vive no Plano.</p></div>
+    <div><b>A marca do passo no widget Semanas</b><p><i>Perde:</i> a linha do maior passo semanal sobre as colunas.</p><p><i>Por que dá:</i> o passo sai; as semanas continuam somadas no fim de cada linha do Calendário.</p></div>
+  </div>
+</section>
+
+<!-- ================= 5 TELAS ================= -->
+<section class="s" id="telas">
+  <span class="sn">5</span>
+  <h2>Onze telas <em>de um mesmo mês.</em></h2>
+  <p class="intro">Telas em 360 × 800 dp, cada uma em claro e em escuro (o mesmo layout com os tokens escuros do livro). Páginas que rolam aparecem inteiras. Todos os números saem dos dados do apêndice e fecham entre si: quarta, 4 de novembro, dia 4 de 30, faltam 27 dias contando hoje.</p>
+
+  <!-- ===== 5.1 ACOMPANHAR ===== -->
+  <h3 class="sub">Acompanhar: o olhar do dia</h3>
+  <div class="shots">
+
+    <figure class="shot" data-twin>
+      <div class="ph t-light tall"><div class="scr">
+        <div class="sbar"><span>9:41</span><span class="r"><svg class="ico s16"><use href="#i-sinal"/></svg><svg class="ico s18"><use href="#i-bat"/></svg></span></div>
+        <div class="tb"><span class="wmk"><svg viewBox="0 0 48 48" width="22" height="22" style="--marca-tinta:var(--tinta);--marca-fio:var(--argila)"><use href="#marca"/></svg>margem</span><span class="ib" aria-label="Ajustes"><svg class="ico"><use href="#i-ajustes"/></svg></span></div>
+        <div class="bd">
+          <div class="over-r">Novembro · dia 4 de 30</div>
+          <h3 class="hl">Cabem <span class="num">R$&nbsp;85,80</span> por dia.</h3>
+          <p class="dek">Margem de R$&nbsp;2.316,70 no dia a dia, para 27 dias contando hoje.</p>
+          <div class="tot" role="button" aria-label="Abrir o Plano">
+            <div class="meter teto" style="--g:.1871;margin-top:6px"><div class="rail"><i class="fill"></i></div></div>
+            <div class="tlab2"><b>Dia a dia: R$&nbsp;533,30 de R$&nbsp;2.850,00</b><span>previstos: 119,90 lançados · 2.386,10 a caminho · aluguel amanhã</span></div>
+          </div>
+          <div class="strip"><svg class="ico"><use href="#i-pauta"/></svg><span class="t">3 recados na pauta<small>3 novos desde a última vez</small></span><span class="ib"><svg class="ico"><use href="#i-avancar"/></svg></span></div>
+          <div class="secline"><span class="over-r t">Pede atenção</span><span class="over-r">2</span></div>
+          <div class="vr">
+            <div class="l1"><span class="nm"><i class="id" style="background:var(--c2)"></i>Delivery</span><span class="vv">R$&nbsp;214,30<small>de 200,00</small></span></div>
+            <div class="meter ov" style="--p:.1333;--x:.0715"><div class="rail"><i class="fill"></i><i class="pace"></i><i class="over"></i></div></div>
+            <div class="l3"><span class="st ov">Fora da margem</span><span class="o">R$&nbsp;14,30 além</span></div>
+            <div class="why"><span>Passou da cota na terça, dia 3.</span><span class="lk">Remanejar</span></div>
+          </div>
+          <div class="vr">
+            <div class="l1"><span class="nm"><i class="id" style="background:var(--c5)"></i>Lazer</span><span class="vv">R$&nbsp;98,00<small>de 500,00</small></span></div>
+            <div class="meter at" style="--g:.196;--p:.1333"><div class="rail"><i class="fill"></i><i class="pace"></i></div></div>
+            <div class="l3"><span class="st at">Acima do ritmo</span><span>cabem R$&nbsp;14,88 por dia</span></div>
+            <div class="why"><span>R$&nbsp;31,34 acima do ritmo de hoje. Pesou: Show do Djavan, R$&nbsp;46,00.</span></div>
+          </div>
+          <div class="secline"><span class="over-r t">No ritmo</span><span class="over-r">4</span></div>
+          <div class="vr">
+            <div class="l1"><span class="nm"><i class="id" style="background:var(--c1)"></i>Mercado</span><span class="vv">R$&nbsp;151,80<small>de 1.200,00</small></span></div>
+            <div class="meter" style="--g:.1265;--p:.1333"><div class="rail"><i class="fill"></i><i class="pace"></i></div></div>
+            <div class="l3"><span class="st ok">No ritmo</span><span>cabem R$&nbsp;38,82 por dia</span></div>
+          </div>
+          <div class="vr">
+            <div class="l1"><span class="nm"><i class="id" style="background:var(--c6)"></i>Transporte</span><span class="vv">R$&nbsp;31,40<small>de 300,00</small></span></div>
+            <div class="meter" style="--g:.1047;--p:.1333"><div class="rail"><i class="fill"></i><i class="pace"></i></div></div>
+            <div class="l3"><span class="st ok">No ritmo</span><span>cabem R$&nbsp;9,94 por dia</span></div>
+          </div>
+          <div class="vr">
+            <div class="l1"><span class="nm"><i class="id" style="background:var(--c3)"></i>Casa</span><span class="vv">R$&nbsp;37,80<small>de 400,00</small></span></div>
+            <div class="meter" style="--g:.0945;--p:.1333"><div class="rail"><i class="fill"></i><i class="pace"></i></div></div>
+            <div class="l3"><span class="st ok">No ritmo</span><span>cabem R$&nbsp;13,41 por dia</span></div>
+          </div>
+          <div class="vr">
+            <div class="l1"><span class="nm"><i class="id" style="background:var(--c4)"></i>Saúde</span><span class="vv">R$&nbsp;0,00<small>de 250,00</small></span></div>
+            <div class="meter" style="--g:0;--p:.1333"><div class="rail"><i class="fill"></i><i class="pace"></i></div></div>
+            <div class="l3"><span class="st nt">Sem gasto</span><span>cabem R$&nbsp;9,25 por dia</span></div>
+          </div>
+          <p class="foot-n">A marca de cada régua é hoje: dia 4 de 30.</p>
+        </div>
+        <nav class="navb"><a class="on"><svg class="ico"><use href="#i-margem"/></svg>Mês</a><a><svg class="ico"><use href="#i-lancamento"/></svg>Lançamentos<span class="bdg">3</span></a><a><svg class="ico"><use href="#i-verba"/></svg>Plano</a><a><svg class="ico"><use href="#i-leitura"/></svg>Leitura</a></nav>
+        <div class="gbar"></div>
+      </div></div>
+      <figcaption><b>5.1 · Mês · <span class="cap-tema">claro</span></b>A tela inicial (antes Verbas). A manchete é o número para agir: margem do dia a dia (R$&nbsp;2.850,00 − R$&nbsp;533,30 = R$&nbsp;2.316,70) ÷ 27 dias que faltam, contando hoje = R$&nbsp;85,80. Embaixo, o dia a dia contra a soma das cotas e os previstos, que não entram em margem nenhuma: R$&nbsp;119,90 lançados (Academia) e R$&nbsp;2.386,10 a caminho; o toque abre o Plano. As verbas vêm em dois grupos, sempre na ordem de risco de spec §8.1: “Pede atenção”, com a frase do porquê, e “No ritmo”. A régua perde os previstos: a marca do ritmo é hoje, 4 de 30 do trilho (cota × 4 ÷ 30), no mesmo ponto em todas; a tinta que passa da marca está acima do ritmo. Cada linha diz quanto cabe por dia (margem ÷ 27). Saem Ordenar, o teto do cabeçalho e o “+”: teto, nova verba e ordem manual vão para o Plano. A engrenagem leva a Ajustes.</figcaption>
+    </figure>
+
+    <figure class="shot" data-twin>
+      <div class="wall t-light">
+        <div class="clock num">9:41</div>
+        <div class="date">quarta-feira, 4 de novembro</div>
+        <div class="wgrid">
+          <div class="wg w42">
+            <div class="wh"><span>Margem · novembro</span><span>3 na pauta</span></div>
+            <div style="display:flex;align-items:baseline;gap:8px"><div class="big"><span class="cur">R$</span>85,80</div><div class="s">por dia até 30 nov</div></div>
+            <div style="margin-top:8px;display:grid;gap:2px">
+              <div class="wrow"><span class="n"><i class="id" style="background:var(--c2)"></i>Delivery</span><div class="meter ov" style="--p:.1333;--x:.0715"><div class="rail"><i class="fill"></i><i class="pace"></i><i class="over"></i></div></div><span class="v ov">14,30 além</span></div>
+              <div class="wrow"><span class="n"><i class="id" style="background:var(--c5)"></i>Lazer</span><div class="meter at" style="--g:.196;--p:.1333"><div class="rail"><i class="fill"></i><i class="pace"></i></div></div><span class="v at">14,88/dia</span></div>
+              <div class="wrow"><span class="n"><i class="id" style="background:var(--c1)"></i>Mercado</span><div class="meter" style="--g:.1265;--p:.1333"><div class="rail"><i class="fill"></i><i class="pace"></i></div></div><span class="v">38,82/dia</span></div>
+            </div>
+          </div>
+          <div class="wg w22">
+            <div class="wh"><span>Margem</span></div>
+            <div class="big" style="font-size:28px;margin-top:10px"><span class="cur">R$</span>85,80</div>
+            <div class="s">por dia até 30 nov</div>
+            <div class="s" style="margin-top:14px"><span class="st ov">Delivery</span><br>R$&nbsp;14,30 além</div>
+          </div>
+        </div>
+      </div>
+      <figcaption><b>5.2 · Widget Margem · <span class="cap-tema">claro</span></b>O olhar diário fora do app (bloco 7, ainda não construído; spec §8.1 redesenhado). 4×2: o número da manchete e as três verbas mais em risco, com a marca de hoje. 2×2: o número e a verba mais grave. Tocar abre o Mês. O widget da Pauta continua como está e abre Lançamentos no topo. Sem notificação própria: o widget cumpre o papel.</figcaption>
+    </figure>
+  </div>
+
+  <!-- ===== 5.2 CORRIGIR ===== -->
+  <h3 class="sub">Corrigir: o momento do desvio</h3>
+  <div class="shots">
+
+    <figure class="shot" data-twin>
+      <div class="ph t-light tall"><div class="scr">
+        <div class="sbar"><span>9:41</span><span class="r"><svg class="ico s16"><use href="#i-sinal"/></svg><svg class="ico s18"><use href="#i-bat"/></svg></span></div>
+        <div class="tb"><span class="ib"><svg class="ico"><use href="#i-voltar"/></svg></span><span class="t">Delivery</span><span class="btn txt">Editar</span></div>
+        <div class="bd">
+          <div style="display:flex;align-items:center;justify-content:space-between;min-height:48px;margin:0 -12px"><span class="ib"><svg class="ico"><use href="#i-voltar"/></svg></span><span style="text-align:center;font:500 17px 'Newsreader'">novembro de 2026<small style="display:block;font:600 11px 'Source Sans 3';letter-spacing:.06em;color:var(--tinta-3)">1 A 30 · MÊS ATUAL</small></span><span class="ib dim"><svg class="ico"><use href="#i-avancar"/></svg></span></div>
+          <h3 class="hl"><span class="num">R$&nbsp;14,30</span> além da cota.</h3>
+          <p class="dek">Você lançou R$&nbsp;214,30 de R$&nbsp;200,00 em 4 dias; no costume, a esta altura eram R$&nbsp;96,16. Nada foi bloqueado. O mês recomeça em 1 de dezembro, com a cota inteira.</p>
+          <div class="meter tall ov" style="--p:.1333;--x:.0715;margin-top:10px"><div class="rail"><i class="fill"></i><i class="pace"></i><i class="over"></i></div></div>
+          <div class="axl"><span>R$&nbsp;0</span><span>cota R$&nbsp;200,00 <span class="o">+ 14,30</span></span></div>
+          <div class="strip" style="margin-top:12px"><svg class="ico"><use href="#i-ritmo"/></svg><span class="t">Remanejar para Delivery<small>da folga do teto ou de outra verba, só em novembro</small></span><span class="ib"><svg class="ico"><use href="#i-avancar"/></svg></span></div>
+
+          <div class="secline"><span class="over-r t">Ritmo de novembro</span><span class="over-r">acumulado</span></div>
+          <p class="sen">Passou da cota no dia 3. Nos meses anteriores, a esta altura, eram R$&nbsp;96,16.</p>
+          <div class="legd"><span><svg width="20" height="8"><path d="M0 4h20" style="stroke:var(--tinta);stroke-width:2"/></svg>gasto</span><span><svg width="20" height="8"><path d="M0 4h20" style="stroke:var(--tinta-3);stroke-width:1.25;stroke-dasharray:4 3"/></svg>ritmo (linha da cota)</span><span><svg width="20" height="8"><path d="M1 4h19" style="stroke:var(--tinta-2);stroke-width:1.75;stroke-dasharray:.5 3.5;stroke-linecap:round"/></svg>costume</span></div>
+          <svg class="chart" viewBox="0 0 312 150" role="img" aria-label="Delivery em novembro: R$&nbsp;214,30 acumulados até o dia 4, contra ritmo de R$&nbsp;26,66 e costume de R$&nbsp;96,16; passou da cota de R$&nbsp;200,00 no dia 3.">
+            <line x1="36" y1="80" x2="306" y2="80" class="gl"/>
+            <line x1="36" y1="130" x2="306" y2="130" class="bl"/>
+            <line x1="36" y1="28.5" x2="306" y2="28.5" class="cr"/><line x1="36" y1="31.5" x2="306" y2="31.5" class="cr"/>
+            <line x1="36" y1="130" x2="306" y2="30" class="rt"/>
+            <polyline points="36,130 45,121.2 54,104.6 63,97.4 72,81.9" class="cs"/>
+            <clipPath id="cp-excesso"><polygon points="59.7,30 63,22.9 72,22.9 72,30"/></clipPath>
+            <g class="hz" clip-path="url(#cp-excesso)"><line x1="52" y1="34" x2="62" y2="20"/><line x1="56" y1="34" x2="66" y2="20"/><line x1="60" y1="34" x2="70" y2="20"/><line x1="64" y1="34" x2="74" y2="20"/><line x1="68" y1="34" x2="78" y2="20"/></g>
+            <polyline points="36,130 45,65.8 54,42.4 63,22.9 72,22.9" class="rl"/>
+            <line x1="72" y1="12" x2="72" y2="130" class="hj"/>
+            <line x1="47" y1="66" x2="82" y2="58" class="ld"/>
+            <text x="84" y="61" class="an">almoço de domingo</text>
+            <text x="76" y="21" class="ov">+ 14,30</text>
+            <text x="306" y="23" text-anchor="end">cota</text>
+            <text x="0" y="33">R$&nbsp;200</text><text x="0" y="83">100</text><text x="0" y="133">0</text>
+            <text x="45" y="146" text-anchor="middle">1</text><text x="72" y="146" text-anchor="middle">hoje</text><text x="108" y="146" text-anchor="middle">8</text><text x="171" y="146" text-anchor="middle">15</text><text x="234" y="146" text-anchor="middle">22</text><text x="306" y="146" text-anchor="end">30</text>
+          </svg>
+          <p class="sen" style="font-size:13.5px">“No passo atual” aparece a partir do dia 8.</p>
+
+          <div class="secline"><span class="over-r t">O que pesou</span><span class="over-r">marcadores</span></div>
+          <p class="sen">ifood puxa: R$&nbsp;175,30 em 2 pedidos.</p>
+          <div class="rk"><div class="h"><b>ifood</b><small>2 lançamentos</small><span>175,30</span></div><div class="bar" style="--w:1;--k:var(--c2)"></div></div>
+          <div class="rk"><div class="h"><b>almoço</b><small>1</small><span>128,40</span></div><div class="bar" style="--w:.732"></div></div>
+          <div class="rk"><div class="h"><b>jantar</b><small>2</small><span>85,90</span></div><div class="bar" style="--w:.49"></div></div>
+          <div class="rk"><div class="h"><b>rappi</b><small>1</small><span>39,00</span></div><div class="bar" style="--w:.222"></div></div>
+          <p class="sen" style="font-size:13px;margin-top:6px">Cada marcador conta o lançamento inteiro: a soma passa do total.</p>
+
+          <div class="secline"><span class="over-r t">Mês a mês</span><span class="over-r">gasto · cota</span></div>
+          <p class="sen">Passou da cota nos 3 últimos meses; o costume é R$&nbsp;360,60.</p>
+          <div class="cols" style="height:118px;margin-top:8px">
+            <div class="col" style="--k:var(--c2)"><span class="v">318</span><i class="x" style="height:16.4px"></i><i class="b" style="height:59.8px"></i><i class="tk" style="bottom:59.8px"></i></div>
+            <div class="col" style="--k:var(--c2)"><span class="v">362</span><i class="x" style="height:26.8px"></i><i class="b" style="height:59.8px"></i><i class="tk" style="bottom:59.8px"></i></div>
+            <div class="col" style="--k:var(--c2)"><span class="v">401</span><i class="x" style="height:36.2px"></i><i class="b" style="height:59.8px"></i><i class="tk" style="bottom:59.8px"></i></div>
+            <div class="col" style="--k:var(--c2)"><span class="v">214</span><i class="x" style="height:3.4px"></i><i class="b part" style="height:47.8px"></i><i class="tk" style="bottom:47.8px"></i></div>
+          </div>
+          <div class="collab"><span>ago</span><span>set</span><span>out</span><span>nov · 4 dias</span></div>
+          <span class="lk">Ajustar a cota<svg class="ico s18"><use href="#i-avancar"/></svg></span>
+
+          <div class="secline"><span class="over-r t">Lançamentos de novembro</span><span class="over-r">valor · soma</span></div>
+          <div class="lrow"><span><span class="leg">Almoço de domingo com a família</span><span class="by"><span class="em">em</span><span class="mer">Sabor de Casa</span></span><span class="w">dom, 1 · ifood, almoço</span></span><span><span class="amt"><span class="cur">R$</span>128,40</span><span class="sum">128,40</span></span></div>
+          <div class="lrow"><span><span class="mer">Pizzaria Roma</span><span class="w">seg, 2 · ifood, jantar</span></span><span><span class="amt"><span class="cur">R$</span>46,90</span><span class="sum">175,30</span></span></div>
+          <div class="lrow"><span><span class="mer">Burger Lab</span><span class="w">ter, 3 · rappi, jantar</span></span><span><span class="amt"><span class="cur">R$</span>39,00</span><span class="sum o">214,30</span></span></div>
+          <div class="cutline">cota atingida aqui</div>
+        </div>
+        <nav class="navb"><a class="on"><svg class="ico"><use href="#i-margem"/></svg>Mês</a><a><svg class="ico"><use href="#i-lancamento"/></svg>Lançamentos<span class="bdg">3</span></a><a><svg class="ico"><use href="#i-verba"/></svg>Plano</a><a><svg class="ico"><use href="#i-leitura"/></svg>Leitura</a></nav>
+        <div class="gbar"></div>
+      </div></div>
+      <figcaption><b>5.3 · Verba Delivery, fora da margem · <span class="cap-tema">claro</span></b>Delivery passou da cota na terça, dia 3, às 21:18: a soma corrida chega a R$&nbsp;214,30 em R$&nbsp;200,00. Manchete e linha fina são as de hoje, mais o costume no mesmo trecho (média dos dias 1 a 4 de agosto a outubro: R$&nbsp;96,16). “Remanejar” abre a folha de 5.4. O gráfico do ritmo, antes só na Leitura, põe o acumulado contra a linha reta da cota e o costume; a projeção entra no dia 8. O que pesou: marcadores da verba no mês, cada um contando o lançamento inteiro (regra C). No Mês a mês, a hachura é o que passou da cota; a coluna de novembro está clara porque o mês não acabou. A lista com soma corrida e “cota atingida aqui” fica como hoje. Os passos semanais saem. Numa verba no ritmo, a linha fina diz também até onde vai a semana: Mercado, “até domingo, 8, cabem R$&nbsp;194,10” (R$&nbsp;38,82 × 5 dias).</figcaption>
+    </figure>
+
+    <figure class="shot" data-twin>
+      <div class="ph t-light"><div class="scr">
+        <div class="sbar"><span>9:42</span><span class="r"><svg class="ico s16"><use href="#i-sinal"/></svg><svg class="ico s18"><use href="#i-bat"/></svg></span></div>
+        <div class="tb"><span class="ib"><svg class="ico"><use href="#i-voltar"/></svg></span><span class="t">Delivery</span><span class="btn txt">Editar</span></div>
+        <div class="bd">
+          <h3 class="hl" style="margin-top:20px"><span class="num">R$&nbsp;14,30</span> além da cota.</h3>
+          <p class="dek">Você lançou R$&nbsp;214,30 de R$&nbsp;200,00 em 4 dias.</p>
+        </div>
+        <div class="veil"></div>
+        <div class="sheet">
+          <h4>Cota de Delivery</h4>
+          <p class="dek" style="font-size:13.5px">Passou da cota nos 3 últimos meses. Costume: R$&nbsp;360,60.</p>
+          <div class="cols" style="height:76px;margin-top:6px">
+            <div class="col" style="--k:var(--c2)"><span class="v">318</span><i class="x" style="height:9.5px"></i><i class="b" style="height:34.9px"></i><i class="tk" style="bottom:34.9px"></i></div>
+            <div class="col" style="--k:var(--c2)"><span class="v">362</span><i class="x" style="height:15.6px"></i><i class="b" style="height:34.9px"></i><i class="tk" style="bottom:34.9px"></i></div>
+            <div class="col" style="--k:var(--c2)"><span class="v">401</span><i class="x" style="height:21.1px"></i><i class="b" style="height:34.9px"></i><i class="tk" style="bottom:34.9px"></i></div>
+            <div class="col" style="--k:var(--c2)"><span class="v">214</span><i class="x" style="height:2px"></i><i class="b part" style="height:27.9px"></i><i class="tk" style="bottom:27.9px"></i></div>
+          </div>
+          <div class="collab"><span>ago</span><span>set</span><span>out</span><span>nov</span></div>
+          <div class="fld money foc" style="margin-top:4px"><label>Cota de novembro</label><div class="in"><span class="cur">R$</span>250<span class="cts">,00</span><span class="caret"></span></div><div class="hint">era R$&nbsp;200,00 · cobre os R$&nbsp;14,30 e deixa R$&nbsp;35,70</div></div>
+          <div class="rb">De onde vêm os R$&nbsp;50,00</div>
+          <div class="opt on"><span class="rd"></span><span class="tx">Folga do teto<small>R$&nbsp;644,00 → R$&nbsp;594,00</small></span></div>
+          <div class="opt"><span class="rd"></span><span class="tx">Mercado<small>cota 1.200,00 → 1.150,00 · segue no ritmo</small></span></div>
+          <div class="opt"><span class="rd"></span><span class="tx">Saúde<small>cota 250,00 → 200,00 · sem gasto</small></span></div>
+          <div class="opt more">Mais 3 verbas</div>
+          <div class="rb" style="margin-top:6px">Vale para</div>
+          <div class="bos"><span class="bo on">Só novembro</span><span class="bo">De novembro em diante</span></div>
+          <div class="prev" style="margin-top:12px"><svg class="ico s20" style="color:var(--c2)"><use href="#i-verba"/></svg><span><b>Delivery</b>: R$&nbsp;14,30 além → margem R$&nbsp;35,70. Fica acima do ritmo: cabem R$&nbsp;1,32 por dia.</span></div>
+          <div style="display:flex;justify-content:flex-end;gap:6px;margin-top:10px"><span class="btn txt">Cancelar</span><span class="btn pri">Salvar</span></div>
+        </div>
+      </div></div>
+      <figcaption><b>5.4 · Ajustar a cota (Remanejar) · <span class="cap-tema">claro</span></b>Remanejar e ajustar a cota são a mesma folha, aberta da Verba ou do Plano. A pessoa digitou R$&nbsp;250,00; os R$&nbsp;50,00 a mais vêm da folga do teto (R$&nbsp;644,00 → R$&nbsp;594,00) ou de uma verba, e cada fonte diz o efeito nela (Mercado em R$&nbsp;1.150,00: ritmo de hoje R$&nbsp;153,33, gasto R$&nbsp;151,80, segue no ritmo). “Mais 3 verbas” abre Casa, Transporte e Lazer (esta, já acima do ritmo, em tinta 3). Quem remaneja quer só este mês: em dezembro a cota volta a R$&nbsp;200,00. A prévia usa as regras de sempre: gasto R$&nbsp;214,30 contra o ritmo de R$&nbsp;33,33 da cota nova, margem R$&nbsp;35,70 ÷ 27 = R$&nbsp;1,32 por dia.</figcaption>
+    </figure>
+
+    <figure class="shot" data-twin>
+      <div class="ph t-light tall"><div class="scr">
+        <div class="sbar"><span>9:44</span><span class="r"><svg class="ico s16"><use href="#i-sinal"/></svg><svg class="ico s18"><use href="#i-bat"/></svg></span></div>
+        <div class="tb"><span class="ib"><svg class="ico"><use href="#i-voltar"/></svg></span><span class="t">Lançar recado</span></div>
+        <div class="bd">
+          <div class="quoteblk"><b>Cartão Ipê · qua, 4 nov, 07:42</b>“Compra aprovada no cartão final 4410: R$&nbsp;23,90 em PAG*JOSEDASILVA 0231.”</div>
+          <div class="fld money" style="padding-bottom:2px"><label>Valor total</label><div class="in"><span class="cur">R$</span>23<span class="cts">,90</span></div></div>
+          <div class="fld"><label>Estabelecimento</label><div class="in"><span class="mer alias">Padaria do Zé</span><svg class="ico s20" style="margin-left:auto;color:var(--argila)"><use href="#i-apelido"/></svg></div><div class="hint">No banco: PAG*JOSEDASILVA 0231</div></div>
+          <div class="fld"><label>Data</label><div class="in">hoje, 4 de novembro · <span class="num">07:42</span><svg class="ico s20" style="margin-left:auto;color:var(--tinta-3)"><use href="#i-periodo"/></svg></div></div>
+          <div class="rb" style="margin-top:6px">Repete</div>
+          <div class="bos"><span class="bo on">Só uma vez</span><span class="bo">Todo mês, dia 4</span></div>
+          <div style="display:grid;grid-template-columns:minmax(0,1.75fr) minmax(0,1fr);gap:14px;margin-top:4px">
+            <div class="fld pick"><label>Verba</label><div class="in"><span class="sg">Mercado</span><span class="vm">margem 1.048,20</span></div></div>
+            <div class="fld"><label>Parcelas</label><div class="in"><span class="num">1×</span></div></div>
+          </div>
+          <div class="fld"><span class="lab" style="margin-bottom:8px">Marcadores</span><div class="chips"><span class="chip sug">padaria <span class="x">✕</span></span></div><div class="in sb"><svg class="ico s20"><use href="#i-lupa"/></svg><span>Buscar ou criar marcador</span></div></div>
+          <div class="prev" style="margin-top:8px"><svg class="ico s20" style="color:var(--c1)"><use href="#i-verba"/></svg><span><b>Mercado</b>: margem R$&nbsp;1.048,20 → R$&nbsp;1.024,30.<br><span class="st at" style="margin:4px 0 2px">Passa para acima do ritmo</span><br>R$&nbsp;15,70 sobre o ritmo de hoje; cabem R$&nbsp;37,93 por dia.</span></div>
+        </div>
+        <div class="dock"><span class="btn risco"><svg class="ico s20"><use href="#i-riscar"/></svg>Riscar</span><span class="btn pri" style="flex:2"><svg class="ico s20"><use href="#i-lancar"/></svg>Lançar R$&nbsp;23,90</span></div>
+        <div class="gbar"></div>
+      </div></div>
+      <figcaption><b>5.5 · Lançar recado, com o desvio na prévia · <span class="cap-tema">claro</span></b>O desvio visto antes de acontecer. O formulário é o de hoje (verba e marcador sugeridos, tracejados); a prévia ganha o estado e o cabe por dia. Lançar a padaria em Mercado leva o gasto a R$&nbsp;175,70, acima do ritmo de hoje (R$&nbsp;1.200,00 × 4 ÷ 30 = R$&nbsp;160,00), e a margem a R$&nbsp;1.024,30 ÷ 27 = R$&nbsp;37,93 por dia. Nada é bloqueado; o snackbar repete o efeito: “Lançado em Mercado. Acima do ritmo: cabem R$&nbsp;37,93 por dia.” — com Desfazer.</figcaption>
+    </figure>
+  </div>
+
+  <!-- ===== 5.3 ANOTAR ===== -->
+  <h3 class="sub">Anotar: Pauta e Lançamentos numa lista só</h3>
+  <div class="shots">
+    <figure class="shot" data-twin>
+      <div class="ph t-light tall"><div class="scr">
+        <div class="sbar"><span>9:41</span><span class="r"><svg class="ico s16"><use href="#i-sinal"/></svg><svg class="ico s18"><use href="#i-bat"/></svg></span></div>
+        <div class="tb"><span class="t root">Lançamentos</span><span class="btn txt"><svg class="ico s20"><use href="#i-mais"/></svg>Novo</span></div>
+        <div class="bd">
+          <div class="secline" style="margin-top:4px"><span class="over-r t">Pauta</span><span class="over-r">3 recados</span></div>
+          <div class="stack">
+            <div class="rec prop novo">
+              <div class="src"><span>PagFácil</span><span class="num">08:05</span></div>
+              <p class="raw">“Você ganhou 10% de cashback em lojas parceiras! Confira.”</p>
+              <span class="flag">▲ Parece propaganda</span>
+              <div class="act"><span class="btn txt sm">Lançar mesmo assim</span><span class="btn pri sm"><svg class="ico s18"><use href="#i-riscar"/></svg>Riscar</span></div>
+            </div>
+            <div class="rec novo">
+              <div class="src"><span>Cartão Ipê</span><span class="num">07:42</span></div>
+              <p class="raw">“Compra aprovada no cartão final 4410: R$&nbsp;23,90 em PAG*JOSEDASILVA 0231.”</p>
+              <div class="ex"><span class="mer alias">Padaria do Zé</span><span class="amt"><span class="cur">R$</span>23,90</span></div>
+              <div class="act"><span class="btn risco sm"><svg class="ico s18"><use href="#i-riscar"/></svg>Riscar</span><span class="btn pri sm">Lançar</span></div>
+            </div>
+            <div class="rec novo">
+              <div class="src"><span>Banco Aurora · débito</span><span class="num">07:30</span></div>
+              <p class="raw">“Débito automático efetuado: R$&nbsp;164,30 PORTO SEGURO AUTO.”</p>
+              <div class="ex"><span class="mer">PORTO SEGURO AUTO</span><span class="amt"><span class="cur">R$</span>164,30</span></div>
+              <div class="liga"><svg class="ico s18"><use href="#i-ligar"/></svg><span><b>É o previsto Seguro do carro</b>Transporte · seguro, carro · dia 3</span></div>
+              <div class="act"><span class="btn txt sm">Não é</span><span class="btn risco sm ic" aria-label="Riscar"><svg class="ico s18"><use href="#i-riscar"/></svg></span><span class="btn pri sm"><svg class="ico s18"><use href="#i-lancar"/></svg>Lançar previsto</span></div>
+            </div>
+          </div>
+          <div class="bridge"><svg class="ico"><use href="#i-previsto"/></svg><span class="bt"><b>Previstos a caminho: 5 · R$&nbsp;2.386,10</b><small>aluguel amanhã · ver no Plano</small></span><span class="ib" style="width:40px;height:40px"><svg class="ico s20"><use href="#i-avancar"/></svg></span></div>
+          <div class="dayh">Ontem · terça, 3 de novembro</div>
+          <div class="lrow"><span><span class="mer">Burger Lab</span><span class="w">Delivery · rappi, jantar</span></span><span class="amt"><span class="cur">R$</span>39,00</span></div>
+          <div class="lrow"><span><span class="mer">Pão de Açúcar</span><span class="w">Mercado · mercado</span></span><span class="amt"><span class="cur">R$</span>87,50</span></div>
+          <div class="lrow"><span><span class="mer">Uber</span><span class="w">Transporte · uber</span></span><span class="amt"><span class="cur">R$</span>12,50</span></div>
+          <div class="lrow"><span><span class="leg">Show do Djavan</span><span class="by"><span class="em">em</span><span class="mer">Sympla</span></span><span class="w">Lazer · show · Parcela 1 de 3</span></span><span class="amt"><span class="cur">R$</span>46,00</span></div>
+          <div class="dayh">Segunda, 2 de novembro</div>
+          <div class="lrow"><span><span class="mer">Pizzaria Roma</span><span class="w">Delivery · ifood, jantar</span></span><span class="amt"><span class="cur">R$</span>46,90</span></div>
+          <div class="lrow"><span><span class="mer">Casa &amp; Cia</span><span class="w">Casa · limpeza</span></span><span class="amt"><span class="cur">R$</span>37,80</span></div>
+          <div class="lrow"><span><span class="mer">Uber</span><span class="w">Transporte · uber</span></span><span class="amt"><span class="cur">R$</span>18,90</span></div>
+          <div class="dayh">Domingo, 1 de novembro</div>
+          <div class="lrow"><span><span class="mer">Cinemark</span><span class="w">Lazer · cinema</span></span><span class="amt"><span class="cur">R$</span>52,00</span></div>
+          <div class="lrow"><span><span class="leg">Almoço de domingo com a família</span><span class="by"><span class="em">em</span><span class="mer">Sabor de Casa</span></span><span class="w">Delivery · ifood, almoço</span></span><span class="amt"><span class="cur">R$</span>128,40</span></div>
+          <div class="lrow"><span><span class="mer alias">Feira da Praça</span><span class="w">Mercado · feira</span></span><span class="amt"><span class="cur">R$</span>64,30</span></div>
+          <div class="lrow"><span><span class="leg">Academia</span><span class="by"><span class="em">em</span><span class="mer">SMARTFIT</span></span><span class="w">Saúde · academia · previsto</span></span><span class="amt"><span class="cur">R$</span>119,90</span></div>
+        </div>
+        <nav class="navb"><a><svg class="ico"><use href="#i-margem"/></svg>Mês</a><a class="on"><svg class="ico"><use href="#i-lancamento"/></svg>Lançamentos<span class="bdg">3</span></a><a><svg class="ico"><use href="#i-verba"/></svg>Plano</a><a><svg class="ico"><use href="#i-leitura"/></svg>Leitura</a></nav>
+        <div class="gbar"></div>
+      </div></div>
+      <figcaption><b>5.6 · Lançamentos com a Pauta · <span class="cap-tema">claro</span></b>Pauta e Lançamentos viram uma lista só, na ordem em que o dinheiro anda: os recados que esperam decisão no topo (o selo da aba conta 3), depois o que já foi lançado, por dia. Hoje ainda não há lançamento: os três recados do dia estão na Pauta. O recado do PORTO SEGURO AUTO é reconhecido como o previsto Seguro do carro (dia 3) e lança com um toque, como hoje. “A caminho” sai daqui e vira uma linha que leva aos previstos do Plano. O lançamento de previsto diz “previsto” na linha, porque não entra em cota nenhuma (Academia). Recado de estorno, Riscados e a tela de lançar ficam como estão.</figcaption>
+    </figure>
+  </div>
+
+  <!-- ===== 5.4 PLANEJAR ===== -->
+  <h3 class="sub">Planejar: a aba Plano</h3>
+  <div class="shots">
+    <figure class="shot" data-twin>
+      <div class="ph t-light tall"><div class="scr">
+        <div class="sbar"><span>9:41</span><span class="r"><svg class="ico s16"><use href="#i-sinal"/></svg><svg class="ico s18"><use href="#i-bat"/></svg></span></div>
+        <div class="tb"><span class="t root">Plano</span></div>
+        <div class="bd">
+          <div style="display:flex;align-items:center;justify-content:space-between;min-height:48px;margin:-6px -12px 0"><span class="ib"><svg class="ico"><use href="#i-voltar"/></svg></span><span style="text-align:center;font:500 17px 'Newsreader'">novembro de 2026<small style="display:block;font:600 11px 'Source Sans 3';letter-spacing:.06em;color:var(--tinta-3)">1 A 30 · MÊS ATUAL</small></span><span class="ib"><svg class="ico"><use href="#i-avancar"/></svg></span></div>
+          <h3 class="hl">Folga de <span class="num">R$&nbsp;644,00</span> até o teto.</h3>
+          <p class="dek">Previstos e cotas do dia a dia somam R$&nbsp;5.356,00 de R$&nbsp;6.000,00.</p>
+          <div class="eqbar"><div class="r"><i class="pv" style="width:41.77%"></i><i class="ct" style="width:47.5%"></i></div></div>
+          <div class="eqleg"><span style="--k:var(--tinta-3)">previstos</span><span style="--k:var(--tinta)">cotas</span><span style="--k:transparent">folga</span></div>
+          <div style="margin-top:8px">
+            <div class="erow"><span>Teto<span class="w">de outubro em diante · tocar para mudar</span></span><span class="amt">6.000,00</span></div>
+            <div class="erow"><span>− Previstos<span class="w">6 · 1 lançado</span></span><span class="amt">2.506,00</span></div>
+            <div class="erow"><span>− Cotas do dia a dia<span class="w">6 verbas</span></span><span class="amt">2.850,00</span></div>
+            <div class="erow sum"><span>= Folga</span><span class="amt">644,00</span></div>
+          </div>
+
+          <div class="secline"><span class="over-r t">Previstos de novembro</span><span class="over-r">6 · 2.506,00</span></div>
+          <div class="prow"><span class="dia done"><small>nov</small><b>1</b></span><span class="tx"><span class="nm">Academia</span><span class="w">Saúde · lançado em 1 nov</span></span><span class="amt"><span class="cur">R$</span>119,90</span></div>
+          <div class="prow"><span class="dia"><small>nov</small><b>3</b></span><span class="tx"><span class="nm">Seguro do carro</span><span class="w lk2">Transporte · recado na Pauta</span></span><span class="amt dim"><span class="cur">R$</span>164,30</span></div>
+          <div class="prow"><span class="dia"><small>nov</small><b>5</b></span><span class="tx"><span class="nm">Aluguel</span><span class="w">Casa · amanhã</span></span><span class="amt dim"><span class="cur">R$</span>1.900,00</span></div>
+          <div class="prow"><span class="dia"><small>nov</small><b>8</b></span><span class="tx"><span class="nm">Spotify</span><span class="w">Lazer · todo mês, desde novembro</span></span><span class="amt dim"><span class="cur">R$</span>21,90</span></div>
+          <div class="prow"><span class="dia"><small>nov</small><b>10</b></span><span class="tx"><span class="nm">Internet</span><span class="w">Casa · todo mês</span></span><span class="amt dim"><span class="cur">R$</span>119,90</span></div>
+          <div class="prow"><span class="dia"><small>nov</small><b>12</b></span><span class="tx"><span class="nm">Conta de luz</span><span class="w">Casa · todo mês</span></span><span class="amt dim"><span class="cur">R$</span>180,00</span></div>
+          <div class="addrow"><svg class="ico s20"><use href="#i-mais"/></svg>Novo previsto</div>
+
+          <div class="secline"><span class="over-r t">Cotas do dia a dia</span><span class="over-r">6 · 2.850,00</span></div>
+          <div class="crow"><span class="nm"><i class="id" style="background:var(--c1)"></i><span>Mercado<small>costume 1.174,76 · passou 1 de 3</small></span></span><span class="amt">1.200,00</span><svg class="ico s18"><use href="#i-avancar"/></svg></div>
+          <div class="crow"><span class="nm"><i class="id" style="background:var(--c2)"></i><span>Delivery<small>costume 360,60 · <span class="o">passou 3 de 3</span></small></span></span><span class="amt">200,00</span><svg class="ico s18"><use href="#i-avancar"/></svg></div>
+          <div class="crow"><span class="nm"><i class="id" style="background:var(--c3)"></i><span>Casa<small>costume 352,93 · passou 1 de 3</small></span></span><span class="amt">400,00</span><svg class="ico s18"><use href="#i-avancar"/></svg></div>
+          <div class="crow"><span class="nm"><i class="id" style="background:var(--c4)"></i><span>Saúde<small>costume 124,56 · sobrou nos 3</small></span></span><span class="amt">250,00</span><svg class="ico s18"><use href="#i-avancar"/></svg></div>
+          <div class="crow"><span class="nm"><i class="id" style="background:var(--c5)"></i><span>Lazer<small>costume 497,53 · passou 1 de 3</small></span></span><span class="amt">500,00</span><svg class="ico s18"><use href="#i-avancar"/></svg></div>
+          <div class="crow"><span class="nm"><i class="id" style="background:var(--c6)"></i><span>Transporte<small>costume 280,93 · passou 1 de 3</small></span></span><span class="amt">300,00</span><svg class="ico s18"><use href="#i-avancar"/></svg></div>
+          <div class="addrow"><svg class="ico s20"><use href="#i-mais"/></svg>Nova verba</div>
+          <p class="foot-n" style="margin-top:2px">Toque numa cota para ajustar; segure e arraste para mudar a ordem.</p>
+
+          <div class="secline"><span class="over-r t">Próximos meses</span><span class="over-r">já comprometido</span></div>
+          <div class="erow"><span>Dezembro<span class="w">6 previstos · parcela 2 de 3 do show, em Lazer</span></span><span class="amt">2.506,00 + 46,00</span></div>
+          <div class="erow"><span>Janeiro<span class="w">6 previstos · parcela 3 de 3</span></span><span class="amt">2.506,00 + 46,00</span></div>
+          <span class="btn sec sm" style="margin-top:12px">Planejar dezembro</span>
+
+          <div class="secline"><span class="over-r t">Fechamentos</span><span class="over-r">margem do mês</span></div>
+          <div class="fcl"><span>Outubro</span><span>R$&nbsp;240,90<svg class="ico s18"><use href="#i-avancar"/></svg></span></div>
+          <div class="fcl"><span>Setembro</span><span><span class="o">R$&nbsp;118,90 além</span><svg class="ico s18"><use href="#i-avancar"/></svg></span></div>
+          <div class="fcl"><span>Agosto</span><span>R$&nbsp;204,00<svg class="ico s18"><use href="#i-avancar"/></svg></span></div>
+        </div>
+        <nav class="navb"><a><svg class="ico"><use href="#i-margem"/></svg>Mês</a><a><svg class="ico"><use href="#i-lancamento"/></svg>Lançamentos<span class="bdg">3</span></a><a class="on"><svg class="ico"><use href="#i-verba"/></svg>Plano</a><a><svg class="ico"><use href="#i-leitura"/></svg>Leitura</a></nav>
+        <div class="gbar"></div>
+      </div></div>
+      <figcaption><b>5.7 · Plano · <span class="cap-tema">claro</span></b>A casa do plano: uma conta só, de cima para baixo. Teto R$&nbsp;6.000,00 − previstos R$&nbsp;2.506,00 − cotas R$&nbsp;2.850,00 = folga R$&nbsp;644,00; a barra é a mesma conta no papel (41,8% · 47,5% · 10,7%). Os previstos aparecem com o estado de cada um — o que era “A caminho” — e o tracejado da folhinha de sempre: cheia no lançado. Cada cota mostra o costume (média de agosto a outubro) e quantas vezes passou nos 3 meses; tocar abre a folha de 5.4. Próximos meses é o que era Meses à frente: dezembro já tem os 6 previstos e a parcela 2 de 3 do show (R$&nbsp;46,00, que conta dentro da cota de Lazer). “Planejar dezembro” abre o mês seguinte para mexer antes da virada. Os fechamentos ficam no fim; a margem de cada mês é a soma das margens das verbas. A seta do mês anda para os meses passados e para dezembro.</figcaption>
+    </figure>
+    <figure class="shot" data-twin>
+      <div class="ph t-light"><div class="scr">
+        <div class="sbar"><span>9:50</span><span class="r"><svg class="ico s16"><use href="#i-sinal"/></svg><svg class="ico s18"><use href="#i-bat"/></svg></span></div>
+        <div class="tb"><span class="ib"><svg class="ico"><use href="#i-fechar"/></svg></span><span class="t">Nova verba</span></div>
+        <div class="bd">
+          <div class="fld foc"><label>Nome</label><div class="in">Pets<span class="caret"></span></div></div>
+          <div class="fld money"><label>Cota do dia a dia</label><div class="in"><span class="cur">R$</span>150<span class="cts">,00</span></div><div class="hint">Por mês, de novembro em diante. Previstos ficam fora da cota: ração por assinatura, plano do veterinário.</div></div>
+          <div class="prev" style="margin-top:14px"><svg class="ico s20"><use href="#i-verba"/></svg><span><b>Plano de novembro</b>: folga R$&nbsp;644,00 → R$&nbsp;494,00.<br>A cota vale o mês inteiro: cabem R$&nbsp;5,55 por dia; o ritmo de hoje é R$&nbsp;20,00.</span></div>
+          <div class="addrow" style="margin-top:6px"><svg class="ico s20"><use href="#i-mais"/></svg>Previsto desta verba</div>
+          <p class="foot-n" style="margin-top:0">Abre o formulário de previsto já em “Todo mês”, com Pets escolhida.</p>
+        </div>
+        <div class="dock"><span class="btn pri">Criar verba</span></div>
+        <div class="gbar"></div>
+      </div></div>
+      <figcaption><b>5.8 · Nova verba · <span class="cap-tema">claro</span></b>Mora no Plano. Sai a prévia dos passos semanais; entra o efeito no plano: R$&nbsp;150,00 a mais em cotas leva a folga de R$&nbsp;644,00 a R$&nbsp;494,00. Como hoje, a verba criada no meio do mês tem a cota cheia (spec §3): ritmo de hoje R$&nbsp;150,00 × 4 ÷ 30 = R$&nbsp;20,00, e cabem R$&nbsp;150,00 ÷ 27 = R$&nbsp;5,55 por dia. Uma cota que passa do teto avisa sob o campo e ao salvar, com os textos de hoje (“Passar do teto?”).</figcaption>
+    </figure>
+  </div>
+
+  <!-- ===== 5.5 FECHAR ===== -->
+  <h3 class="sub">Fechar: a virada ganha uma página</h3>
+  <div class="shots">
+    <figure class="shot" data-twin>
+      <div class="ph t-light tall"><div class="scr">
+        <div class="sbar"><span>8:10</span><span class="r"><svg class="ico s16"><use href="#i-sinal"/></svg><svg class="ico s18"><use href="#i-bat"/></svg></span></div>
+        <div class="tb"><span class="ib"><svg class="ico"><use href="#i-voltar"/></svg></span><span class="t">Fechamento de outubro</span></div>
+        <div class="bd">
+          <div class="over-r">Outubro · 1 a 31 · fechou ontem</div>
+          <h3 class="hl">Outubro fechou com <span class="num">R$&nbsp;240,90</span> de margem.</h3>
+          <p class="dek">Quatro verbas ficaram dentro da cota; Delivery passou R$&nbsp;151,30 e Transporte, R$&nbsp;11,70. Os previstos vieram R$&nbsp;3,70 abaixo. No total, R$&nbsp;5.139,50: R$&nbsp;860,50 abaixo do teto.</p>
+
+          <div class="secline"><span class="over-r t">Verba a verba</span><span class="over-r">ago · set · out</span></div>
+          <div class="frow"><span class="nm"><i class="id" style="background:var(--c2)"></i><span>Delivery<small>401,30 de 250,00</small></span></span><span class="spk"><i><u style="height:3.7px"></u><b style="height:13.7px"></b></i><i><u style="height:6.1px"></u><b style="height:13.7px"></b></i><i><u style="height:8.3px"></u><b style="height:13.7px"></b></i><span class="tk" style="bottom:13.7px"></span></span><span class="rs o">151,30 além<small>3 de 3</small></span></div>
+          <div class="frow"><span class="nm"><i class="id" style="background:var(--c6)"></i><span>Transporte<small>311,70 de 300,00</small></span></span><span class="spk"><i><b style="height:19.5px"></b></i><i><b style="height:18px"></b></i><i><u style="height:.8px"></u><b style="height:21.2px"></b></i><span class="tk" style="bottom:21.2px"></span></span><span class="rs o">11,70 além<small>1 de 3</small></span></div>
+          <div class="frow"><span class="nm"><i class="id" style="background:var(--c5)"></i><span>Lazer<small>472,90 de 500,00</small></span></span><span class="spk"><i><b style="height:20.2px"></b></i><i><u style="height:1.3px"></u><b style="height:20.7px"></b></i><i><b style="height:19.6px"></b></i><span class="tk" style="bottom:20.7px"></span></span><span class="rs">27,10<small>dentro</small></span></div>
+          <div class="frow"><span class="nm"><i class="id" style="background:var(--c1)"></i><span>Mercado<small>1.121,40 de 1.200,00</small></span></span><span class="spk"><i><b style="height:20.7px"></b></i><i><u style="height:.7px"></u><b style="height:21.3px"></b></i><i><b style="height:19.9px"></b></i><span class="tk" style="bottom:21.3px"></span></span><span class="rs">78,60<small>dentro</small></span></div>
+          <div class="frow"><span class="nm"><i class="id" style="background:var(--c3)"></i><span>Casa<small>287,30 de 400,00</small></span></span><span class="spk"><i><b style="height:18.5px"></b></i><i><u style="height:1px"></u><b style="height:21px"></b></i><i><b style="height:15.1px"></b></i><span class="tk" style="bottom:21px"></span></span><span class="rs">112,70<small>dentro</small></span></div>
+          <div class="frow"><span class="nm"><i class="id" style="background:var(--c4)"></i><span>Saúde<small>64,50 de 250,00</small></span></span><span class="spk"><i><b style="height:8.5px"></b></i><i><b style="height:18.7px"></b></i><i><b style="height:5.7px"></b></i><span class="tk" style="bottom:22px"></span></span><span class="rs">185,50<small>dentro</small></span></div>
+
+          <div class="secline"><span class="over-r t">O que mudou</span><span class="over-r">da Leitura</span></div>
+          <p class="chg"><b>Delivery cresceu pelo terceiro mês:</b> R$&nbsp;318,40, R$&nbsp;362,10, R$&nbsp;401,30.</p>
+          <p class="chg"><b>Saúde sobrou nos três:</b> em média, R$&nbsp;125,44 da cota.</p>
+          <p class="chg"><b>Conta de luz veio R$&nbsp;3,70 abaixo:</b> R$&nbsp;176,30 de R$&nbsp;180,00.</p>
+
+          <div class="secline"><span class="over-r t">Para novembro</span><span class="over-r">só o que tem motivo</span></div>
+          <div class="dcard">
+            <div class="dh"><b>Delivery</b><span>cota de outubro 250,00</span></div>
+            <p>Passou da cota nos 3 últimos meses. Costume: R$&nbsp;360,60.</p>
+            <div class="bos"><span class="bo">Manter</span><span class="bo">Costume</span><span class="bo on">Outro valor</span></div>
+            <div class="fld money"><label>Cota de novembro</label><div class="in" style="font-size:30px;min-height:44px"><span class="cur">R$</span>200<span class="cts">,00</span></div></div>
+          </div>
+          <div class="dcard">
+            <div class="dh"><b>Saúde</b><span>cota de outubro 250,00</span></div>
+            <p>Sobrou nos 3 últimos meses. Costume: R$&nbsp;124,56.</p>
+            <div class="bos"><span class="bo on">Manter</span><span class="bo">Costume</span><span class="bo">Outro valor</span></div>
+          </div>
+          <p class="foot-n">Mercado, Casa, Lazer e Transporte: mantidas.</p>
+
+          <div class="secline"><span class="over-r t">Volta todo mês, sem previsto</span><span class="over-r">6 meses</span></div>
+          <div class="prow" style="border-bottom:0"><span class="dia"><small>todo</small><b>8</b></span><span class="tx"><span class="nm">Spotify</span><span class="w" style="white-space:normal">Lazer · R$&nbsp;21,90 desde maio</span></span><span class="okst"><svg class="ico s18"><use href="#i-lancar"/></svg>previsto</span></div>
+          <div class="feito"><span>Vira previsto do dia 8, em Lazer, de novembro em diante.</span><span class="lk" style="min-height:0;font-size:13.5px">Desfazer</span></div>
+
+          <div class="secline"><span class="over-r t">Plano de novembro</span><span class="over-r">teto 6.000,00</span></div>
+          <div class="erow"><span>− Previstos<span class="w">6, com o Spotify</span></span><span class="amt">2.506,00</span></div>
+          <div class="erow"><span>− Cotas do dia a dia<span class="w">Delivery 250,00 → 200,00</span></span><span class="amt">2.850,00</span></div>
+          <div class="erow sum"><span>= Folga<span class="w" style="font-weight:400">repetindo outubro, seria 615,90</span></span><span class="amt">644,00</span></div>
+        </div>
+        <div class="dock"><span class="btn pri">Salvar o plano de novembro</span></div>
+        <div class="gbar"></div>
+      </div></div>
+      <figcaption><b>5.9 · Fechamento de outubro · <span class="cap-tema">claro</span></b>Domingo, 1 de novembro, 8h10. Na virada, um cartão no Mês convida a fechar outubro e fica até o dia 7; quem não abre fica com o plano repetido, como hoje (D30). Verba a verba, gasto contra cota e as barras de agosto a outubro (a hachura é o que passou). “O que mudou” traz o que a Leitura sabe e o plano usa. Para novembro aparecem só as decisões com motivo — passou ou sobrou nos três meses — e o padrão é sempre “Manter”: o app mostra o costume, não escolhe por você. A pessoa baixou Delivery para R$&nbsp;200,00 e transformou o Spotify, que volta todo mês sem previsto, num previsto do dia 8. A conta do plano muda junto: repetir outubro daria folga de R$&nbsp;615,90 (R$&nbsp;6.000,00 − R$&nbsp;2.484,10 − R$&nbsp;2.900,00); com as duas decisões, R$&nbsp;644,00, a mesma do Plano (5.7). Depois de salvo, a página fica em Plano › Fechamentos.</figcaption>
+    </figure>
+  </div>
+
+  <!-- ===== 5.6 ENTENDER ===== -->
+  <h3 class="sub">Entender: a Leitura com saída para o plano</h3>
+  <div class="shots">
+    <figure class="shot" data-twin>
+      <div class="ph t-light tall"><div class="scr">
+        <div class="sbar"><span>9:41</span><span class="r"><svg class="ico s16"><use href="#i-sinal"/></svg><svg class="ico s18"><use href="#i-bat"/></svg></span></div>
+        <div class="tb"><span class="t root">Leitura</span></div>
+        <div class="bd">
+          <div class="filt">
+            <div class="rng"><svg class="ico s20"><use href="#i-periodo"/></svg>1 a 30 nov · até hoje</div>
+            <div class="fld" style="padding-top:0"><div class="in sb"><svg class="ico s20"><use href="#i-lupa"/></svg><span>Buscar verba, marcador, estabelecimento ou recado</span></div></div>
+            <p class="summ"><b>R$&nbsp;533,30</b> · 10 lançamentos · até hoje<br>e R$&nbsp;119,90 de previstos lançados, à parte</p>
+          </div>
+
+          <div class="ctx"><span class="over-r">Contexto</span><b>Quanto</b><span class="q">Cabe no que planejei?</span></div>
+          <div class="wd">
+            <div class="rub">Resumo</div>
+            <p class="sen big">R$&nbsp;533,30, R$&nbsp;142,80 acima do costume.</p>
+            <div class="cols" style="height:76px;margin-top:8px">
+              <div class="col"><span class="v">369</span><i class="b" style="height:38.8px"></i></div>
+              <div class="col"><span class="v">406</span><i class="b" style="height:42.7px"></i></div>
+              <div class="col"><span class="v">395</span><i class="b" style="height:41.5px"></i></div>
+              <div class="col" style="--k:var(--tinta)"><span class="v">533</span><i class="b" style="height:56px"></i></div>
+            </div>
+            <div class="collab"><span>ago</span><span>set</span><span>out</span><span>agora</span></div>
+            <p class="sen" style="margin-top:8px">ifood puxa a fila: R$&nbsp;175,30.</p>
+            <p class="sen">O dia mais pesado foi dom, 1 nov: R$&nbsp;244,70.</p>
+            <p class="sen">Uber voltou 2 vezes.</p>
+            <p class="summ" style="margin-top:6px">Fora da leitura: 3 recados na Pauta, R$&nbsp;188,20.</p>
+          </div>
+          <div class="wpair">
+            <div class="wd">
+              <div class="rub">Mês a mês</div>
+              <p class="sen">Setembro passou das cotas; outubro fechou R$&nbsp;240,90 dentro.</p>
+              <div class="cols" style="height:84px;margin-top:6px;gap:7px;padding:0 2px">
+                <div class="col"><i class="b" style="height:57.2px"></i><i class="tk" style="bottom:61.5px"></i></div>
+                <div class="col"><i class="x" style="height:2.5px"></i><i class="b" style="height:61.5px"></i><i class="tk" style="bottom:61.5px"></i></div>
+                <div class="col"><i class="b" style="height:56.4px"></i><i class="tk" style="bottom:61.5px"></i></div>
+                <div class="col"><i class="b part" style="height:11.3px"></i><i class="tk" style="bottom:60.4px"></i></div>
+              </div>
+              <div class="collab" style="gap:7px;padding:0 2px"><span>ago</span><span>set</span><span>out</span><span>nov</span></div>
+            </div>
+            <div class="wd">
+              <div class="rub">O que cresceu</div>
+              <p class="sen">Delivery cresceu R$&nbsp;118,14 sobre o costume.</p>
+              <div class="rk"><div class="h"><b>Delivery</b><span>+118</span></div><div class="two"><span></span><i class="ps" style="width:100%"></i></div></div>
+              <div class="rk"><div class="h"><b>Lazer</b><span>+36</span></div><div class="two"><span></span><i class="ps" style="width:30.8%"></i></div></div>
+              <div class="rk"><div class="h"><b>Saúde</b><span>−12</span></div><div class="two"><i class="ng" style="width:9.8%"></i><span></span></div></div>
+              <span class="lk">Ajustar a cota de Delivery</span>
+            </div>
+          </div>
+
+          <div class="ctx"><span class="over-r">Contexto</span><b>Para onde</b><span class="q">Verba, marcador, estabelecimento.</span></div>
+          <div class="wpair">
+            <div class="wd">
+              <div class="rub">Para onde foi</div>
+              <p class="sen">Delivery puxa a fila: 40%.</p>
+              <div class="rk"><div class="h"><b>Delivery</b><span>214</span></div><div class="bar" style="--w:1;--k:var(--c2)"></div></div>
+              <div class="rk"><div class="h"><b>Mercado</b><span>152</span></div><div class="bar" style="--w:.708;--k:var(--c1)"></div></div>
+              <div class="rk"><div class="h"><b>Lazer</b><span>98</span></div><div class="bar" style="--w:.457;--k:var(--c5)"></div></div>
+              <div class="rk"><div class="h"><b>Casa</b><span>38</span></div><div class="bar" style="--w:.176;--k:var(--c3)"></div></div>
+              <div class="rk"><div class="h"><b>Transp.</b><span>31</span></div><div class="bar" style="--w:.147;--k:var(--c6)"></div></div>
+            </div>
+            <div class="wd">
+              <div class="rub">Onde você volta</div>
+              <p class="sen">Uber voltou 2 vezes: típico R$&nbsp;18,90.</p>
+              <div class="rk"><div class="h"><b>Uber</b><small>2× · 18,90 e 12,50</small></div></div>
+                            <p class="sen" style="margin-top:8px;font-size:14px">Todo mês: Spotify, previsto desde 1 nov.</p>
+              <span class="lk">Ver os 6 meses</span>
+            </div>
+          </div>
+          <div class="wd fx">
+            <div class="rub">Fluxo verba → marcador</div>
+            <p class="sen">Delivery → ifood + almoço puxa: R$&nbsp;128,40.</p>
+            <svg class="chart" viewBox="0 0 312 196" role="img" aria-label="Fluxo do dia a dia de novembro, de cada verba para os marcadores: Delivery para ifood mais almoço, R$&nbsp;128,40, é o maior.">
+              <path d="M68,6 C132,6 132,6 196,6 L196,44.5 C132,44.5 132,44.5 68,44.5 Z" style="fill:var(--c2);opacity:.6"/>
+              <path d="M68,44.5 C132,44.5 132,47.5 196,47.5 L196,61.6 C132,61.6 132,58.6 68,58.6 Z" style="fill:var(--c2);opacity:.28"/>
+              <path d="M68,58.6 C132,58.6 132,64.6 196,64.6 L196,76.3 C132,76.3 132,70.3 68,70.3 Z" style="fill:var(--c2);opacity:.28"/>
+              <path d="M68,76.3 C132,76.3 132,79.3 196,79.3 L196,105.5 C132,105.5 132,102.5 68,102.5 Z" style="fill:var(--c1);opacity:.28"/>
+              <path d="M68,102.5 C132,102.5 132,108.5 196,108.5 L196,127.8 C132,127.8 132,121.8 68,121.8 Z" style="fill:var(--c1);opacity:.28"/>
+              <path d="M68,127.8 C132,127.8 132,130.8 196,130.8 L196,146.4 C132,146.4 132,143.4 68,143.4 Z" style="fill:var(--c5);opacity:.28"/>
+              <path d="M68,143.4 C132,143.4 132,149.4 196,149.4 L196,163.2 C132,163.2 132,157.2 68,157.2 Z" style="fill:var(--c5);opacity:.28"/>
+              <path d="M68,163.2 C132,163.2 132,166.2 196,166.2 L196,177.6 C132,177.6 132,174.6 68,174.6 Z" style="fill:var(--c3);opacity:.28"/>
+              <path d="M68,180.6 C132,180.6 132,180.6 196,180.6 L196,190 C132,190 132,190 68,190 Z" style="fill:var(--c6);opacity:.28"/>
+              <rect x="62" y="6" width="6" height="64.3" style="fill:var(--c2)"/><rect x="62" y="76.3" width="6" height="45.5" style="fill:var(--c1)"/><rect x="62" y="127.8" width="6" height="29.4" style="fill:var(--c5)"/><rect x="62" y="163.2" width="6" height="11.4" style="fill:var(--c3)"/><rect x="62" y="180.6" width="6" height="9.4" style="fill:var(--c6)"/>
+              <rect x="196" y="6" width="5" height="38.5" style="fill:var(--tinta-2)"/><rect x="196" y="47.5" width="5" height="14.1" style="fill:var(--tinta-3)"/><rect x="196" y="64.6" width="5" height="11.7" style="fill:var(--tinta-3)"/><rect x="196" y="79.3" width="5" height="26.2" style="fill:var(--tinta-3)"/><rect x="196" y="108.5" width="5" height="19.3" style="fill:var(--tinta-3)"/><rect x="196" y="130.8" width="5" height="15.6" style="fill:var(--tinta-3)"/><rect x="196" y="149.4" width="5" height="13.8" style="fill:var(--tinta-3)"/><rect x="196" y="166.2" width="5" height="11.4" style="fill:var(--tinta-3)"/><rect x="196" y="180.6" width="5" height="9.4" style="fill:var(--tinta-3)"/>
+              <text x="58" y="41.6" text-anchor="end" class="lb hi">Delivery</text><text x="58" y="102.6" text-anchor="end" class="lb">Mercado</text><text x="58" y="146" text-anchor="end" class="lb">Lazer</text><text x="58" y="172.4" text-anchor="end" class="lb">Casa</text><text x="58" y="188.8" text-anchor="end" class="lb">Transporte</text>
+              <text x="206" y="28.8" class="lb hi">ifood + almoço</text><text x="206" y="58.1" class="lb">ifood + jantar</text><text x="206" y="73.9" class="lb">jantar + rappi</text><text x="206" y="95.9" class="lb">mercado</text><text x="206" y="121.7" class="lb">feira</text><text x="206" y="142.1" class="lb">cinema</text><text x="206" y="159.8" class="lb">show</text><text x="206" y="175.4" class="lb">limpeza</text><text x="206" y="188.8" class="lb">uber</text>
+            </svg>
+          </div>
+          <div class="wd">
+            <div class="rub">Primeira vez</div>
+            <p class="sen">2 novidades: Burger Lab, Sympla.</p>
+            <div class="chipl"><span>Burger Lab</span><span>Sympla</span></div>
+          </div>
+
+          <div class="ctx"><span class="over-r">Contexto</span><b>Quando</b><span class="q">Dias, semanas e horas.</span></div>
+          <div class="wd">
+            <div class="rub">Calendário</div>
+            <p class="sen">O dia mais pesado foi dom, 1 nov: R$&nbsp;244,70.</p>
+            <div class="calh"><span>seg</span><span>ter</span><span>qua</span><span>qui</span><span>sex</span><span>sáb</span><span>dom</span><span>semana</span></div>
+            <div class="calg">
+              <span class="d out">26</span><span class="d out">27</span><span class="d out">28</span><span class="d out">29</span><span class="d out">30</span><span class="d out">31</span><span class="d l4">1</span><span class="wk">244,70</span>
+              <span class="d l2">2</span><span class="d l3">3</span><span class="d hoje">4</span><span class="d fut">5</span><span class="d fut">6</span><span class="d fut">7</span><span class="d fut">8</span><span class="wk">288,60</span>
+              <span class="d fut">9</span><span class="d fut">10</span><span class="d fut">11</span><span class="d fut">12</span><span class="d fut">13</span><span class="d fut">14</span><span class="d fut">15</span><span class="wk">—</span>
+            </div>
+            <p class="summ" style="margin-top:6px">cada degrau ≈ R$&nbsp;70 · semanas de seg a dom</p>
+          </div>
+          <div class="wpair">
+            <div class="wd">
+              <div class="rub">Dia e hora</div>
+              <p class="sen">Noites pesam: 6 de 10 depois das 18h.</p>
+              <div class="hh">
+                <span></span><span style="grid-column:span 6;display:flex;justify-content:space-between"><span>0h</span><span>12h</span><span>24</span></span><span></span>
+                <span>seg</span><i></i><i></i><i class="l1"></i><i></i><i class="l1"></i><i class="l1"></i><span class="n">3</span>
+                <span>ter</span><i></i><i></i><i></i><i class="l1"></i><i class="l2"></i><i class="l1"></i><span class="n">4</span>
+                <span>qua</span><i></i><i></i><i></i><i></i><i></i><i></i><span class="n">0</span>
+                <span>qui</span><i></i><i></i><i></i><i></i><i></i><i></i><span class="n">0</span>
+                <span>sex</span><i></i><i></i><i></i><i></i><i></i><i></i><span class="n">0</span>
+                <span>sáb</span><i></i><i></i><i></i><i></i><i></i><i></i><span class="n">0</span>
+                <span>dom</span><i></i><i></i><i class="l1"></i><i class="l1"></i><i></i><i class="l1"></i><span class="n">3</span>
+              </div>
+            </div>
+            <div class="wd">
+              <div class="rub">Tamanho</div>
+              <p class="sen">Metade fica até R$&nbsp;46,90.</p>
+              <div class="cols" style="height:62px;margin-top:6px;gap:6px;padding:0 2px">
+                <div class="col"><span class="v">2</span><i class="b" style="height:22px"></i></div>
+                <div class="col"><span class="v">4</span><i class="b" style="height:44px"></i></div>
+                <div class="col"><span class="v">3</span><i class="b" style="height:33px"></i></div>
+                <div class="col"><span class="v">1</span><i class="b" style="height:11px"></i></div>
+              </div>
+              <div class="collab" style="gap:6px;padding:0 2px"><span>≤20</span><span>≤50</span><span>≤100</span><span>&gt;100</span></div>
+            </div>
+          </div>
+        </div>
+        <nav class="navb"><a><svg class="ico"><use href="#i-margem"/></svg>Mês</a><a><svg class="ico"><use href="#i-lancamento"/></svg>Lançamentos<span class="bdg">3</span></a><a><svg class="ico"><use href="#i-verba"/></svg>Plano</a><a class="on"><svg class="ico"><use href="#i-leitura"/></svg>Leitura</a></nav>
+        <div class="gbar"></div>
+      </div></div>
+      <figcaption><b>5.10 · Leitura · <span class="cap-tema">claro</span></b>A Leitura fica, com 11 widgets em vez de 20 e sem o seletor de tipo: os de valor (Resumo, Mês a mês, Para onde foi, Calendário) leem o dia a dia e mostram os previstos lançados à parte; os de hábito (Dia e hora, Tamanho, Onde você volta, Primeira vez) leem só o dia a dia. Resumo junta Total e costume (média dos dias 1 a 4 de agosto a outubro: R$&nbsp;390,50), História e O que ficou fora. O Calendário soma as semanas no fim da linha; Dia e hora soma cada dia da semana. Onde você volta junta Estabelecimentos que voltam e Volta todo mês (o típico é a mediana do código, que com dois valores fica com o maior: R$&nbsp;18,90). Margem, Ritmo, Previstos do mês e Meses à frente foram para o Mês, a Verba e o Plano. Quando o widget aponta para uma decisão, ele leva a ela: “Ajustar a cota de Delivery”. Busca com chips, Separar, Retrato e a página do widget continuam como estão.</figcaption>
+    </figure>
+  </div>
+
+  <!-- ===== 5.7 AJUSTES ===== -->
+  <h3 class="sub">Ajustes, pela engrenagem</h3>
+  <div class="shots">
+    <figure class="shot" data-twin>
+      <div class="ph t-light"><div class="scr">
+        <div class="sbar"><span>9:41</span><span class="r"><svg class="ico s16"><use href="#i-sinal"/></svg><svg class="ico s18"><use href="#i-bat"/></svg></span></div>
+        <div class="tb"><span class="ib"><svg class="ico"><use href="#i-voltar"/></svg></span><span class="t">Ajustes</span></div>
+        <div class="bd">
+          <div class="secline" style="margin-top:4px"><span class="over-r t">Anotação</span></div>
+          <div class="lrow"><span><span style="font:500 16px 'Source Sans 3'">Fontes</span><span class="w">Banco Aurora, Cartão Ipê, PagFácil</span></span><svg class="ico s20" style="color:var(--tinta-3)"><use href="#i-avancar"/></svg></div>
+          <div class="lrow"><span><span style="font:500 16px 'Source Sans 3'">Riscados</span><span class="w">trazer recados de volta à pauta</span></span><svg class="ico s20" style="color:var(--tinta-3)"><use href="#i-avancar"/></svg></div>
+          <div class="lrow"><span><span style="font:500 16px 'Source Sans 3'">Marcadores</span><span class="w">renomear, juntar, apagar</span></span><svg class="ico s20" style="color:var(--tinta-3)"><use href="#i-avancar"/></svg></div>
+          <div class="secline"><span class="over-r t">Mês e semana</span></div>
+          <div class="lrow"><span><span style="font:500 16px 'Source Sans 3'">Início do mês e da semana</span><span class="w">dia 1 · segunda</span></span><svg class="ico s20" style="color:var(--tinta-3)"><use href="#i-avancar"/></svg></div>
+          <p class="foot-n" style="margin-top:6px">A semana só arruma o Calendário da Leitura.</p>
+          <div class="secline"><span class="over-r t">Aparência</span></div>
+          <p class="dek" style="font-size:13px;margin-top:6px">Tema · vale também para os widgets</p>
+          <div class="seg"><span class="on">sistema</span><span>claro</span><span>escuro</span></div>
+          <div class="secline"><span class="over-r t">Dados</span></div>
+          <div class="lrow"><span><span style="font:500 16px 'Source Sans 3'">Backup</span><span class="w">exportar · importar</span></span><svg class="ico s20" style="color:var(--tinta-3)"><use href="#i-avancar"/></svg></div>
+          <div class="lrow"><span><span style="font:500 16px 'Source Sans 3'">Importar do cobudget</span><span class="w">recados de um backup do app antigo</span></span><svg class="ico s20" style="color:var(--tinta-3)"><use href="#i-avancar"/></svg></div>
+        </div>
+        <nav class="navb"><a class="on"><svg class="ico"><use href="#i-margem"/></svg>Mês</a><a><svg class="ico"><use href="#i-lancamento"/></svg>Lançamentos<span class="bdg">3</span></a><a><svg class="ico"><use href="#i-verba"/></svg>Plano</a><a><svg class="ico"><use href="#i-leitura"/></svg>Leitura</a></nav>
+        <div class="gbar"></div>
+      </div></div>
+      <figcaption><b>5.11 · Ajustes · <span class="cap-tema">claro</span></b>Ajustes sai da barra e vira a engrenagem do Mês (a aba Mês fica marcada). Saem: Ordem do widget (o widget usa a ordem de risco), A Leitura abre em (não há mais tipo) e o aviso de que mudar o início do mês ou da semana apaga passos editados (não há passos); mudar o dia de início do mês continua recalculando os meses, sem diálogo.</figcaption>
+    </figure>
+  </div>
+</section>
+
+<!-- ================= 6 GLOSSÁRIO ================= -->
+<section class="s" id="glossario">
+  <span class="sn">6</span>
+  <h2>Palavras novas, <em>palavras que saem.</em></h2>
+  <p class="intro">Só o que muda em <code>docs/glossary.md</code>. O resto fica como está, inclusive a regra de que usar na interface um termo da coluna Evitar é bug de texto.</p>
+  <div class="tblw"><table class="tbl stk sglo">
+    <thead><tr><th style="width:15%">Termo</th><th style="width:44%">Definição na proposta</th><th style="width:23%">Exemplo</th><th>Evitar</th></tr></thead>
+    <tbody>
+      <tr class="g"><td colspan="4">Novos</td></tr>
+      <tr><td class="t">Plano</td><td>O mês escrito antes: teto, previstos e cotas, numa conta só. Aba Plano.</td><td>“Plano de novembro.”</td><td class="dim">orçamento, planejamento</td></tr>
+      <tr><td class="t">Folga</td><td>Teto − previstos do mês − cotas: o que o teto ainda não destinou. Pode ser fonte de remanejamento. Sem teto, não há folga.</td><td>“Folga de R$&nbsp;644,00 até o teto.”</td><td class="dim">sobra, saldo, disponível, livre</td></tr>
+      <tr><td class="t">Cabe por dia</td><td>Margem ÷ dias que faltam no mês, contando hoje, arredondada para baixo. Não é limite: muda a cada lançamento. Fora da margem, não aparece.</td><td>“Cabem R$&nbsp;38,82 por dia.”</td><td class="dim">meta diária, limite diário, mesada</td></tr>
+      <tr><td class="t">Remanejar</td><td>Passar cota da folga, ou de uma verba, para outra. Só neste mês (padrão) ou deste mês em diante.</td><td>“R$&nbsp;50,00 da folga para Delivery, só em novembro.”</td><td class="dim">transferir, mover dinheiro, realocar</td></tr>
+      <tr><td class="t">Fechamento</td><td>A página do mês que acabou: verba a verba, o que mudou, o que volta todo mês e as decisões do plano seguinte.</td><td>“Fechamento de outubro.”</td><td class="dim">relatório, balanço, extrato</td></tr>
+      <tr><td class="t">Resumo · Onde você volta</td><td>Widgets da Leitura que juntam Total e costume, História e O que ficou fora; e Estabelecimentos que voltam com Volta todo mês.</td><td>“Uber voltou 2 vezes.”</td><td class="dim"></td></tr>
+      <tr class="g"><td colspan="4">Mudam</td></tr>
+      <tr><td class="t">Cota</td><td>Quanto a verba permite gastar no dia a dia do mês; previstos ficam fora. Mudar pergunta: só este mês ou deste mês em diante.</td><td>“Cota de R$&nbsp;200,00 em novembro.”</td><td class="dim">meta, limite</td></tr>
+      <tr><td class="t">Margem</td><td>Cota − gasto do mês: quanto ainda cabe.</td><td>“Margem: R$&nbsp;1.048,20.”</td><td class="dim">saldo, disponível, restante</td></tr>
+      <tr><td class="t">Previsto</td><td>Gasto que já se sabe que vem, com valor próprio no Plano, fora da cota. Em aberto, conta na folga; lançado, conta no mês dele como previsto lançado.</td><td>“Previstos de novembro: R$&nbsp;2.506,00.”</td><td class="dim">conta fixa, agendado, recorrente</td></tr>
+      <tr><td class="t">Ritmo ideal</td><td>Linha reta da cota: cota × dias corridos ÷ dias do mês, arredondada para baixo. Na régua, a marca de hoje.</td><td>“R$&nbsp;31,34 acima do ritmo de hoje.”</td><td class="dim">meta, target</td></tr>
+      <tr><td class="t">No passo atual</td><td>Gasto × dias do mês ÷ dias corridos; aparece do dia 8 em diante.</td><td>“No passo atual, fecha em R$&nbsp;1.140.”</td><td class="dim">previsão, forecast</td></tr>
+      <tr><td class="t">Costume</td><td>Média dos 3 meses anteriores no mesmo trecho. Uma medida só, em todo o app.</td><td>“No costume, a esta altura eram R$&nbsp;96,16.”</td><td class="dim">normal, média histórica</td></tr>
+      <tr><td class="t">Teto</td><td>Topo do plano: previstos e cotas cabem nele; o que sobra é a folga. Passar continua permitido, com aviso.</td><td>“Teto de R$&nbsp;6.000,00.”</td><td class="dim">renda, orçamento total</td></tr>
+      <tr><td class="t">Régua</td><td>Trilho, gasto na cor do estado, marca de hoje, fio duplo da cota e hachura do excesso.</td><td></td><td class="dim">barra de progresso</td></tr>
+      <tr><td class="t">Pauta</td><td>O topo de Lançamentos, com os recados que esperam decisão.</td><td>“Pauta · 3 recados.”</td><td class="dim">caixa de entrada, fila</td></tr>
+      <tr class="g"><td colspan="4">Saem</td></tr>
+      <tr><td class="t">Cota livre</td><td>É a cota.</td><td></td><td class="dim"></td></tr>
+      <tr><td class="t">Gasto variável</td><td>É o gasto; o lançamento de previsto é previsto lançado.</td><td></td><td class="dim"></td></tr>
+      <tr><td class="t">Passo semanal</td><td>Sai, com semana editada, automática e travada. “Semana” fica só no Calendário da Leitura.</td><td></td><td class="dim"></td></tr>
+      <tr><td class="t">A caminho</td><td>Sai como grupo e rubrica; vira “Previstos de novembro”, no Plano. Fica só a expressão: “R$&nbsp;2.386,10 a caminho”.</td><td></td><td class="dim"></td></tr>
+      <tr><td class="t">Tipo de gasto</td><td>Sai, com “A Leitura abre em”.</td><td></td><td class="dim"></td></tr>
+    </tbody>
+  </table></div>
+</section>
+
+<!-- ================= 7 DECISÕES ================= -->
+<section class="s" id="decisoes">
+  <span class="sn">7</span>
+  <h2>Decisões que são suas, <em>uma por vez.</em></h2>
+  <p class="intro">Na ordem em que dependem umas das outras. Cada uma com a recomendação e o que se perde ao escolher o outro lado.</p>
+  <ol class="dec">
+    <li><b>Os previstos saem da cota?</b><p>A cota passa a ser só o dia a dia; o previsto tem valor próprio no Plano. Somem cota livre, gasto variável, a régua de cinco partes e o seletor de tipo. Do outro lado: manter a margem honesta e redesenhar só a navegação.</p><span class="reco">Sim. É o corte que mais simplifica, e a informação continua inteira no Plano. O que muda é o efeito do previsto que vem mais caro: aparece na folga, não no dia a dia da verba.</span></li>
+    <li><b>Os passos semanais saem?</b><p>O ritmo vira a linha reta da cota e o “cabe por dia” assume o papel de olhar para frente. Do outro lado: manter os passos, mas escondidos atrás de um “Ajustar o ritmo” na página da verba.</p><span class="reco">Sim. A edição por semana cobre sobretudo compras conhecidas, que o previsto cobre melhor.</span></li>
+    <li><b>A Pauta entra em Lançamentos (quatro abas)?</b><p>Do outro lado: manter a aba Pauta e levar a lista de lançamentos para dentro da Leitura.</p><span class="reco">Sim. É a mesma fila em dois estados, e o selo segue na aba.</span></li>
+    <li><b>Remanejar vale “só este mês” por padrão?</b><p>A mesma folha ajusta a cota de vez (“deste mês em diante”).</p><span class="reco">Sim. Quem remaneja está cobrindo um mês; mudança de plano vem no Fechamento.</span></li>
+    <li><b>O Fechamento é convite ou passo obrigatório?</b><p>Do outro lado: abrir o Fechamento sozinho na primeira vez que o app abre no mês novo.</p><span class="reco">Convite, do dia 1 ao 7, no topo do Mês. Sem resposta, o plano se repete, como hoje.</span></li>
+    <li><b>O Fechamento sugere valor de cota?</b><p>Do outro lado: pré-escolher o costume quando a verba passou nos três meses.</p><span class="reco">Mostrar o costume e “passou N de 3”, com “Manter” como padrão. O app não é fiscal nem conselheiro: quem decide é a pessoa.</span></li>
+    <li><b>“No passo atual” só do dia 8 em diante?</b><p>Antes disso, a página da verba compara com o costume no mesmo trecho.</p><span class="reco">Sim. No dia 4, a projeção de Delivery seria R$&nbsp;1.607,25.</span></li>
+    <li><b>O “cabe por dia” do Mês soma a margem negativa?</b><p>Delivery está R$&nbsp;14,30 além; somar dá R$&nbsp;85,80 por dia, ignorar daria R$&nbsp;86,33.</p><span class="reco">Somar. O excesso de uma verba sai de algum lugar, e a manchete deve dizer isso.</span></li>
+    <li><b>A parcela do mês com data à frente entra no ritmo só no dia dela?</b><p>Hoje, uma parcela com data de 18 de novembro já conta no ritmo no dia 1 e pode virar o estado. Na proposta, sai da margem desde o dia 1 e entra no ritmo no dia dela.</p><span class="reco">Sim. A margem continua honesta e o estado deixa de acusar um gasto que ainda não aconteceu.</span></li>
+  </ol>
+</section>
+
+<!-- ================= DADOS ================= -->
+<section class="s" id="dados">
+  <span class="sn">A</span>
+  <h2>Dados do cenário, <em>com as contas.</em></h2>
+  <p class="intro">Quarta, 4 de novembro de 2026. Mês de 1 a 30 (dia de início 1), semana de segunda a domingo. Dia 4 de 30; faltam 27 dias contando hoje. Ritmo de hoje = cota × 4 ÷ 30, arredondado para baixo; cabe por dia = margem ÷ 27, arredondado para baixo; costume = média de agosto, setembro e outubro, arredondada para baixo (como <code>usual = before.sum() / back</code>). Estados como em <code>Month.kt:136–140</code>. Com os passos semanais de hoje (<code>Month.kt:88–131</code>), o ritmo do dia 4 mudaria no máximo um centavo (Delivery 26,65, Casa 53,32, Saúde 33,32, Lazer 66,65) e nenhum estado mudaria.</p>
+  <div class="data">
+    <div>
+      <h4 class="min">Verbas em novembro</h4>
+      <div class="tblw"><table class="tbl">
+        <thead><tr><th>Verba</th><th class="r">Cota</th><th class="r">Gasto</th><th class="r">Ritmo</th><th class="r">Margem</th><th class="r">Por dia</th></tr></thead>
+        <tbody>
+          <tr><td>Mercado · no ritmo</td><td class="r">1.200,00</td><td class="r">151,80</td><td class="r">160,00</td><td class="r">1.048,20</td><td class="r">38,82</td></tr>
+          <tr><td>Delivery · fora da margem</td><td class="r">200,00</td><td class="r">214,30</td><td class="r">26,66</td><td class="r">−14,30</td><td class="r">—</td></tr>
+          <tr><td>Casa · no ritmo</td><td class="r">400,00</td><td class="r">37,80</td><td class="r">53,33</td><td class="r">362,20</td><td class="r">13,41</td></tr>
+          <tr><td>Saúde · sem gasto</td><td class="r">250,00</td><td class="r">0,00</td><td class="r">33,33</td><td class="r">250,00</td><td class="r">9,25</td></tr>
+          <tr><td>Lazer · acima do ritmo</td><td class="r">500,00</td><td class="r">98,00</td><td class="r">66,66</td><td class="r">402,00</td><td class="r">14,88</td></tr>
+          <tr><td>Transporte · no ritmo</td><td class="r">300,00</td><td class="r">31,40</td><td class="r">40,00</td><td class="r">268,60</td><td class="r">9,94</td></tr>
+          <tr class="tot"><td>Total</td><td class="r">2.850,00</td><td class="r">533,30</td><td class="r"></td><td class="r">2.316,70</td><td class="r">85,80</td></tr>
+        </tbody>
+      </table></div>
+      <h4 class="min">Plano de novembro</h4>
+      <div class="tblw"><table class="tbl">
+        <tbody>
+          <tr><td>Teto (de outubro em diante)</td><td class="r">6.000,00</td></tr>
+          <tr><td>Previstos: 119,90 lançados + 2.386,10 em aberto</td><td class="r">2.506,00</td></tr>
+          <tr><td>Cotas</td><td class="r">2.850,00</td></tr>
+          <tr class="tot"><td>Folga</td><td class="r">644,00</td></tr>
+          <tr><td class="dim">Remanejar R$&nbsp;50,00 da folga (5.4): folga</td><td class="r">594,00</td></tr>
+        </tbody>
+      </table></div>
+      <h4 class="min">Previstos de novembro</h4>
+      <div class="tblw"><table class="tbl">
+        <thead><tr><th>Dia</th><th>Previsto</th><th>Verba</th><th class="r">Valor</th><th>Estado no dia 4</th></tr></thead>
+        <tbody>
+          <tr><td>1</td><td>Academia · “SMARTFIT”</td><td>Saúde</td><td class="r">119,90</td><td>lançado 1 nov, 06:10</td></tr>
+          <tr><td>3</td><td>Seguro do carro · “PORTO SEGURO AUTO”</td><td>Transporte</td><td class="r">164,30</td><td>recado na Pauta</td></tr>
+          <tr><td>5</td><td>Aluguel</td><td>Casa</td><td class="r">1.900,00</td><td>amanhã</td></tr>
+          <tr><td>8</td><td>Spotify (desde o Fechamento)</td><td>Lazer</td><td class="r">21,90</td><td>esperando</td></tr>
+          <tr><td>10</td><td>Internet · “VIVO FIBRA”</td><td>Casa</td><td class="r">119,90</td><td>esperando</td></tr>
+          <tr><td>12</td><td>Conta de luz · “ENEL SP”</td><td>Casa</td><td class="r">180,00</td><td>esperando</td></tr>
+        </tbody>
+      </table></div>
+      <h4 class="min">Pauta no dia 4</h4>
+      <div class="tblw"><table class="tbl">
+        <tbody>
+          <tr><td>08:05</td><td>PagFácil · propaganda, sem valor</td><td class="r">—</td></tr>
+          <tr><td>07:42</td><td>Cartão Ipê · PAG*JOSEDASILVA 0231 (Padaria do Zé)</td><td class="r">23,90</td></tr>
+          <tr><td>07:30</td><td>Banco Aurora · PORTO SEGURO AUTO (previsto Seguro do carro)</td><td class="r">164,30</td></tr>
+          <tr class="tot"><td></td><td>Com valor</td><td class="r">188,20</td></tr>
+        </tbody>
+      </table></div>
+    </div>
+    <div>
+      <h4 class="min">Lançamentos de 1 a 3 de novembro (dia a dia)</h4>
+      <div class="tblw"><table class="tbl">
+        <thead><tr><th>Quando</th><th>Verba</th><th>Nome · marcadores</th><th class="r">Valor</th></tr></thead>
+        <tbody>
+          <tr><td>dom 1, 10:12</td><td>Mercado</td><td>Feira da Praça · feira</td><td class="r">64,30</td></tr>
+          <tr><td>dom 1, 13:05</td><td>Delivery</td><td><i>Almoço de domingo com a família</i>, em Sabor de Casa · ifood, almoço</td><td class="r">128,40</td></tr>
+          <tr><td>dom 1, 21:10</td><td>Lazer</td><td>Cinemark · cinema</td><td class="r">52,00</td></tr>
+          <tr><td>seg 2, 08:05</td><td>Transporte</td><td>Uber · uber</td><td class="r">18,90</td></tr>
+          <tr><td>seg 2, 18:20</td><td>Casa</td><td>Casa &amp; Cia · limpeza</td><td class="r">37,80</td></tr>
+          <tr><td>seg 2, 20:47</td><td>Delivery</td><td>Pizzaria Roma · ifood, jantar</td><td class="r">46,90</td></tr>
+          <tr><td>ter 3, 12:20</td><td>Lazer</td><td><i>Show do Djavan</i>, em Sympla · show · 3× de 138,00</td><td class="r">46,00</td></tr>
+          <tr><td>ter 3, 18:40</td><td>Transporte</td><td>Uber · uber</td><td class="r">12,50</td></tr>
+          <tr><td>ter 3, 19:40</td><td>Mercado</td><td>Pão de Açúcar · mercado</td><td class="r">87,50</td></tr>
+          <tr><td>ter 3, 21:18</td><td>Delivery</td><td>Burger Lab · rappi, jantar</td><td class="r">39,00</td></tr>
+          <tr class="tot"><td colspan="3">Total · dom 244,70 · seg 103,60 · ter 185,00</td><td class="r">533,30</td></tr>
+        </tbody>
+      </table></div>
+      <h4 class="min">Meses anteriores (dia a dia)</h4>
+      <div class="tblw"><table class="tbl">
+        <thead><tr><th>Verba</th><th class="r">Cota</th><th class="r">Ago</th><th class="r">Set</th><th class="r">Out</th><th class="r">Costume</th><th class="r">Dias 1–4</th></tr></thead>
+        <tbody>
+          <tr><td>Mercado</td><td class="r">1.200</td><td class="r">1.164,20</td><td class="r">1.238,70</td><td class="r">1.121,40</td><td class="r">1.174,76</td><td class="r">150,50</td></tr>
+          <tr><td>Delivery</td><td class="r">250</td><td class="r">318,40</td><td class="r">362,10</td><td class="r">401,30</td><td class="r">360,60</td><td class="r">96,16</td></tr>
+          <tr><td>Casa</td><td class="r">400</td><td class="r">352,60</td><td class="r">418,90</td><td class="r">287,30</td><td class="r">352,93</td><td class="r">33,23</td></tr>
+          <tr><td>Saúde</td><td class="r">250</td><td class="r">96,40</td><td class="r">212,80</td><td class="r">64,50</td><td class="r">124,56</td><td class="r">11,63</td></tr>
+          <tr><td>Lazer</td><td class="r">500</td><td class="r">488,10</td><td class="r">531,60</td><td class="r">472,90</td><td class="r">497,53</td><td class="r">61,66</td></tr>
+          <tr><td>Transporte</td><td class="r">300</td><td class="r">276,30</td><td class="r">254,80</td><td class="r">311,70</td><td class="r">280,93</td><td class="r">37,30</td></tr>
+          <tr class="tot"><td>Total</td><td class="r">2.900</td><td class="r">2.696,00</td><td class="r">3.018,90</td><td class="r">2.659,10</td><td class="r"></td><td class="r">390,50</td></tr>
+          <tr><td class="dim">Margem do mês</td><td></td><td class="r">204,00</td><td class="r">−118,90</td><td class="r">240,90</td><td></td><td></td></tr>
+        </tbody>
+      </table></div>
+      <p class="muted" style="font-size:14.5px">Dias 1 a 4 de Delivery: agosto 82,30, setembro 96,40, outubro 109,80 (acumulados por dia, em média: 17,60 · 50,76 · 65,30 · 96,16). Total dos dias 1 a 4: 369,50 · 406,60 · 395,40. Previstos de outubro: 2.480,40 lançados de 2.484,10 previstos (luz 176,30 de 180,00); outubro inteiro, 2.659,10 + 2.480,40 = 5.139,50, R$&nbsp;860,50 abaixo do teto. O Spotify (R$&nbsp;21,90, dia 8) estava no dia a dia de Lazer de maio a outubro.</p>
+    </div>
+  </div>
+</section>
+
+</main>
+
+<script>
+(function(){
+  var r=document.documentElement,b=document.getElementById('tema'),lbl=b.querySelector('span');
+  function set(t){r.setAttribute('data-theme',t);lbl.textContent=t==='dark'?'Ler no claro':'Ler no escuro';try{localStorage.setItem('margem-v3a-tema',t)}catch(e){}}
+  var s=null;try{s=localStorage.getItem('margem-v3a-tema')}catch(e){}
+  set(s||(window.matchMedia&&matchMedia('(prefers-color-scheme: dark)').matches?'dark':'light'));
+  b.addEventListener('click',function(){set(r.getAttribute('data-theme')==='dark'?'light':'dark')});
+  /* versões escuras das telas: o mesmo layout, com os tokens escuros do livro */
+  document.querySelectorAll('[data-twin]').forEach(function(n){
+    var c=n.cloneNode(true);c.removeAttribute('data-twin');
+    c.querySelectorAll('.t-light').forEach(function(e){e.classList.remove('t-light');e.classList.add('t-dark')});
+    var cap=c.querySelector('figcaption');
+    if(cap){var bb=cap.querySelector('b');cap.textContent='';if(bb){bb.querySelectorAll('.cap-tema').forEach(function(e){e.textContent='escuro'});cap.appendChild(bb);cap.appendChild(document.createTextNode('O mesmo layout, com os tokens escuros.'))}}
+    c.querySelectorAll('[id]').forEach(function(e){e.removeAttribute('id')});
+    n.parentNode.insertBefore(c,n.nextSibling);
+  });
+})();
+</script>
+</body>
+</html>

@@ -17,6 +17,15 @@ val releaseKey = listOf("storeFile", "storePassword", "keyAlias", "keyPassword")
     .associateWith { local.getProperty("release.$it").orEmpty() }
     .takeIf { it.values.all(String::isNotBlank) }
 
+// Version from the latest vX.Y.Z tag reachable from HEAD: versionName "X.Y.Z",
+// versionCode X*10000 + Y*100 + Z (so each component stays below 100). No tag, or no git: 0.0.0.
+val versionTag = providers.exec {
+    commandLine("git", "describe", "--tags", "--abbrev=0", "--match", "v[0-9]*")
+    isIgnoreExitValue = true
+}.standardOutput.asText.get().trim().removePrefix("v")
+val (major, minor, patch) = Regex("""(\d+)\.(\d+)\.(\d+)""").matchEntire(versionTag)
+    ?.destructured?.toList()?.map(String::toInt) ?: listOf(0, 0, 0)
+
 android {
     namespace = "com.kaiodelphino.margem"
     compileSdk = 36
@@ -25,8 +34,8 @@ android {
         applicationId = "com.kaiodelphino.margem"
         minSdk = 29
         targetSdk = 36
-        versionCode = 1
-        versionName = "0.2.0"
+        versionCode = major * 10000 + minor * 100 + patch
+        versionName = "$major.$minor.$patch"
     }
 
     // Debug key in the repo, so every machine signs debug builds the same way and an install

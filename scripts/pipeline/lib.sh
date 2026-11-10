@@ -10,7 +10,7 @@ PIPELINE_SCRIPTS="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
 cd "$ROOT"
 
 # Configuration always comes from the main checkout, including in candidate worktrees.
-export PIPELINE_CONFIG="${PIPELINE_CONFIG:-$MAIN_ROOT/.claude/pipeline/config.json}"
+export PIPELINE_CONFIG="${PIPELINE_CONFIG:-$MAIN_ROOT/.agents/pipeline/config.json}"
 export PYTHONPATH="$PIPELINE_SCRIPTS${PYTHONPATH:+:$PYTHONPATH}"
 config() { python3 "$PIPELINE_SCRIPTS/pipeline_config.py" "$@"; }
 config get version >/dev/null

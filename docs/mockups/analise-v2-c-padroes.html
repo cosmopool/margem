@@ -1,0 +1,950 @@
+<!doctype html>
+<html lang="pt-BR">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Leitura · direção C · Padrões</title>
+<meta name="description" content="Leitura do Margem, direção C: grade densa de pequenos múltiplos, filtro único com OU, intervalo em pílula, detalhe em tela cheia com opções, recorte e lançamentos.">
+<style>
+/* ===== TOKENS (docs/design_system.html) ===== */
+:root, .t-light{
+  color-scheme:light;
+  --papel:#F3EEE4; --folha:#FBF8F1; --folha-2:#ECE5D8;
+  --fio:#DDD3C2; --fio-forte:#8A7E6A;
+  --tinta:#1E1B16; --tinta-2:#514A40; --tinta-3:#6B6254;
+  --argila:#A44D29;
+  --musgo:#3E5E38; --musgo-fundo:#E3EADB;
+  --ocre:#85590F;  --ocre-fundo:#F4E7CC;
+  --lacre:#9A2A20; --lacre-fundo:#F6E3DC;
+  --anil:#2D4C6E;  --anil-fundo:#DFE6EE;
+  --acao:#1E1B16; --sobre-acao:#FBF8F1; --acao-press:#3A352D;
+  --scrim:rgba(30,27,22,.45);
+  --sombra:0 1px 2px rgba(30,27,22,.06),0 12px 30px -12px rgba(30,27,22,.28);
+  --c1:#2F5FA8; --c2:#D0682E; --c3:#139488; --c4:#7E2F78; --c5:#B8860B; --c6:#C25C7E; --c0:#8C8270;
+  --s0:#F1E4D6; --s1:#E3C3A6; --s2:#CF9871; --s3:#B46A43; --s4:#8A4422;
+}
+:root[data-theme="dark"]{
+  color-scheme:dark;
+  --papel:#171512; --folha:#201D19; --folha-2:#2A2621;
+  --fio:#36312A; --fio-forte:#7C7262;
+  --tinta:#EEE7DA; --tinta-2:#BDB3A3; --tinta-3:#988E7F;
+  --argila:#E09470;
+  --musgo:#A3C092; --musgo-fundo:#24301F;
+  --ocre:#DDB063;  --ocre-fundo:#382C17;
+  --lacre:#EE937E; --lacre-fundo:#3A221C;
+  --anil:#A3BCDB;  --anil-fundo:#1F2A36;
+  --acao:#EEE7DA; --sobre-acao:#171512; --acao-press:#CFC6B6;
+  --scrim:rgba(0,0,0,.6);
+  --sombra:0 1px 0 rgba(0,0,0,.35),0 14px 34px -10px rgba(0,0,0,.7);
+  --c1:#5584D0; --c2:#D06A30; --c3:#20A898; --c4:#8E4A8A; --c5:#B98A14; --c6:#CC6487; --c0:#7A7163;
+  --s0:#2B231E; --s1:#4E3324; --s2:#7E4A2E; --s3:#B66C44; --s4:#E6A27C;
+}
+
+/* ===== PAGE ===== */
+*{box-sizing:border-box;margin:0;padding:0}
+body{background:var(--papel);color:var(--tinta);font:400 17px/1.6 'Source Sans 3','Source Sans Pro',system-ui,sans-serif;overflow-x:hidden}
+h1,h2,h3,.serif{font-family:'Newsreader',Georgia,serif;font-weight:400}
+button{font:inherit;color:inherit;background:none;border:0;cursor:pointer;text-align:inherit}
+.num{font-variant-numeric:lining-nums tabular-nums}
+.wrap{max-width:1240px;margin:0 auto;padding:0 16px 96px}
+@media (min-width:720px){.wrap{padding:0 40px 120px}}
+header.cover{padding:48px 0 40px;border-bottom:2px solid var(--tinta)}
+.kick{font:600 12px/1.3 'Source Sans 3',system-ui,sans-serif;letter-spacing:.14em;text-transform:uppercase;color:var(--argila)}
+h1{font:italic 400 clamp(44px,8vw,96px)/.95 'Newsreader',Georgia,serif;letter-spacing:-.03em;margin:14px 0 18px}
+.lede{font:300 clamp(19px,2.4vw,24px)/1.45 'Newsreader',Georgia,serif;color:var(--tinta-2);max-width:42em}
+.lede em{color:var(--tinta)}
+section{padding:60px 0 24px;border-bottom:1px solid var(--fio)}
+h2{font:400 clamp(30px,4.4vw,44px)/1.05 'Newsreader',Georgia,serif;letter-spacing:-.015em;margin:8px 0 18px;max-width:22em}
+h2 em{color:var(--argila)}
+h3{font:500 22px/1.25 'Newsreader',Georgia,serif;margin:32px 0 10px}
+p{max-width:46em;margin-bottom:14px}
+.muted{color:var(--tinta-2)}
+.grid3{display:grid;grid-template-columns:repeat(auto-fit,minmax(min(100%,300px),1fr));gap:18px 24px;margin-top:18px}
+.card{background:var(--folha);border:1px solid var(--fio);border-radius:8px;padding:18px 20px}
+.card h3{margin:0 0 6px;font-size:19px}
+.card p{font-size:15.5px;line-height:1.5;margin:0;color:var(--tinta-2)}
+.card p b{color:var(--tinta)}
+.tblw{overflow-x:auto;margin:12px 0 20px}
+table{width:100%;border-collapse:collapse;font-size:15px;line-height:1.45}
+th{font:600 11px/1.3 'Source Sans 3',system-ui,sans-serif;letter-spacing:.12em;text-transform:uppercase;text-align:left;padding:10px 14px 10px 0;border-top:2px solid var(--tinta);border-bottom:1px solid var(--tinta);white-space:nowrap}
+td{padding:10px 14px 10px 0;border-bottom:1px solid var(--fio);vertical-align:top}
+td.t{font:500 17px/1.3 'Newsreader',Georgia,serif;white-space:nowrap}
+ol.qs{padding-left:22px;max-width:50em}
+ol.qs li{margin-bottom:12px}
+#tema{position:fixed;bottom:16px;right:16px;z-index:20;min-height:44px;padding:0 16px;border-radius:4px;border:1px solid var(--fio-forte);background:var(--folha);color:var(--tinta);font:600 13px 'Source Sans 3',system-ui,sans-serif;letter-spacing:.06em;text-transform:uppercase}
+.toc{display:flex;flex-wrap:wrap;gap:6px 18px;margin-top:22px;font-size:15px}
+.toc a{color:var(--anil)}
+
+/* ===== PHONE ===== */
+.shots{display:flex;flex-wrap:wrap;gap:40px 28px;align-items:flex-start;margin:24px 0}
+.shot{margin:0;max-width:380px;width:100%}
+.shot figcaption{margin-top:12px;font:italic 15px/1.45 'Newsreader',Georgia,serif;color:var(--tinta-2)}
+.shot figcaption b{display:block;font:600 11px 'Source Sans 3',system-ui,sans-serif;letter-spacing:.12em;text-transform:uppercase;color:var(--tinta);font-style:normal;margin-bottom:3px}
+.ph{width:100%;max-width:380px;padding:10px;border-radius:48px;background:#0D0C0A;box-shadow:0 0 0 1px #3a352e,0 40px 70px -40px rgba(20,16,10,.55)}
+.scr{width:360px;max-width:100%;height:780px;border-radius:38px;overflow:hidden;position:relative;background:var(--papel);color:var(--tinta);font:400 15px/1.45 'Source Sans 3','Source Sans Pro',system-ui,sans-serif;display:flex;flex-direction:column}
+.sbar{height:30px;padding:4px 26px 0;display:flex;justify-content:space-between;align-items:center;font:600 13px 'Source Sans 3',system-ui,sans-serif;flex:none}
+.tb{height:50px;display:flex;align-items:center;padding:0 8px 0 18px;flex:none;gap:4px}
+.tb .t{font:500 22px 'Newsreader',Georgia,serif;flex:1;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.tb .back{width:40px;height:40px;display:grid;place-items:center;margin-left:-12px;color:var(--tinta)}
+.ico{width:22px;height:22px;fill:none;stroke:currentColor;stroke-width:1.6;stroke-linecap:round;stroke-linejoin:round;flex:none}
+.ico.s{width:16px;height:16px}
+.ico.xs{width:13px;height:13px;stroke-width:1.8}
+.bd{flex:1;overflow-y:auto;overflow-x:hidden;padding:0 12px 20px;position:relative;scrollbar-width:none}
+.bd::-webkit-scrollbar{display:none}
+.navb{height:64px;display:grid;grid-template-columns:repeat(5,1fr);border-top:1px solid var(--fio);background:var(--papel);flex:none}
+.navb a{display:flex;flex-direction:column;align-items:center;justify-content:center;gap:3px;font:500 11px 'Source Sans 3',system-ui,sans-serif;white-space:nowrap;color:var(--tinta-3);position:relative}
+.navb a.on{color:var(--tinta);font-weight:700}
+.navb a.on::before{content:"";position:absolute;top:-1px;left:24%;right:24%;height:2px;background:var(--tinta)}
+.navb .bdg{position:absolute;top:8px;left:58%;min-width:16px;height:16px;border-radius:8px;background:var(--argila);color:var(--folha);font:700 10px/16px 'Source Sans 3',system-ui,sans-serif;text-align:center;padding:0 4px}
+
+/* filter header */
+.fh{padding:2px 12px 8px;flex:none;border-bottom:1px solid var(--fio);background:var(--papel)}
+.fr{display:flex;gap:6px;align-items:center}
+.ff{flex:1;min-width:0;height:40px;border:1px solid var(--fio-forte);border-radius:4px;background:var(--folha);display:flex;align-items:center;gap:6px;padding:0 8px;color:var(--tinta-3);font-size:14.5px;overflow:hidden}
+.ff .ph-t{white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.ff .mc .mt{overflow:hidden;text-overflow:ellipsis}
+.ff .mc{display:inline-flex;align-items:center;gap:4px;height:26px;padding:0 7px;border:1px solid var(--fio-forte);border-radius:3px;color:var(--tinta);font-size:13px;white-space:nowrap;background:var(--papel);flex:none;max-width:110px;overflow:hidden;text-overflow:ellipsis}
+.ff .ou{font:italic 13px 'Newsreader',Georgia,serif;color:var(--tinta-3);flex:none}
+.ff .more{font-size:12.5px;color:var(--tinta-2);flex:none;font-weight:600}
+.rp{height:40px;flex:none;border:1px solid var(--fio-forte);border-radius:4px;padding:0 8px;display:flex;align-items:center;gap:5px;font:600 13.5px 'Source Sans 3',system-ui,sans-serif;white-space:nowrap;background:var(--folha)}
+.fs{display:flex;justify-content:space-between;align-items:center;gap:8px;margin-top:6px;font-size:12.5px;color:var(--tinta-3);min-height:24px}
+.fs b{color:var(--tinta);font-weight:600}
+.sw{display:inline-flex;align-items:center;gap:6px;font:600 12.5px 'Source Sans 3',system-ui,sans-serif;color:var(--tinta-2);height:24px}
+.sw i{width:26px;height:15px;border-radius:8px;background:var(--fio);position:relative;transition:.15s}
+.sw i::after{content:"";position:absolute;left:2px;top:2px;width:11px;height:11px;border-radius:50%;background:var(--folha);transition:.15s}
+.sw.on{color:var(--tinta)}
+.sw.on i{background:var(--tinta)}
+.sw.on i::after{left:13px}
+.sw.dis{opacity:.45;cursor:default}
+/* editing */
+.fbox{border:1.5px solid var(--anil);border-radius:4px;background:var(--folha);padding:6px;display:flex;flex-wrap:wrap;gap:6px 4px;align-items:center}
+.fbox input{flex:1;min-width:120px;height:30px;border:0;outline:0;background:transparent;color:var(--tinta);font:400 15px 'Source Sans 3',system-ui,sans-serif;padding:0 4px}
+.fbox input::placeholder{color:var(--tinta-3)}
+.fc{display:inline-flex;align-items:center;gap:5px;height:30px;padding:0 4px 0 8px;border:1px solid var(--fio-forte);border-radius:3px;font:500 13.5px 'Source Sans 3',system-ui,sans-serif;background:var(--papel);white-space:nowrap;max-width:100%}
+.fc .x{width:22px;height:22px;display:grid;place-items:center;color:var(--tinta-3)}
+.fc .sq,.mc .sq,.lg .sq{width:9px;height:9px;border-radius:2px;flex:none}
+.fbox .ou{font:italic 13.5px 'Newsreader',Georgia,serif;color:var(--tinta-3);padding:0 1px}
+.done{font:600 14px 'Source Sans 3',system-ui,sans-serif;color:var(--anil);padding:0 4px;height:28px}
+.ac{padding:4px 0 8px}
+.acs{margin-top:10px}
+.acs .rub{padding:0 4px 4px}
+.aci{display:flex;align-items:center;gap:10px;width:100%;min-height:44px;padding:4px;border-bottom:1px solid var(--fio)}
+.aci .ico{color:var(--tinta-2)}
+.aci .an{flex:1;min-width:0;font-size:15px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.aci .an b{font-weight:700;color:var(--tinta);text-decoration:underline;text-decoration-color:var(--argila);text-underline-offset:3px}
+.aci .an small{display:block;font-size:12px;color:var(--tinta-3);line-height:1.2}
+.aci .am{font-size:12.5px;color:var(--tinta-3);white-space:nowrap;text-align:right}
+.acnote{font-size:12.5px;color:var(--tinta-3);padding:12px 4px 0;line-height:1.4}
+
+.rub{font:600 11px/1.3 'Source Sans 3',system-ui,sans-serif;letter-spacing:.12em;text-transform:uppercase;color:var(--tinta-3)}
+/* grid */
+.grid{display:grid;grid-template-columns:1fr 1fr;gap:8px;padding-top:10px}
+.tile{cursor:pointer;text-align:left;background:var(--folha);border:1px solid var(--fio);border-radius:8px;padding:9px 10px 10px;min-width:0;display:block;width:100%;position:relative}
+.tile.full{grid-column:1/-1}
+.tile:active{background:var(--folha-2)}
+.tile .th{display:flex;justify-content:space-between;align-items:center;gap:6px}
+.tile .th .ico{color:var(--tinta-3)}
+.tile .ts{font:400 15px/1.25 'Newsreader',Georgia,serif;margin:3px 0 6px;color:var(--tinta)}
+.tile.half .ts{font-size:14px;min-height:35px}
+.tile svg.ch{display:block;width:100%;height:auto;overflow:visible}
+.tile .mlg{display:flex;gap:10px;font-size:11px;color:var(--tinta-3);margin-top:4px;flex-wrap:wrap}
+.mlg span{display:inline-flex;align-items:center;gap:4px}
+.mlg .ln{width:14px;height:0;border-top:2px solid var(--tinta)}
+.mlg .ln.dash{border-top:1.5px dashed var(--tinta-3)}
+.mlg .ln.prevl{border-top:1.5px solid var(--fio-forte)}
+.mlg .bx{width:9px;height:9px;border-radius:2px}
+.hsm{font:400 13.5px/1.3 'Newsreader',Georgia,serif;color:var(--tinta);padding:5px 0;border-top:1px solid var(--fio)}
+.hsm:first-of-type{border-top:0}
+/* ranking rows (html bars) */
+.rk{display:block;width:100%;padding:3px 0;cursor:pointer}
+.rk .rr{display:flex;justify-content:space-between;gap:6px;font-size:12.5px;line-height:1.25}
+.rk .rr span:first-child{white-space:nowrap;overflow:hidden;text-overflow:ellipsis;display:inline-flex;align-items:center;gap:5px}
+.rk .rr .v{color:var(--tinta-2);white-space:nowrap}
+.rk .bar{height:4px;margin-top:3px;position:relative;background:transparent}
+.rk .bar i{position:absolute;left:0;top:0;bottom:0;border-radius:0 2px 2px 0;background:var(--tinta-2)}
+.rk .bar u{position:absolute;top:-3px;bottom:-3px;width:2px;background:var(--fio-forte)}
+.rk.big{padding:7px 0;border-bottom:1px solid var(--fio);text-align:left}
+.rk.big .rr{font-size:14.5px}
+.rk.big .bar{height:6px;margin-top:5px}
+.rk .dl{font-size:12px;color:var(--tinta-3);margin-left:4px}
+/* detail */
+.dsent{font:400 21px/1.2 'Newsreader',Georgia,serif;margin:12px 2px 2px}
+.dsub{font-size:13px;color:var(--tinta-3);margin:0 2px 10px}
+.tbar{display:flex;flex-direction:column;gap:6px;margin:0 -12px 10px;padding:0 12px 10px;border-bottom:1px solid var(--fio)}
+.orow{display:flex;align-items:center;gap:8px;overflow-x:auto;scrollbar-width:none}
+.orow::-webkit-scrollbar{display:none}
+.orow .ol{font:600 10.5px 'Source Sans 3',system-ui,sans-serif;letter-spacing:.1em;text-transform:uppercase;color:var(--tinta-3);width:58px;flex:none}
+.oc{height:30px;padding:0 10px;border:1px solid var(--fio-forte);border-radius:3px;font:500 13px 'Source Sans 3',system-ui,sans-serif;white-space:nowrap;flex:none;background:var(--folha)}
+.oc.on{background:var(--tinta);color:var(--papel);border-color:var(--tinta)}
+.otog{display:flex;flex-wrap:wrap;gap:4px 14px;padding-top:2px}
+.cc{background:var(--folha);border:1px solid var(--fio);border-radius:8px;padding:10px}
+.cc svg.ch{display:block;width:100%;height:auto;overflow:visible;touch-action:none}
+.lg{display:flex;flex-wrap:wrap;gap:4px 12px;font-size:12px;color:var(--tinta-2);margin-top:8px}
+.lg span{display:inline-flex;align-items:center;gap:5px}
+.lg .ln{width:16px;height:0;border-top:2px solid}
+.lg .ln.dash{border-top:1.5px dashed var(--tinta-3)}
+.hint{font-size:12px;color:var(--tinta-3);margin-top:6px}
+.bb{display:flex;align-items:center;gap:6px;margin-top:8px;padding:6px 6px 6px 10px;border-radius:4px;background:var(--anil-fundo);font-size:13px;color:var(--tinta)}
+.bb .tx{flex:1;min-width:0}
+.bb .use{font:600 13px 'Source Sans 3',system-ui,sans-serif;color:var(--anil);white-space:nowrap;padding:4px}
+.bb .x{width:28px;height:28px;display:grid;place-items:center;color:var(--tinta-2)}
+.mult{margin-top:8px}
+.mult .mh{display:flex;align-items:center;gap:6px;font-size:12.5px;color:var(--tinta-2);margin:6px 0 2px}
+.mult .mh .sq{width:9px;height:9px;border-radius:2px}
+.mult .mh b{color:var(--tinta);font-weight:600}
+.mult .mh .r{margin-left:auto}
+.lh{display:flex;justify-content:space-between;align-items:baseline;margin:18px 2px 4px}
+.lh span:last-child{font-size:12.5px;color:var(--tinta-3)}
+.dayh{display:flex;justify-content:space-between;font:600 11px 'Source Sans 3',system-ui,sans-serif;letter-spacing:.08em;text-transform:uppercase;color:var(--tinta-3);padding:10px 2px 3px;border-bottom:1px solid var(--fio)}
+.li{display:flex;gap:10px;align-items:flex-start;padding:7px 2px;border-bottom:1px solid var(--fio)}
+.li .ln{flex:1;min-width:0}
+.li .nm{display:block;font-size:15px;line-height:1.25;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.li .nm i{font-family:'Newsreader',Georgia,serif}
+.li .em{font-size:12.5px;color:var(--tinta-3)}
+.li .mt{display:block;font-size:12.5px;color:var(--tinta-3);line-height:1.3}
+.li .mt b{color:var(--tinta);font-weight:600;background:var(--folha-2);padding:0 3px;border-radius:2px}
+.li .am{font-size:15px;white-space:nowrap;font-variant-numeric:tabular-nums}
+.li .pv{font-size:11px;color:var(--tinta-3);display:block;text-align:right}
+.morel{display:block;width:100%;text-align:center;padding:12px;color:var(--anil);font-weight:600;font-size:14px}
+.ptab .pr{display:flex;justify-content:space-between;gap:8px;padding:7px 2px;border-bottom:1px solid var(--fio);font-size:14px}
+.ptab .pr i{font-family:'Newsreader',Georgia,serif}
+.ptab .pr small{color:var(--tinta-3);font-size:12.5px;display:block}
+/* história */
+.over-r{font:600 11px/1.3 'Source Sans 3',system-ui,sans-serif;letter-spacing:.12em;text-transform:uppercase;color:var(--tinta-3);margin-top:14px}
+.hl{font:400 27px/1.15 'Newsreader',Georgia,serif;letter-spacing:-.01em;margin:4px 0 8px}
+.hs{display:flex;gap:8px;align-items:flex-start;width:100%;padding:11px 2px;border-bottom:1px solid var(--fio);font:400 17px/1.35 'Newsreader',Georgia,serif;text-align:left}
+.hs span{flex:1}
+.hs .ico{color:var(--tinta-3);margin-top:3px}
+.hs em{font-style:normal;font-weight:600}
+.acam{display:flex;gap:8px;align-items:center;font-size:13.5px;color:var(--tinta-2);padding:10px 2px;border-bottom:1px solid var(--fio)}
+.tl{position:relative;padding-left:18px;margin-top:6px}
+.tl::before{content:"";position:absolute;left:4px;top:8px;bottom:8px;width:1px;background:var(--fio-forte)}
+.tli{position:relative;padding:8px 0 10px}
+.tli::before{content:"";position:absolute;left:-18px;top:14px;width:9px;height:9px;border-radius:50%;background:var(--papel);box-shadow:inset 0 0 0 1.5px var(--tinta-2)}
+.tli .wk{font:600 11px 'Source Sans 3',system-ui,sans-serif;letter-spacing:.1em;text-transform:uppercase;color:var(--tinta-3);display:flex;justify-content:space-between}
+.tli .wk b{color:var(--tinta)}
+.tli p{font:400 15px/1.35 'Newsreader',Georgia,serif;margin:3px 0 0}
+.tli .spark{display:block;margin-top:5px}
+/* sheets */
+.scrim{position:absolute;inset:0;background:var(--scrim);z-index:5}
+.sheet{position:absolute;left:0;right:0;bottom:0;z-index:6;background:var(--folha);border-radius:16px 16px 0 0;padding:8px 16px 18px;box-shadow:var(--sombra);max-height:88%;overflow-y:auto}
+.sheet .grab{width:36px;height:4px;border-radius:2px;background:var(--fio-forte);margin:0 auto 10px;opacity:.6}
+.sheet h4{font:400 21px/1.2 'Newsreader',Georgia,serif;margin:2px 0 4px;display:flex;align-items:center;gap:8px}
+.sheet .dek{font-size:14px;color:var(--tinta-2);margin-bottom:12px}
+.btn{display:inline-flex;align-items:center;justify-content:center;gap:8px;min-height:46px;padding:0 18px;border-radius:4px;font:600 15px/1 'Source Sans 3',system-ui,sans-serif;border:1px solid transparent;color:var(--tinta)}
+.btn.pri{background:var(--acao);color:var(--sobre-acao)}
+.btn.sec{border-color:var(--fio-forte)}
+.btn.txt{color:var(--anil);padding:0 10px}
+.btn.full{width:100%}
+.btns{display:flex;flex-direction:column;gap:8px;margin-top:12px}
+.pres{display:flex;flex-wrap:wrap;gap:6px;margin:6px 0 12px}
+.ft{display:grid;grid-template-columns:1fr 1fr;gap:8px;margin-bottom:10px}
+.ft div{border:1px solid var(--fio-forte);border-radius:4px;padding:5px 10px;font-size:15px}
+.ft div.on{border:1.5px solid var(--anil)}
+.ft small{display:block;font:600 10px 'Source Sans 3',system-ui,sans-serif;letter-spacing:.1em;text-transform:uppercase;color:var(--tinta-3)}
+.calh{display:flex;align-items:center;justify-content:space-between;font:500 16px 'Newsreader',Georgia,serif;margin-bottom:4px}
+.calh button{width:40px;height:36px;display:grid;place-items:center;color:var(--tinta-2)}
+.calg{display:grid;grid-template-columns:repeat(7,1fr);row-gap:2px;text-align:center;font-size:14px}
+.calg .wd{font:600 10.5px 'Source Sans 3',system-ui,sans-serif;color:var(--tinta-3);padding:4px 0}
+.calg button{height:38px;text-align:center;font-variant-numeric:tabular-nums;position:relative}
+.calg button.in{background:var(--folha-2)}
+.calg button.e{background:var(--tinta);color:var(--papel);border-radius:4px;font-weight:700}
+.calg button.fut{color:var(--tinta-3)}
+.calg button.off{color:var(--fio-forte);cursor:default}
+.calg button.td::after{content:"";position:absolute;bottom:5px;left:50%;width:4px;height:4px;margin-left:-2px;border-radius:50%;background:var(--argila)}
+.sheet .li{padding:6px 0}
+#tip{position:fixed;z-index:50;pointer-events:none;background:var(--tinta);color:var(--papel);font:500 12.5px/1.35 'Source Sans 3',system-ui,sans-serif;padding:5px 8px;border-radius:4px;max-width:220px;opacity:0;transition:opacity .08s}
+svg .hit{cursor:pointer}
+svg .hit:hover{stroke:var(--tinta);stroke-width:1.5}
+</style>
+</head>
+<body>
+<svg width="0" height="0" style="position:absolute" aria-hidden="true"><defs>
+<symbol id="i-lupa" viewBox="0 0 24 24"><circle cx="10.5" cy="10.5" r="6"/><path d="M15 15l5 5"/></symbol>
+<symbol id="i-periodo" viewBox="0 0 24 24"><path d="M4 6h16v14H4z"/><path d="M4 10h16M8 3.5V7.5M16 3.5V7.5"/><path d="M8 14h3v3H8z"/></symbol>
+<symbol id="i-voltar" viewBox="0 0 24 24"><path d="M14.5 5.5L8 12l6.5 6.5"/></symbol>
+<symbol id="i-avancar" viewBox="0 0 24 24"><path d="M9.5 5.5L16 12l-6.5 6.5"/></symbol>
+<symbol id="i-fechar" viewBox="0 0 24 24"><path d="M6 6l12 12M18 6L6 18"/></symbol>
+<symbol id="i-verba" viewBox="0 0 24 24"><path d="M6 3.5h12v17H6z"/><path d="M6 11h12"/><path d="M9 14.5h6M9 17.5h6"/></symbol>
+<symbol id="i-marcador" viewBox="0 0 24 24"><path d="M7 3.5h10v17l-5-4-5 4z"/><circle cx="12" cy="8.5" r="1.4"/></symbol>
+<symbol id="i-lugar" viewBox="0 0 24 24"><path d="M12 20.5s-6-5.6-6-10.5a6 6 0 0112 0c0 4.9-6 10.5-6 10.5z"/><circle cx="12" cy="10" r="2.2"/></symbol>
+<symbol id="i-recado" viewBox="0 0 24 24"><path d="M5 3.5h10l4 4V20.5H5z"/><path d="M15 3.5v4h4"/><path d="M8.5 12h7M8.5 15.5h4.5"/></symbol>
+<symbol id="i-leitura" viewBox="0 0 24 24"><path d="M3.5 20h17"/><path d="M7 20v-6M12 20V7M17 20v-9"/><path d="M5 9l5-4 4 3 5-4" stroke-dasharray="1.5 2.2"/></symbol>
+<symbol id="i-pauta" viewBox="0 0 24 24"><path d="M3.5 13.5L6 5h12l2.5 8.5V19.5h-17z"/><path d="M3.5 13.5H8l1 2h6l1-2h4.5"/><path d="M9 8.5h6M8.5 11h7"/></symbol>
+<symbol id="i-lancamento" viewBox="0 0 24 24"><path d="M4 4.5h16v15H4z"/><path d="M8 4.5v15M9.5 4.5v15"/><path d="M12.5 9h5M12.5 12.5h5M12.5 16h3"/></symbol>
+<symbol id="i-ajustes" viewBox="0 0 24 24"><path d="M4 7h9M17 7h3M4 17h3M11 17h9"/><circle cx="15" cy="7" r="2"/><circle cx="9" cy="17" r="2"/></symbol>
+<symbol id="i-previsto" viewBox="0 0 24 24"><path d="M4 6h16v14H4z" stroke-dasharray="2.2 2.2"/><path d="M8 3.5V7.5M16 3.5V7.5"/><path d="M9 13.5l2 2 4-4.5"/></symbol>
+<symbol id="i-abrir" viewBox="0 0 24 24"><path d="M14 4.5h5.5V10M19.5 4.5l-7 7M10 6H4.5v13.5H18V14"/></symbol>
+</defs></svg>
+
+<div class="wrap">
+<header class="cover">
+  <div class="kick">Leitura · direção C</div>
+  <h1>Padrões</h1>
+  <p class="lede">Os widgets da Leitura viram uma <em>grade densa</em> de pequenos gráficos, cada um com a sua frase. Em cima, uma linha só: o <em>filtro único</em> e a <em>pílula do intervalo</em>. Tocar num tile abre o <em>detalhe em tela cheia</em>: o gráfico grande, as opções dele, recorte arrastando, “usar como filtro” e os lançamentos embaixo. Sem abas.</p>
+  <nav class="toc"><a href="#decisoes">1 · Decisões</a><a href="#grade">2 · Grade</a><a href="#filtro">3 · Filtro e intervalo</a><a href="#detalhe">4 · Detalhe</a><a href="#historia">5 · História</a><a href="#catalogo">6 · Catálogo de tiles</a><a href="#regras">7 · Regras do filtro</a><a href="#perguntas">8 · Perguntas</a></nav>
+</header>
+
+<section id="decisoes">
+  <div class="kick">1 · Decisões</div>
+  <h2>Uma tela que rola, <em>não</em> quatro abas</h2>
+  <div class="grid3">
+    <div class="card"><h3>Sem abas</h3><p>A Leitura é uma página só. O que eram abas vira tile: História, ranking, calendário, ritmo. O topo guarda <b>só o filtro</b>, que vale para todos.</p></div>
+    <div class="card"><h3>Um filtro, com OU</h3><p>Grupo e busca viram <b>um campo</b>. Cada escolha vira chip tipado (verba, marcador, lugar, aviso). Um lançamento entra se <b>qualquer</b> chip bate.</p></div>
+    <div class="card"><h3>Intervalo em pílula</h3><p>“set – nov” ao lado do campo. Abre uma folha com atalhos e um calendário de dia a dia. A pílula lembra o último intervalo usado.</p></div>
+    <div class="card"><h3>Tile = frase + gráfico</h3><p>Como na Leitura de hoje: cada tile diz uma frase (“As sextas pesam.”) e mostra o gráfico pequeno. A frase é o que se lê; o gráfico, o que se confere.</p></div>
+    <div class="card"><h3>Detalhe com opções</h3><p>Tocar num tile abre em tela cheia. Só aparecem as opções que fazem sentido para aquele gráfico: agrupar, métrica, grão, comparar, separar.</p></div>
+    <div class="card"><h3>Separar os chips</h3><p>Como o filtro é OU, “padaria ou Delivery” soma tudo. <b>Separar</b> mostra cada chip como série (linhas) ou como pequeno múltiplo (mapas), lado a lado.</p></div>
+  </div>
+</section>
+
+<section id="grade">
+  <div class="kick">2 · Grade</div>
+  <h2>Pequenos múltiplos, <em>metade e inteira</em></h2>
+  <p class="muted">Todos os frames são vivos: role a grade, toque num tile, num chip ou na pílula. Dados de mentira de março a 6 de novembro de 2026; hoje é sex, 6 nov.</p>
+  <div class="shots">
+    <figure class="shot"><div class="ph" data-frame="grade"></div><figcaption><b>Grade · 3 meses</b>Abre no último intervalo usado. Tiles inteiros para o que corre no tempo (acumulado, calendário, lugares, fluxo); meios para o que cabe num relance. A História fica no segundo tile, à esquerda: perto do topo, mas sem ser aba.</figcaption></figure>
+    <figure class="shot"><div class="ph" data-frame="mes"></div><figcaption><b>Grade · este mês, dia 6</b>Com pouco mês, os tiles não fingem padrão: o calendário mostra os dias que faltam só no contorno, e o acumulado traz o ritmo ideal até o fim do mês, com o “hoje” marcado.</figcaption></figure>
+    <figure class="shot"><div class="ph" data-frame="grade2"></div><figcaption><b>Grade · rolada</b>Dia da semana × semana do mês e ranking dividem a linha; faixas de valor e previstos vs variável também. Cada tile diz uma frase antes do gráfico, como na Leitura de hoje.</figcaption></figure>
+    <figure class="shot"><div class="ph" data-frame="grade3"></div><figcaption><b>Grade · fim</b>Lugares de sempre (vezes × valor médio) e o fluxo verba → marcador ocupam a largura toda: precisam de rótulo para serem lidos.</figcaption></figure>
+  </div>
+</section>
+
+<section id="filtro">
+  <div class="kick">3 · Filtro e intervalo</div>
+  <h2>Digitar, escolher, <em>virar chip</em></h2>
+  <p class="muted">Tocar no campo expande o cabeçalho; a grade dá lugar às sugestões, em seções por tipo. Cada linha diz quantas vezes e quanto no intervalo, para escolher olhando o efeito.</p>
+  <div class="shots">
+    <figure class="shot"><div class="ph" data-frame="busca"></div><figcaption><b>Sugestões · “pa”</b>Busca sem acento e sem caixa em verbas, marcadores, lugares (apelidos) e avisos (fontes e texto do banco). O trecho que bate fica sublinhado em argila. Enter escolhe a primeira.</figcaption></figure>
+    <figure class="shot"><div class="ph" data-frame="chips"></div><figcaption><b>Três chips, ligados por OU</b>De volta à grade, os chips cabem numa linha (“+1” quando não cabem). Tudo reage: a soma no topo conta cada lançamento uma vez. Com 2 ou mais chips aparece <i>Separar</i>.</figcaption></figure>
+    <figure class="shot"><div class="ph" data-frame="periodo"></div><figcaption><b>Intervalo · personalizado</b>Atalhos em cima (seguem o mês de Ajustes), De e Até, e um calendário: o primeiro toque marca o início, o segundo o fim. O botão diz o intervalo e quantos dias.</figcaption></figure>
+  </div>
+</section>
+
+<section id="detalhe">
+  <div class="kick">4 · Detalhe</div>
+  <h2>Tela cheia: <em>opções, recorte, lançamentos</em></h2>
+  <p class="muted">O cabeçalho do filtro continua em cima; abaixo, a frase, a barra de opções do gráfico, o gráfico grande e a lista. Arrastar num gráfico de tempo recorta o intervalo; tocar numa marca abre “Usar como filtro”.</p>
+  <div class="shots">
+    <figure class="shot"><div class="ph" data-frame="d-acum"></div><figcaption><b>Acumulado · separado e recortado</b>Uma linha por chip, nas cores que cada chip ganhou ao entrar. O intervalo anterior em fio. O recorte de 12 a 18 out filtra a lista e oferece “Usar como intervalo”. Sem ritmo ideal: com marcador ou lugar no filtro, não há cota para medir.</figcaption></figure>
+    <figure class="shot"><div class="ph" data-frame="d-rank"></div><figcaption><b>Ranking · por marcador, comparado</b>Agrupar troca a régua da fila; o traço em fio é o intervalo anterior e a diferença vem em %. Tocar numa linha abre a folha: quanto, quantas vezes e “Usar como filtro”, que entra com OU.</figcaption></figure>
+    <figure class="shot"><div class="ph" data-frame="d-cal"></div><figcaption><b>Calendário · um mapa por chip</b>Mapas de calor não sobrepõem séries: separar vira pequenos múltiplos, na mesma escala. Previstos ficam fora por padrão (o aluguel apagaria o resto); “Com previstos” os traz.</figcaption></figure>
+    <figure class="shot"><div class="ph" data-frame="d-mes"></div><figcaption><b>Mês a mês · agrupado por verba</b>Agrupar em gráfico de tempo não empilha cores: vira uma fileira por verba, na mesma escala. No grão semana ou dia dá para arrastar o recorte.</figcaption></figure>
+    <figure class="shot"><div class="ph" data-frame="d-lug"></div><figcaption><b>Lugares de sempre</b>Vezes × valor médio, em escala log. Em cima à direita, o que pesa sempre; embaixo à direita, o miúdo frequente (a padaria). Tocar num ponto usa o lugar como filtro.</figcaption></figure>
+    <figure class="shot"><div class="ph" data-frame="d-fluxo"></div><figcaption><b>Fluxo verba → marcador</b>De onde sai e para onde vai. Lançamento com dois marcadores divide o valor entre eles, para o fluxo somar o total. “Para” troca marcador por lugar.</figcaption></figure>
+  </div>
+</section>
+
+<section id="historia">
+  <div class="kick">5 · História</div>
+  <h2>O intervalo <em>em frases</em></h2>
+  <p class="muted">A História continua, agora como tile (as três primeiras frases) que abre em tela cheia. As frases seguem o filtro e o intervalo; cada uma leva ao detalhe do gráfico que a sustenta. Embaixo, a linha do tempo semana a semana.</p>
+  <div class="shots">
+    <figure class="shot"><div class="ph" data-frame="hist"></div><figcaption><b>História · 3 meses, sem filtro</b>Até oito frases numa ordem fixa; uma frase só aparece quando tem algo a dizer. “A caminho” fica fora das contas, numa linha própria.</figcaption></figure>
+    <figure class="shot"><div class="ph" data-frame="hist-f"></div><figcaption><b>História · com filtro</b>Com padaria ou Delivery ou Café Pinheiros, as frases falam do grupo. Sem cota a medir, a frase de ritmo sai e entra a do intervalo anterior.</figcaption></figure>
+  </div>
+</section>
+
+<section id="catalogo">
+  <div class="kick">6 · Catálogo de tiles</div>
+  <h2>Cada tile responde <em>uma</em> pergunta</h2>
+  <div class="tblw"><table>
+    <thead><tr><th>Tile</th><th>Pergunta</th><th>Forma</th><th>No detalhe</th></tr></thead>
+    <tbody>
+      <tr><td class="t">Acumulado</td><td>Estou no ritmo?</td><td>Linha do gasto variável acumulado; ritmo ideal tracejado (só quando os chips são verbas, ou sem chips); intervalo anterior em fio quando não há ritmo</td><td>Métrica soma · contagem; comparar; separar; recorte arrastando</td></tr>
+      <tr><td class="t">História</td><td>O que aconteceu?</td><td>Três frases</td><td>Tela cheia com todas as frases e a linha do tempo</td></tr>
+      <tr><td class="t">Mês a mês</td><td>Este mês é normal?</td><td>Barras dos últimos 6 meses; fora do intervalo em tom fraco</td><td>Grão dia · semana · mês; agrupar (fileiras); métrica; separar; recorte</td></tr>
+      <tr><td class="t">Calendário</td><td>Que dias pesam?</td><td>Mapa de calor estilo GitHub, uma coluna por semana, vários meses</td><td>Métrica; com previstos; separar (mapas lado a lado); tocar no dia</td></tr>
+      <tr><td class="t">Semana do mês</td><td>Há um padrão no mês?</td><td>Dia da semana × semana do mês, média por dia</td><td>Totais nas margens; métrica; separar</td></tr>
+      <tr><td class="t">Ranking</td><td>Para onde foi?</td><td>Barras horizontais, as 4 primeiras</td><td>Agrupar verba · marcador · lugar · aviso; métrica; comparar; tocar = usar como filtro</td></tr>
+      <tr><td class="t">Lugares de sempre</td><td>Onde volto sempre?</td><td>Dispersão: vezes × valor médio (log)</td><td>Rótulos de todos com 4+ vezes; tocar = usar como filtro</td></tr>
+      <tr><td class="t">Faixas de valor</td><td>Gasto muito miúdo ou pouco graúdo?</td><td>Histograma do valor do lançamento, 6 faixas</td><td>Métrica contagem · soma; separar; tocar na faixa filtra a lista</td></tr>
+      <tr><td class="t">Previstos e variável</td><td>Quanto já vem marcado?</td><td>Barras empilhadas por mês: previstos lançados em tinta 3, variável em tinta, em aberto tracejado</td><td>Lista dos previstos com o que falta “a caminho”</td></tr>
+      <tr><td class="t">Fluxo</td><td>Como cada verba se divide?</td><td>Fluxo verba → marcador (ou lugar), 6 destinos + outros</td><td>Para marcador · lugar; tocar = usar como filtro</td></tr>
+    </tbody>
+  </table></div>
+  <p class="muted">Cores: verbas mantêm a cor de série do app (c1–c6) no ranking e no fluxo; tudo que não é identidade fica em tinta. Mapas de calor usam a rampa de argila s1–s4, com “cada degrau ≈ R$ x”. Ritmo ideal é sempre tracejado; previstos seguem a régua (tinta 3 lançado, tracejado em aberto).</p>
+</section>
+
+<section id="regras">
+  <div class="kick">7 · Regras do filtro</div>
+  <h2>Quatro tipos, <em>um conector</em></h2>
+  <div class="tblw"><table>
+    <thead><tr><th>Chip</th><th>Bate quando</th><th>Exemplo</th></tr></thead>
+    <tbody>
+      <tr><td class="t">Verba</td><td>a verba do lançamento é esta</td><td>Delivery</td></tr>
+      <tr><td class="t">Marcador</td><td>o lançamento tem este marcador entre os seus</td><td>padaria</td></tr>
+      <tr><td class="t">Lugar</td><td>o estabelecimento (apelido, senão texto do banco) é este</td><td>Café Pinheiros</td></tr>
+      <tr><td class="t">Aviso</td><td>o recado que virou o lançamento veio desta fonte, ou trouxe este texto do banco</td><td>Cartão Ipê · “PAG*PADARIAZE”</td></tr>
+    </tbody>
+  </table></div>
+  <ul style="padding-left:20px;max-width:48em;font-size:16px">
+    <li>Entre chips, sempre OU. Lançamento que bate em dois chips conta <b>uma vez</b> no total do topo; com Separar, aparece nas duas séries.</li>
+    <li>A cor de Separar é dada quando o chip entra e não muda quando outro sai. Chip de verba usa a cor da verba; os outros, a primeira cor livre.</li>
+    <li>O intervalo não é chip: é a pílula. “Usar como intervalo” (recorte, dia, mês) troca a pílula para personalizado.</li>
+    <li>As opções escolhidas no detalhe (agrupar por marcador, métrica) ficam no tile, até mudar de novo.</li>
+  </ul>
+</section>
+
+<section id="perguntas">
+  <div class="kick">8 · Perguntas</div>
+  <h2>Em aberto</h2>
+  <ol class="qs">
+    <li><b>“Aviso”</b> não está no glossário (lá há fonte e recado). Manter “aviso” no tipo do chip e no texto da busca, ou trocar por “fonte” e mostrar o texto do banco como lugar?</li>
+    <li><b>Só OU basta?</b> Sem NÃO, não dá para ver “Casa sem o aluguel”. Vale um toque longo no chip para “tirar”, ou fica para depois?</li>
+    <li><b>Ritmo ideal com filtro.</b> Só existe quando os chips são verbas (há cota). Com marcador, o acumulado compara com o intervalo anterior. Faz sentido?</li>
+    <li><b>Cores de Separar</b> reusam c1–c6, as mesmas das verbas. Um marcador pode sair azul como Mercado. Aceitável, ou Separar usa só tinta com padrões?</li>
+    <li><b>Densidade.</b> Dez tiles é muito para a primeira vez? Esconder ou reordenar tiles (toque longo) entra agora?</li>
+    <li><b>“Lugares de sempre”.</b> O pedido dizia “lugares recorrentes”, mas “recorrente” está em Evitar (é do Previsto). Bom nome?</li>
+    <li><b>“Intervalo” e não “período”.</b> O glossário põe “período” em Evitar (para o Mês). O mock usa “intervalo” para o recorte de datas livre e deixa “mês” para o Mês do app. Bom assim?</li>
+    <li><b>Marcadores múltiplos.</b> No ranking, o lançamento conta inteiro em cada marcador (como hoje); no fluxo, divide. Unificar?</li>
+  </ol>
+</section>
+</div>
+<button id="tema" type="button">Escuro</button>
+<div id="tip"></div>
+
+<script>
+/* ================= utilities ================= */
+const TODAY='2026-11-06', DATA_START='2026-03-01';
+const NB=' ';
+const MES=['jan','fev','mar','abr','mai','jun','jul','ago','set','out','nov','dez'];
+const MESL=['janeiro','fevereiro','março','abril','maio','junho','julho','agosto','setembro','outubro','novembro','dezembro'];
+const DS=['dom','seg','ter','qua','qui','sex','sáb'];
+const DSP=['domingos','segundas','terças','quartas','quintas','sextas','sábados'];
+const DI=['D','S','T','Q','Q','S','S'];
+const D=s=>{const[y,m,d]=s.split('-').map(Number);return new Date(Date.UTC(y,m-1,d));};
+const iso=dt=>dt.toISOString().slice(0,10);
+const addDays=(s,n)=>{const d=D(s);d.setUTCDate(d.getUTCDate()+n);return iso(d);};
+const diffDays=(a,b)=>Math.round((D(b)-D(a))/864e5);
+const dow=s=>D(s).getUTCDay();
+const dim=m=>{const[y,mm]=m.split('-').map(Number);return new Date(Date.UTC(y,mm,0)).getUTCDate();};
+const mAdd=(m,n)=>{let[y,mm]=m.split('-').map(Number);mm+=n;while(mm>12){mm-=12;y++}while(mm<1){mm+=12;y--}return y+'-'+String(mm).padStart(2,'0');};
+const range=(a,b)=>{const r=[];for(let d=a;d<=b;d=addDays(d,1))r.push(d);return r;};
+const fmtD=s=>`${+s.slice(8)}${NB}${MES[+s.slice(5,7)-1]}`;
+const fmtDW=s=>`${DS[dow(s)]}, ${fmtD(s)}`;
+const grp=n=>String(n).replace(/\B(?=(\d{3})+(?!\d))/g,'.');
+const money=c=>{const neg=c<0;c=Math.abs(Math.round(c));return(neg?'−':'')+'R$'+NB+grp(Math.floor(c/100))+','+String(c%100).padStart(2,'0');};
+const money0=c=>'R$'+NB+grp(Math.round(c/100));
+const axisM=c=>{const r=c/100;if(r>=1000){const k=r/1000;return(Number.isInteger(k)?k:k.toFixed(1).replace('.',','))+' mil';}return String(Math.round(r));};
+const pct=(a,b)=>b?Math.round(a/b*100):0;
+const norm=s=>s.normalize('NFD').replace(/[̀-ͯ]/g,'').toLowerCase();
+const esc=s=>String(s).replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/"/g,'&quot;');
+const nice=v=>{if(v<=0)return 1;const e=10**Math.floor(Math.log10(v)),m=v/e;return(m<=1?1:m<=2?2:m<=2.5?2.5:m<=5?5:10)*e;};
+const ico=(id,cls='')=>`<svg class="ico ${cls}"><use href="#i-${id}"/></svg>`;
+const cap=s=>s.charAt(0).toUpperCase()+s.slice(1);
+const NUMW=['zero','uma','duas','três','quatro','cinco'];
+
+/* ================= fake data ================= */
+function rng(seed){return()=>{seed|=0;seed=seed+0x6D2B79F5|0;let t=Math.imul(seed^seed>>>15,1|seed);t=t+Math.imul(t^t>>>7,61|t)^t;return((t^t>>>14)>>>0)/4294967296;};}
+const R=rng(20261106);
+const rb=(a,b)=>Math.round((a+(b-a)*R())*100);
+const COTA={Mercado:130000,Delivery:40000,Casa:270000,Transporte:65000,Lazer:60000,'Saúde':40000};
+const PREVM={Casa:231990,'Saúde':12990,Lazer:3990};
+const VCOL={Mercado:'var(--c1)',Delivery:'var(--c2)',Casa:'var(--c3)',Transporte:'var(--c4)',Lazer:'var(--c5)','Saúde':'var(--c6)'};
+const L={
+ 'Padaria do Zé':['Mercado','PagFácil','PAG*PADARIAZE'],
+ 'Feira de sábado':['Mercado','Banco Aurora','PIX JOAO B FEIRANTE'],
+ 'Pão de Açúcar':['Mercado','Cartão Ipê','PAO DE ACUCAR 1123'],
+ 'Hortifruti Ipê':['Mercado','Cartão Ipê','HORTIFRUTI IPE'],
+ 'iFood':['Delivery','Cartão Ipê','IFD*IFOOD.COM'],
+ 'Rappi':['Delivery','PagFácil','RAPPI*BR'],
+ 'Uber':['Transporte','Cartão Ipê','UBER *TRIP'],
+ 'Posto Shell':['Transporte','Banco Aurora','SHELL BOX 0442'],
+ 'Bar do Seu Jorge':['Lazer','Cartão Ipê','BAR SEU JORGE'],
+ 'Cinemark':['Lazer','PagFácil','CINEMARK*ELDORADO'],
+ 'Café Pinheiros':['Lazer','PagFácil','PAG*CAFEPINHEIROS'],
+ 'Livraria Cultura':['Lazer','Cartão Ipê','LIVRARIA CULTURA'],
+ 'Drogasil':['Saúde','Cartão Ipê','DROGASIL 2231'],
+ 'Leroy Merlin':['Casa','Cartão Ipê','LEROY MERLIN SP'],
+ 'Imobiliária Centro':['Casa','Banco Aurora','PIX IMOB CENTRO'],
+ 'Vivo Fibra':['Casa','Cartão Ipê','VIVO FIBRA'],
+ 'Enel':['Casa','Banco Aurora','ENEL SP'],
+ 'Smart Fit':['Saúde','Banco Aurora','SMARTFIT'],
+ 'Netflix':['Lazer','Cartão Ipê','NETFLIX.COM'],
+};
+const TX=[];let nid=0;
+function add(date,lugar,v,tags,x={}){const l=L[lugar];TX.push({id:nid++,date,lugar,v,tags,verba:l[0],fonte:l[1],banco:l[2],...x});}
+let shell='2026-03-04';
+for(let d=DATA_START;d<=TODAY;d=addDays(d,1)){
+  const w=dow(d),day=+d.slice(8),wk=w>=1&&w<=5;
+  if(R()<(wk?.42:.62))add(d,'Padaria do Zé',rb(7,32),R()<.3?['padaria','café']:['padaria']);
+  if(w===6&&R()<.85)add(d,'Feira de sábado',rb(42,96),['feira']);
+  if(w===0&&R()<.72)add(d,'Pão de Açúcar',rb(130,340),['supermercado']);else if(R()<.07)add(d,'Pão de Açúcar',rb(28,90),['supermercado']);
+  if(R()<.09)add(d,'Hortifruti Ipê',rb(24,70),['feira']);
+  if((w===5||w===6)&&R()<(d.slice(5,7)==='10'?.85:.58))add(d,R()<.8?'iFood':'Rappi',rb(42,118),['jantar']);else if(R()<.1)add(d,'iFood',rb(26,55),['almoço']);
+  if(R()<(wk?.36:.28))add(d,'Uber',rb(12,44),['uber']);
+  if(d===shell){add(d,'Posto Shell',rb(190,262),['gasolina']);shell=addDays(d,11+Math.floor(R()*4));}
+  if(w===5&&R()<.45)add(d,'Bar do Seu Jorge',rb(55,165),['bar']);
+  if(R()<(w===0||w===6?.14:.03))add(d,'Cinemark',rb(46,98),['cinema']);
+  if(wk&&R()<.3)add(d,'Café Pinheiros',rb(9,26),['café']);
+  if(R()<.065)add(d,'Drogasil',rb(18,140),['farmácia']);
+  if(R()<.025)add(d,'Leroy Merlin',rb(40,380),['reforma']);
+  if(day===5)add(d,'Imobiliária Centro',200000,['aluguel'],{prev:'Aluguel'});
+  if(day===8)add(d,'Smart Fit',12990,['academia'],{prev:'Academia'});
+  if(day===10)add(d,'Vivo Fibra',11990,['internet'],{prev:'Internet'});
+  if(day===12)add(d,'Enel',rb(140,225),['luz'],{prev:'Conta de luz'});
+  if(day===15)add(d,'Netflix',3990,['assinatura'],{prev:'Streaming'});
+}
+add('2026-09-19','Livraria Cultura',28900,['presente'],{leg:'Presente da Ana'});
+add('2026-10-24','Leroy Merlin',41250,['reforma'],{leg:'Torneira e sifão'});
+TX.sort((a,b)=>a.date<b.date?-1:a.date>b.date?1:a.id-b.id);
+const OPEN=[
+ {date:'2026-11-08',v:12990,lugar:'Smart Fit',verba:'Saúde',tags:['academia'],fonte:'Banco Aurora',banco:'SMARTFIT',prev:'Academia'},
+ {date:'2026-11-10',v:11990,lugar:'Vivo Fibra',verba:'Casa',tags:['internet'],fonte:'Cartão Ipê',banco:'VIVO FIBRA',prev:'Internet'},
+ {date:'2026-11-12',v:18000,lugar:'Enel',verba:'Casa',tags:['luz'],fonte:'Banco Aurora',banco:'ENEL SP',prev:'Conta de luz'},
+ {date:'2026-11-15',v:3990,lugar:'Netflix',verba:'Lazer',tags:['assinatura'],fonte:'Cartão Ipê',banco:'NETFLIX.COM',prev:'Streaming'},
+];
+const VERBAS=Object.keys(COTA);
+const TAGS=[...new Set(TX.flatMap(t=>t.tags))];
+const LUGS=[...new Set(TX.map(t=>t.lugar))];
+const FONTES=[...new Set(TX.map(t=>t.fonte))];
+const BANCOS=[...new Set(TX.map(t=>t.banco))];
+
+/* ================= filter model ================= */
+function matchChip(t,c){switch(c.t){case'verba':return t.verba===c.v;case'marcador':return t.tags.includes(c.v);case'lugar':return t.lugar===c.v;case'aviso':return c.sub==='fonte'?t.fonte===c.v:t.banco===c.v;}return false;}
+function sel(st,o={}){const from=o.from||st.from,to=o.to||st.to,chips=o.chips||st.chips;return TX.filter(t=>t.date>=from&&t.date<=to&&(!chips.length||chips.some(c=>matchChip(t,c))));}
+const chipLabel=c=>c.t==='aviso'&&c.sub==='texto'?`“${c.v}”`:c.v;
+const chipIco=c=>({verba:'verba',marcador:'marcador',lugar:'lugar',aviso:'recado'})[c.t];
+const CPAL=['var(--c1)','var(--c2)','var(--c3)','var(--c4)','var(--c5)','var(--c6)'];
+function mkChip(st,t,v,sub){let color;if(t==='verba')color=VCOL[v];else{const used=st.chips.map(c=>c.color);color=CPAL.find(c=>!used.includes(c))||'var(--c0)';}return{t,v,sub,color};}
+const PRESETS=[['mes','Este mês'],['ant','Mês passado'],['3m','3 meses'],['6m','6 meses'],['pers','Personalizado']];
+function presetRange(p){const m=TODAY.slice(0,7);if(p==='mes')return[m+'-01',m+'-'+dim(m)];if(p==='ant'){const a=mAdd(m,-1);return[a+'-01',a+'-'+dim(a)];}if(p==='3m')return[mAdd(m,-2)+'-01',m+'-'+dim(m)];if(p==='6m')return[mAdd(m,-5)+'-01',m+'-'+dim(m)];return null;}
+function rangeLabel(f,t){const fm=f.slice(0,7),tm=t.slice(0,7),wf=f.slice(8)==='01',wt=+t.slice(8)===dim(tm);
+  if(fm===tm&&wf&&wt)return MESL[+fm.slice(5)-1];
+  if(fm===tm)return `${+f.slice(8)}–${+t.slice(8)}${NB}${MES[+fm.slice(5)-1]}`;
+  if(wf&&wt)return `${MES[+fm.slice(5)-1]} – ${MES[+tm.slice(5)-1]}`;
+  return `${fmtD(f)} – ${fmtD(t)}`;}
+const relVerbas=st=>!st.chips.length?VERBAS:st.chips.every(c=>c.t==='verba')?st.chips.map(c=>c.v):null;
+function idealCum(st,days){const vs=relVerbas(st);if(!vs)return null;let s=0;return days.map(d=>{const m=d.slice(0,7);let daily=0;vs.forEach(v=>daily+=(COTA[v]-(PREVM[v]||0))/dim(m));return s+=daily;});}
+
+const DEF={acum:{metric:'soma',cmp:false},cal:{metric:'soma',prev:false},sem:{metric:'soma'},mes:{metric:'soma',gran:'mês',group:'—'},rank:{group:'verba',metric:'soma',cmp:false},faixa:{metric:'contagem'},lug:{},fluxo:{to:'marcador'},prev:{},hist:{}};
+const wo=(st,w)=>Object.assign({},DEF[w],st.wo[w]||{});
+const mval=(rows,m)=>m==='contagem'?rows.length:m==='ticket médio'?(rows.length?rows.reduce((a,t)=>a+t.v,0)/rows.length:0):rows.reduce((a,t)=>a+t.v,0);
+const mfmt=(v,m)=>m==='contagem'?`${v}${v===1?' lançamento':' lançamentos'}`:m==='ticket médio'?money(v):money0(v);
+const sum=rs=>rs.reduce((a,t)=>a+t.v,0);
+
+function ctxOf(st){const rows=sel(st);const days=range(st.from,st.to);const past=days.filter(d=>d<=TODAY);
+  const split=st.split&&st.chips.length>1;
+  const ser=split?st.chips.map(c=>({name:chipLabel(c),color:c.color,chip:c,rows:rows.filter(t=>matchChip(t,c))})):[{name:'Filtro',color:'var(--tinta)',rows}];
+  return{st,rows,days,past,ser,split};}
+
+/* ================= widgets ================= */
+const WD={
+ acum:{title:'Acumulado',size:'full',rows:[['metric',['soma','contagem']]],tog:['cmp','split'],brush:true},
+ hist:{title:'História',size:'half'},
+ mes:{title:'Mês a mês',size:'half',rows:[['gran',['dia','semana','mês']],['metric',['soma','contagem','ticket médio']],['group',['—','verba','marcador','lugar','aviso']]],tog:['split'],brush:true},
+ cal:{title:'Calendário',size:'full',rows:[['metric',['soma','contagem']]],tog:['prev','split']},
+ sem:{title:'Semana do mês',size:'half',rows:[['metric',['soma','contagem']]],tog:['split']},
+ rank:{title:'Ranking',size:'half',rows:[['group',['verba','marcador','lugar','aviso']],['metric',['soma','contagem','ticket médio']]],tog:['cmp']},
+ lug:{title:'Lugares de sempre',size:'full'},
+ faixa:{title:'Faixas de valor',size:'half',rows:[['metric',['contagem','soma']]],tog:['split']},
+ prev:{title:'Previstos e variável',size:'half'},
+ fluxo:{title:'Fluxo',size:'full',rows:[['to',['marcador','lugar']]]},
+};
+const ORDER=['acum','hist','mes','cal','sem','rank','lug','faixa','prev','fluxo'];
+const OL={metric:'Métrica',gran:'Grão',group:'Agrupar',to:'Para'};
+const TL={cmp:'Comparar com intervalo anterior',split:'Separar filtros',prev:'Com previstos'};
+
+/* ---------- acumulado ---------- */
+function acumData(c){const{st,days}=c,o=wo(st,'acum'),cnt=o.metric==='contagem';
+  const cum=(rs,ds)=>{const by={};rs.forEach(t=>{if(!t.prev)by[t.date]=(by[t.date]||0)+(cnt?1:t.v)});let s=0;return ds.map(d=>d>TODAY?null:(s+=by[d]||0));};
+  const len=days.length,pf=addDays(st.from,-len),pt=addDays(st.from,-1);
+  const prevRows=pf>=DATA_START?sel(st,{from:pf,to:pt}):null;
+  return{o,cnt,lines:c.ser.map(s=>({...s,ys:cum(s.rows,days)})),total:cum(c.rows,days),ideal:cnt?null:idealCum(st,days),prevYs:prevRows?cum(prevRows,range(pf,pt)):null,ti:c.past.length-1};}
+function sAcum(c){const a=acumData(c),i=a.ti;if(i<0)return'O intervalo ainda não começou.';const v=a.total[i];const past=c.st.to<TODAY;
+  if(a.ideal){const d=v-a.ideal[i];const p=past?'Fechou ':'';if(Math.abs(d)<100)return p+'No ritmo ideal.';return d<0?`${p}${money0(-d)} abaixo do ritmo ideal.`:`${p}${money0(d)} acima do ritmo ideal.`;}
+  if(a.prevYs){const d=v-a.prevYs[i];const u=a.cnt?n=>`${Math.abs(n)} lançamentos`:n=>money0(Math.abs(n));return d>=0?`${u(d)} a mais que no intervalo anterior, até aqui.`:`${u(d)} a menos que no intervalo anterior, até aqui.`;}
+  return `${money0(v)} até aqui.`;}
+function wAcum(c,big){const a=acumData(c),{days}=c,len=days.length;
+  const W=316,H=big?210:84,pl=big?34:2,pr=big?8:46,pt=8,pb=big?20:4;
+  const showPrev=big?a.o.cmp||!a.ideal:!a.ideal;
+  let mx=1;[...a.lines.map(l=>l.ys),a.ideal,showPrev&&a.prevYs].forEach(arr=>arr&&arr.forEach(v=>{if(v>mx)mx=v}));mx=nice(mx);
+  const X=i=>pl+i*(W-pl-pr)/Math.max(1,len-1),Y=v=>pt+(H-pt-pb)*(1-v/mx);
+  const path=ys=>{let p='',on=false;ys.forEach((v,i)=>{if(v==null||i>=len){on=false;return;}p+=(on?'L':'M')+X(i).toFixed(1)+' '+Y(v).toFixed(1);on=true;});return p;};
+  let g='';
+  if(big){[0,.5,1].forEach(k=>{const y=Y(mx*k);g+=`<line x1="${pl}" x2="${W-pr}" y1="${y}" y2="${y}" style="stroke:var(--fio)"/><text x="${pl-5}" y="${y+3.5}" text-anchor="end" style="fill:var(--tinta-3);font-size:10px">${a.cnt?Math.round(mx*k):axisM(mx*k)}</text>`;});
+    xLabels(days,X,H-5).forEach(l=>g+=l);
+  }else g+=`<line x1="${pl}" x2="${W-pr}" y1="${H-pb}" y2="${H-pb}" style="stroke:var(--fio)"/>`;
+  if(a.ti>=0&&a.ti<len-1){const x=X(a.ti);g+=`<line x1="${x}" x2="${x}" y1="${pt-4}" y2="${H-pb}" style="stroke:var(--fio-forte);stroke-width:1"/><text x="${x}" y="${pt-5}" text-anchor="middle" style="fill:var(--tinta-3);font-size:9.5px">hoje</text>`;}
+  if(big&&c.st.brush){const[b0,b1]=c.st.brush;const i0=Math.max(0,diffDays(days[0],b0)),i1=Math.min(len-1,diffDays(days[0],b1));if(i1>=i0)g+=`<rect x="${X(i0)-2}" y="${pt}" width="${X(i1)-X(i0)+4}" height="${H-pt-pb}" style="fill:var(--anil-fundo)"/>`;}
+  if(a.ideal)g+=`<path d="${path(a.ideal)}" style="fill:none;stroke:var(--tinta-3);stroke-width:1.5;stroke-dasharray:4 3"/>`;
+  if(showPrev&&a.prevYs)g+=`<path d="${path(a.prevYs)}" style="fill:none;stroke:var(--fio-forte);stroke-width:1.5"/>`;
+  a.lines.forEach(l=>{g+=`<path d="${path(l.ys)}" style="fill:none;stroke:${l.color};stroke-width:2;stroke-linejoin:round"/>`;});
+  // end labels
+  const ends=a.lines.map(l=>{const i=Math.min(a.ti,len-1);return{l,i,v:l.ys[i]};}).filter(e=>e.i>=0);
+  ends.forEach(e=>{g+=`<circle cx="${X(e.i)}" cy="${Y(e.v)}" r="3.5" style="fill:${e.l.color};stroke:var(--folha);stroke-width:2"/>`;});
+  if(!c.split&&ends[0]){const e=ends[0];const tx=big?Math.min(X(e.i),W-pr-2):X(e.i)-5;g+=`<text x="${tx}" y="${Y(e.v)-8}" text-anchor="end" style="fill:var(--tinta);font-size:11px;font-weight:600">${a.cnt?e.v:money0(e.v)}</text>`;}
+  if(!big&&a.ideal){const v=a.ideal[len-1];g+=`<text x="${X(len-1)+6}" y="${Y(v)+4}" style="fill:var(--tinta-3);font-size:10px">${money0(v)}</text>`;}
+  // hover columns
+  const step=(W-pl-pr)/Math.max(1,len-1);
+  if(big)days.forEach((d,i)=>{if(d>TODAY)return;const parts=a.lines.map(l=>`${c.split?l.name+': ':''}${a.cnt?l.ys[i]:money0(l.ys[i])}`).join(' · ');const id=a.ideal?` · ritmo ideal ${money0(a.ideal[i])}`:'';g+=`<rect x="${X(i)-step/2}" y="${pt}" width="${step}" height="${H-pt-pb}" style="fill:transparent" data-tip="${esc(fmtDW(d)+': '+parts+id)}"/>`;});
+  const br=big?` data-brush="1" data-d0="${days[0]}" data-n="${len}" data-step="1" data-x0="${pl}" data-x1="${W-pr}" data-w="${W}" data-pt="${pt}" data-h="${H-pt-pb}"`:'';
+  const svg=`<svg class="ch" viewBox="0 0 ${W} ${H}"${br}>${g}</svg>`;
+  let lg='';
+  if(big){lg='<div class="lg">'+a.lines.map(l=>`<span><i class="ln" style="border-color:${l.color}"></i>${c.split?esc(l.name):a.cnt?'lançamentos':'gasto variável'}</span>`).join('')+(a.ideal?'<span><i class="ln dash"></i>ritmo ideal</span>':'')+(showPrev&&a.prevYs?'<span><i class="ln" style="border-color:var(--fio-forte);border-top-width:1.5px"></i>intervalo anterior</span>':'')+'</div>';}
+  else lg=`<div class="mlg"><span><i class="ln"></i>${c.split?'um traço por filtro':'gasto variável'}</span>${a.ideal?'<span><i class="ln dash"></i>ritmo ideal</span>':''}${showPrev&&a.prevYs?'<span><i class="ln prevl"></i>intervalo anterior</span>':''}</div>`;
+  return svg+lg;}
+function xLabels(days,X,y){const len=days.length,out=[];const t=(x,s,anch='middle')=>`<text x="${x}" y="${y}" text-anchor="${anch}" style="fill:var(--tinta-3);font-size:10px">${s}</text>`;
+  if(len>45){days.forEach((d,i)=>{if(d.slice(8)==='01')out.push(t(X(i),MES[+d.slice(5,7)-1],'start'));});}
+  else if(len>10){days.forEach((d,i)=>{if(i%7===0)out.push(t(X(i),fmtD(d),i===0?'start':'middle'));});}
+  else days.forEach((d,i)=>out.push(t(X(i),+d.slice(8))));
+  return out;}
+
+/* ---------- calendário ---------- */
+function dayVals(rows,days,o){const by={};rows.forEach(t=>{if(t.prev&&!o.prev)return;by[t.date]=(by[t.date]||0)+(o.metric==='contagem'?1:t.v)});return by;}
+const LV=['var(--folha-2)','var(--s1)','var(--s2)','var(--s3)','var(--s4)'];
+function sCal(c){const o=wo(c.st,'cal');const by=dayVals(c.rows,c.days,o);const past=c.past;if(past.length<7)return `Com ${past.length} ${past.length===1?'dia':'dias'} só, ainda não dá para dizer que dia pesa.`;
+  const s=[0,0,0,0,0,0,0],n=[0,0,0,0,0,0,0];past.forEach(d=>{s[dow(d)]+=by[d]||0;n[dow(d)]++});const mean=s.map((v,i)=>n[i]?v/n[i]:0);const all=s.reduce((a,b)=>a+b,0)/past.length;
+  const w=mean.indexOf(Math.max(...mean));if(mean[w]<all*1.25)return'Nenhum dia da semana pesa.';return `${w===0||w===6?'Os':'As'} ${DSP[w]} pesam.`;}
+function heat(c,rows,big,mx){const{days}=c,o=wo(c.st,'cal');const by=dayVals(rows,days,o);
+  const start=addDays(days[0],-dow(days[0]));const nW=Math.ceil((diffDays(start,days[days.length-1])+1)/7);
+  const W=316,lab=14,top=13;const cs=Math.max(6,Math.min(big?30:20,Math.floor((W-lab)/nW)-2));
+  let g='';[1,3,5].forEach(r=>g+=`<text x="0" y="${top+r*(cs+2)+cs/2+3.5}" style="fill:var(--tinta-3);font-size:9px">${DI[r]}</text>`);
+  const step=mx/4||1;let lastM='';
+  days.forEach(d=>{const col=Math.floor(diffDays(start,d)/7),row=dow(d),x=lab+col*(cs+2),y=top+row*(cs+2);
+    const m=d.slice(0,7);if(m!==lastM){lastM=m;g+=`<text x="${x}" y="9" style="fill:var(--tinta-3);font-size:9.5px">${MES[+m.slice(5)-1]}</text>`;}
+    if(d>TODAY){g+=`<rect x="${x+.5}" y="${y+.5}" width="${cs-1}" height="${cs-1}" rx="2" style="fill:none;stroke:var(--fio)"/>`;return;}
+    const v=by[d]||0,lv=v?Math.min(4,Math.ceil(v/step)):0;
+    const tip=`${fmtDW(d)}: ${v?(o.metric==='contagem'?v+' lançamentos':money(v)):'sem gasto'}`;
+    g+=`<rect class="hit" x="${x}" y="${y}" width="${cs}" height="${cs}" rx="2" style="fill:${LV[lv]}" data-tip="${esc(tip)}" data-a="pickday" data-d="${d}"/>`;
+    if(d===TODAY)g+=`<rect x="${x-1.5}" y="${y-1.5}" width="${cs+3}" height="${cs+3}" rx="3" style="fill:none;stroke:var(--tinta);stroke-width:1.2"/>`;});
+  const H=top+7*(cs+2);return `<svg class="ch" viewBox="0 0 ${W} ${H}" style="max-height:${H*1.15}px">${g}</svg>`;}
+function heatLegend(mx,o){return `<div class="lg"><span>menos</span>${LV.map(c=>`<i style="width:11px;height:11px;border-radius:2px;background:${c}"></i>`).join('')}<span>mais</span><span>· cada degrau ≈ ${o.metric==='contagem'?Math.max(1,Math.round(mx/4))+' lançamentos':money0(mx/4)}</span></div>`;}
+function calMax(c,o){let mx=0;c.ser.forEach(s=>{const by=dayVals(s.rows,c.days,o);Object.values(by).forEach(v=>{if(v>mx)mx=v})});return mx;}
+function wCal(c,big){const o=wo(c.st,'cal');const mx=calMax(c,o);
+  if(big&&c.split)return '<div class="mult">'+c.ser.map(s=>`<div class="mh"><i class="sq" style="background:${s.color}"></i><b>${esc(s.name)}</b><span class="r">${money0(sum(s.rows))}</span></div>`+heat(c,s.rows,big,mx)).join('')+'</div>'+heatLegend(mx,o);
+  return heat(c,c.rows,big,big?mx:Math.max(...Object.values(dayVals(c.rows,c.days,o)),0))+(big?heatLegend(mx,o):'');}
+
+/* ---------- semana do mês ---------- */
+function semGrid(c,rows,o){const by=dayVals(rows,c.days,o);const s=[...Array(7)].map(()=>[0,0,0,0,0]),n=[...Array(7)].map(()=>[0,0,0,0,0]);
+  c.past.forEach(d=>{const w=dow(d),k=Math.min(4,Math.floor((+d.slice(8)-1)/7));s[w][k]+=by[d]||0;n[w][k]++;});
+  return s.map((r,w)=>r.map((v,k)=>n[w][k]?v/n[w][k]:null));}
+function sSem(c){const o=wo(c.st,'sem');const m=semGrid(c,c.rows,o);let b=-1,bw=0,bk=0;m.forEach((r,w)=>r.forEach((v,k)=>{if(v!=null&&v>b){b=v;bw=w;bk=k}}));if(b<=0)return'Nada lançado no intervalo.';if(c.past.length<14)return `${cap(DSP[bw])} da ${bk+1}ª semana, por enquanto.`;return `${cap(DSP[bw])} da ${bk+1}ª semana pesam.`;}
+function semSvg(c,m,big,mx){const W=big?316:144,lab=big?30:12,top=12,cw=big?44:Math.floor((W-lab)/5)-2,ch=big?24:11,mr=big?48:0;
+  let g='';const step=mx/4||1,o=wo(c.st,'sem');
+  for(let k=0;k<5;k++)g+=`<text x="${lab+k*(cw+2)+cw/2}" y="9" text-anchor="middle" style="fill:var(--tinta-3);font-size:9.5px">${k+1}ª</text>`;
+  m.forEach((r,w)=>{g+=`<text x="0" y="${top+w*(ch+2)+ch/2+3.5}" style="fill:var(--tinta-3);font-size:${big?10:8.5}px">${big?DS[w]:DI[w]}</text>`;
+    r.forEach((v,k)=>{const x=lab+k*(cw+2),y=top+w*(ch+2);if(v==null){g+=`<rect x="${x+.5}" y="${y+.5}" width="${cw-1}" height="${ch-1}" rx="2" style="fill:none;stroke:var(--fio)"/>`;return;}
+      const lv=v?Math.min(4,Math.ceil(v/step)):0;g+=`<rect x="${x}" y="${y}" width="${cw}" height="${ch}" rx="2" style="fill:${LV[lv]}" data-tip="${esc(`${cap(DSP[w])} da ${k+1}ª semana: ${o.metric==='contagem'?v.toFixed(1).replace('.',',')+' lançamentos':money(v)} por dia, em média`)}"/>`;});});
+  let H=top+7*(ch+2);
+  if(big){// marginal means
+    const rm=m.map(r=>{const a=r.filter(v=>v!=null);return a.length?a.reduce((x,y)=>x+y,0)/a.length:0}),cm=[0,1,2,3,4].map(k=>{const a=m.map(r=>r[k]).filter(v=>v!=null);return a.length?a.reduce((x,y)=>x+y,0)/a.length:0});
+    const rmx=Math.max(...rm,1),cmx=Math.max(...cm,1),x0=lab+5*(cw+2)+6;
+    rm.forEach((v,w)=>{g+=`<rect x="${x0}" y="${top+w*(ch+2)+ch/2-3}" width="${Math.max(1,(mr-6)*v/rmx)}" height="6" rx="2" style="fill:var(--tinta-2)" data-tip="${esc(cap(DSP[w])+': '+money(v)+' por dia')}"/>`;});
+    cm.forEach((v,k)=>{const h=30*v/cmx;g+=`<rect x="${lab+k*(cw+2)+cw/2-4}" y="${H+4+30-h}" width="8" height="${Math.max(1,h)}" rx="2" style="fill:var(--tinta-2)" data-tip="${esc(`${k+1}ª semana: ${money(v)} por dia`)}"/>`;});
+    H+=38;}
+  return `<svg class="ch" viewBox="0 0 ${W} ${H}">${g}</svg>`;}
+function wSem(c,big){const o=wo(c.st,'sem');const grids=(big&&c.split?c.ser:[{rows:c.rows}]).map(s=>({s,m:semGrid(c,s.rows,o)}));let mx=0;grids.forEach(x=>x.m.forEach(r=>r.forEach(v=>{if(v>mx)mx=v})));
+  if(big&&c.split)return '<div class="mult">'+grids.map(x=>`<div class="mh"><i class="sq" style="background:${x.s.color}"></i><b>${esc(x.s.name)}</b></div>`+semSvg(c,x.m,true,mx)).join('')+'</div>'+heatLegend(mx,o);
+  return semSvg(c,grids[0].m,big,mx)+(big?heatLegend(mx,o)+'<div class="hint">Média por dia. Barras à direita: média do dia da semana; embaixo: da semana do mês.</div>':'');}
+
+/* ---------- mês a mês ---------- */
+function buckets(c,gran){const{st}=c;
+  if(gran==='mês'){const tm=st.to.slice(0,7);let fm=st.from.slice(0,7);const n=(+tm.slice(0,4)-+fm.slice(0,4))*12+(+tm.slice(5)-+fm.slice(5))+1;if(n<6)fm=mAdd(tm,-5);if(fm<DATA_START.slice(0,7))fm=DATA_START.slice(0,7);const out=[];for(let m=fm;m<=tm;m=mAdd(m,1))out.push({a:m+'-01',b:m+'-'+dim(m),lab:MES[+m.slice(5)-1],full:MESL[+m.slice(5)-1],m});return out;}
+  if(gran==='semana'){const out=[];let a=addDays(st.from,-dow(st.from));while(a<=st.to){const b=addDays(a,6);out.push({a:a<st.from?st.from:a,b:b>st.to?st.to:b,lab:fmtD(a<st.from?st.from:a)});a=addDays(a,7);}return out;}
+  return c.days.map(d=>({a:d,b:d,lab:String(+d.slice(8))}));}
+function sMes(c){const bs=buckets(c,'mês');const rows=sel(c.st,{from:bs[0].a,to:bs[bs.length-1].b});const vals=bs.map(b=>({b,v:sum(rows.filter(t=>t.date>=b.a&&t.date<=b.b))}));const closed=vals.filter(x=>x.b.b<TODAY);if(!closed.length)return'Primeiro mês com lançamentos.';const top=closed.reduce((a,b)=>b.v>a.v?b:a);return `${cap(top.b.full)} foi o mês mais alto.`;}
+function barsSvg(c,bs,vals,big,mx,color,opt={}){const W=big?316:144,H=opt.h||(big?170:70),pl=big?30:0,pb=14,pt=10;const n=bs.length,bw=(W-pl)/n;
+  const Y=v=>pt+(H-pt-pb)*(1-v/mx);let g='';
+  if(big&&!opt.noaxis)[0,.5,1].forEach(k=>{const y=Y(mx*k);g+=`<line x1="${pl}" x2="${W}" y1="${y}" y2="${y}" style="stroke:var(--fio)"/><text x="${pl-5}" y="${y+3.5}" text-anchor="end" style="fill:var(--tinta-3);font-size:10px">${opt.m==='contagem'?Math.round(mx*k):axisM(mx*k)}</text>`;});
+  else g+=`<line x1="${pl}" x2="${W}" y1="${H-pb}" y2="${H-pb}" style="stroke:var(--fio)"/>`;
+  if(big&&c.st.brush&&opt.brush){const[b0,b1]=c.st.brush;bs.forEach((b,i)=>{if(b.b>=b0&&b.a<=b1)g+=`<rect x="${pl+i*bw}" y="${pt}" width="${bw}" height="${H-pt-pb}" style="fill:var(--anil-fundo)"/>`;});}
+  const inR=b=>b.b>=c.st.from&&b.a<=c.st.to;const every=Math.ceil(n/(big?8:6));
+  bs.forEach((b,i)=>{const v=vals[i],x=pl+i*bw+Math.min(1,bw*.1),w=Math.max(1.5,bw-Math.max(2,bw*.25)),y=Y(v);const part=b.b>=TODAY&&b.a<=TODAY&&b.m;
+    const op=inR(b)?1:.35;
+    if(v>0)g+=`<rect class="hit" x="${x}" y="${y}" width="${w}" height="${Math.max(1,H-pb-y)}" rx="${Math.min(2,w/3)}" style="fill:${color};opacity:${op}" data-tip="${esc(`${b.full||b.lab}${part?' (até '+fmtD(TODAY)+')':''}: ${mfmt(v,opt.m||'soma')}`)}"${b.m&&big?` data-a="pickmonth" data-m="${b.m}"`:''}/>`;
+    if(part)g+=`<text x="${x+w/2}" y="${y-3}" text-anchor="middle" style="fill:var(--tinta-3);font-size:9px">até ${+TODAY.slice(8)}</text>`;
+    if(i%every===0||n<=8)g+=`<text x="${x+w/2}" y="${H-2}" text-anchor="middle" style="fill:var(--tinta-3);font-size:${big?10:9.5}px">${b.lab}</text>`;});
+  const br=big&&opt.brush?` data-brush="1" data-d0="${opt.wk?addDays(bs[0].a,-dow(bs[0].a)):bs[0].a}" data-n="${n}" data-step="${opt.wk?7:1}" data-x0="${pl}" data-x1="${W}" data-w="${W}" data-pt="${pt}" data-h="${H-pt-pb}" data-bucket="1"`:'';
+  return `<svg class="ch" viewBox="0 0 ${W} ${H}"${br}>${g}</svg>`;}
+function groupKey(g){return g==='verba'?t=>[t.verba]:g==='marcador'?t=>t.tags:g==='lugar'?t=>[t.lugar]:t=>[t.fonte];}
+function wMes(c,big){const o=wo(c.st,'mes');const gran=big?o.gran:'mês';const bs=buckets(c,gran);const all=sel(c.st,{from:bs[0].a,to:bs[bs.length-1].b});
+  const vals=rs=>bs.map(b=>mval(rs.filter(t=>t.date>=b.a&&t.date<=b.b),o.metric));
+  const brush=gran!=='mês',wk=gran==='semana';
+  if(big&&o.group!=='—'){const kf=groupKey(o.group);const tot={};all.forEach(t=>kf(t).forEach(k=>tot[k]=(tot[k]||0)+t.v));const top=Object.keys(tot).sort((a,b)=>tot[b]-tot[a]).slice(0,6);
+    const ser=top.map(k=>({k,v:vals(all.filter(t=>kf(t).includes(k)))}));const mx=nice(Math.max(1,...ser.flatMap(s=>s.v)));
+    return '<div class="mult">'+ser.map(s=>`<div class="mh">${o.group==='verba'?`<i class="sq" style="background:${VCOL[s.k]}"></i>`:''}<b>${esc(s.k)}</b><span class="r">${money0(tot[s.k])}</span></div>`+barsSvg(c,bs,s.v,true,mx,'var(--tinta-2)',{h:62,noaxis:1,m:o.metric})).join('')+'</div><div class="hint">As 6 maiores, na mesma escala. Tocar no nome usa como filtro.</div>';}
+  if(c.split){const ser=c.ser.map(s=>({s,v:vals(all.filter(t=>matchChip(t,s.chip)))}));const mx=nice(Math.max(1,...ser.flatMap(x=>x.v)));
+    if(big)return '<div class="mult">'+ser.map(x=>`<div class="mh"><i class="sq" style="background:${x.s.color}"></i><b>${esc(x.s.name)}</b></div>`+barsSvg(c,bs,x.v,true,mx,x.s.color,{h:70,noaxis:1,m:o.metric,brush,wk})).join('')+'</div>';
+    // mini grouped bars
+    const W=144,H=70,pb=14,pt=10,n=bs.length,bw=W/n,k=ser.length;let g=`<line x1="0" x2="${W}" y1="${H-pb}" y2="${H-pb}" style="stroke:var(--fio)"/>`;
+    bs.forEach((b,i)=>{ser.forEach((x,j)=>{const v=x.v[i],w=Math.max(1.5,(bw-4)/k-1),xx=i*bw+1+j*(w+1),y=pt+(H-pt-pb)*(1-v/mx);if(v>0)g+=`<rect x="${xx}" y="${y}" width="${w}" height="${H-pb-y}" rx="1" style="fill:${x.s.color}" data-tip="${esc(x.s.name+', '+b.full+': '+money0(v))}"/>`;});g+=`<text x="${i*bw+bw/2}" y="${H-2}" text-anchor="middle" style="fill:var(--tinta-3);font-size:9.5px">${b.lab}</text>`;});
+    return `<svg class="ch" viewBox="0 0 ${W} ${H}">${g}</svg>`;}
+  const v=vals(all);return barsSvg(c,bs,v,big,nice(Math.max(1,...v)),'var(--tinta-2)',{m:o.metric,brush,wk})+(big?`<div class="hint">${brush?'Arraste nas barras para recortar o intervalo.':'Fora do intervalo em tom fraco. Tocar num mês para usá-lo como intervalo.'}</div>`:'');}
+
+/* ---------- ranking ---------- */
+function rankData(c,rows,o){const kf=groupKey(o.group);const m={};rows.forEach(t=>kf(t).forEach(k=>(m[k]=m[k]||[]).push(t)));return Object.keys(m).map(k=>({k,v:mval(m[k],o.metric),n:m[k].length})).sort((a,b)=>b.v-a.v);}
+function sRank(c){const o=wo(c.st,'rank');const r=rankData(c,c.rows,o);if(!r.length)return'Nada lançado no intervalo.';return `${r[0].k} puxa a fila.`;}
+const gT={verba:'verba',marcador:'marcador',lugar:'lugar',aviso:'aviso'};
+function wRank(c,big){const o=wo(c.st,'rank');const r=rankData(c,c.rows,o);if(!r.length)return '<div class="hint">Nada lançado no intervalo.</div>';
+  const top=big?r.slice(0,c.st.rlim||10):r.slice(0,4);let prevM=null;
+  if(big&&o.cmp){const len=c.days.length,pf=addDays(c.st.from,-len),pt=addDays(c.st.from,-1);prevM={};rankData(c,sel(c.st,{from:pf,to:pt}),o).forEach(x=>prevM[x.k]=x.v);}
+  const mx=Math.max(r[0].v,...(prevM?top.map(x=>prevM[x.k]||0):[0]));
+  const sub=o.group==='aviso'?' data-sub="fonte"':'';
+  let h=top.map(x=>{const pv=prevM?prevM[x.k]||0:null;const d=pv!=null?(pv?Math.round((x.v-pv)/pv*100):null):undefined;
+    const mark=o.group==='verba'?`<i class="sq" style="width:8px;height:8px;border-radius:2px;background:${VCOL[x.k]};flex:none"></i>`:'';
+    return `<div role="button" class="rk${big?' big':''}" data-a="pick" data-t="${gT[o.group]}" data-v="${esc(x.k)}"${sub} data-tip="${esc(`${x.k}: ${mfmt(x.v,o.metric)} · ${x.n} lançamentos`)}"><div class="rr"><span>${mark}${esc(x.k)}</span><span class="v">${o.metric==='contagem'?x.v:o.metric==='ticket médio'?money(x.v):money0(x.v)}${d!==undefined?`<span class="dl">${d==null?'novo':(d>0?'+':'')+d+'%'}</span>`:''}</span></div><div class="bar"><i style="width:${(x.v/mx*100).toFixed(1)}%"></i>${pv?`<u style="left:${(pv/mx*100).toFixed(1)}%"></u>`:''}</div></div>`;}).join('');
+  if(big&&r.length>top.length)h+=`<button class="morel" data-a="rmore">Ver todos (${r.length})</button>`;
+  if(big&&o.group==='marcador')h+='<div class="hint">Lançamento com vários marcadores conta inteiro em cada um.</div>';
+  if(big&&prevM)h+='<div class="lg"><span><i style="width:2px;height:12px;background:var(--fio-forte)"></i>intervalo anterior</span></div>';
+  return h;}
+
+/* ---------- faixas ---------- */
+const BK=[0,2000,5000,10000,25000,50000,1e12],BKL=['até 20','20–50','50–100','100–250','250–500','500+'],BKS=['20','50','100','250','500','+'];
+const bkOf=v=>BK.findIndex((b,i)=>v>BK[i]&&v<=BK[i+1]);
+function sFaixa(c){const v=c.rows.map(t=>t.v).sort((a,b)=>a-b);if(!v.length)return'Nada lançado no intervalo.';const md=v[Math.floor(v.length/2)];return `Metade fica abaixo de ${money0(md)}.`;}
+function faixaSvg(c,rows,big,o,mx,color){const W=big?316:144,H=big?120:62,pb=14,pt=12,bw=W/6;const vals=[0,0,0,0,0,0];rows.forEach(t=>{const i=bkOf(t.v);vals[i]+=o.metric==='soma'?t.v:1;});
+  mx=mx||Math.max(1,...vals);let g=`<line x1="0" x2="${W}" y1="${H-pb}" y2="${H-pb}" style="stroke:var(--fio)"/>`;
+  vals.forEach((v,i)=>{const h=(H-pt-pb)*v/mx,x=i*bw+2,w=bw-4;const on=c.st.bucket===i;
+    if(v>0)g+=`<rect class="hit" x="${x}" y="${H-pb-h}" width="${w}" height="${Math.max(1,h)}" rx="2" style="fill:${color};${c.st.bucket!=null&&!on?'opacity:.35':''}" data-tip="${esc(`R$ ${BKL[i]}: ${o.metric==='soma'?money0(v):v+' lançamentos'}`)}"${big?` data-a="bucket" data-b="${i}"`:''}/>`;
+    if(big&&v>0)g+=`<text x="${x+w/2}" y="${H-pb-h-3}" text-anchor="middle" style="fill:var(--tinta-2);font-size:10px">${o.metric==='soma'?axisM(v):v}</text>`;
+    g+=`<text x="${i*bw+bw/2}" y="${H-2}" text-anchor="middle" style="fill:var(--tinta-3);font-size:${big?10:9}px">${big?BKL[i]:BKS[i]}</text>`;});
+  return `<svg class="ch" viewBox="0 0 ${W} ${H}">${g}</svg>`;}
+function wFaixa(c,big){const o=wo(c.st,'faixa');
+  if(big&&c.split){let mx=1;c.ser.forEach(s=>{const v=[0,0,0,0,0,0];s.rows.forEach(t=>v[bkOf(t.v)]+=o.metric==='soma'?t.v:1);mx=Math.max(mx,...v)});return '<div class="mult">'+c.ser.map(s=>`<div class="mh"><i class="sq" style="background:${s.color}"></i><b>${esc(s.name)}</b><span class="r">${s.rows.length} lançamentos</span></div>`+faixaSvg(c,s.rows,true,o,mx,s.color)).join('')+'</div>';}
+  return faixaSvg(c,c.rows,big,o,0,'var(--tinta-2)')+(big?'<div class="hint">Valor de cada lançamento, em reais. Tocar numa faixa filtra a lista.</div>':'');}
+
+/* ---------- lugares ---------- */
+function lugData(rows){const m={};rows.forEach(t=>{(m[t.lugar]=m[t.lugar]||{k:t.lugar,n:0,s:0}).n++;m[t.lugar].s+=t.v;});return Object.values(m).map(x=>({...x,a:x.s/x.n}));}
+function sLug(c){const d=lugData(c.rows).sort((a,b)=>b.n-a.n);if(!d.length)return'Nada lançado no intervalo.';const x=d[0];return `${x.k}: ${x.n} ${x.n===1?'vez':'vezes'}, ${money0(x.a)} em média.`;}
+function wLug(c,big){const d=lugData(c.rows);if(!d.length)return '<div class="hint">Nada lançado no intervalo.</div>';
+  const W=316,H=big?250:112,pl=big?34:30,pb=16,pt=8,pr=8;const nx=nice(Math.max(...d.map(x=>x.n)));const lo=Math.log10(500),hi=Math.log10(Math.max(100000,...d.map(x=>x.a))*1.2);
+  const X=n=>pl+(W-pl-pr)*n/nx,Y=a=>pt+(H-pt-pb)*(1-(Math.log10(Math.max(a,500))-lo)/(hi-lo));
+  let g='';[1000,10000,100000].forEach(v=>{if(Math.log10(v)>hi)return;const y=Y(v);g+=`<line x1="${pl}" x2="${W-pr}" y1="${y}" y2="${y}" style="stroke:var(--fio)"/><text x="${pl-5}" y="${y+3.5}" text-anchor="end" style="fill:var(--tinta-3);font-size:9.5px">${axisM(v)}</text>`;});
+  g+=`<line x1="${pl}" x2="${W-pr}" y1="${H-pb}" y2="${H-pb}" style="stroke:var(--fio)"/>`;
+  [0,nx/2,nx].forEach(n=>g+=`<text x="${X(n)}" y="${H-3}" text-anchor="middle" style="fill:var(--tinta-3);font-size:9.5px">${Math.round(n)}${n===nx?' vezes':''}</text>`);
+  g+=`<text x="${pl-5}" y="${pt-1}" text-anchor="end" style="fill:var(--tinta-3);font-size:9px">R$</text>`;
+  const byN=[...d].sort((a,b)=>b.n-a.n),byA=[...d].sort((a,b)=>b.a-a.a);const lab=new Set(big?d.filter(x=>x.n>=4).map(x=>x.k):[...byN.slice(0,3),...byA.slice(0,1)].map(x=>x.k));
+  d.forEach(x=>{const cx=X(x.n),cy=Y(x.a);g+=`<circle class="hit" cx="${cx}" cy="${cy}" r="${big?5:4}" style="fill:var(--tinta-2);stroke:var(--folha);stroke-width:2" data-tip="${esc(`${x.k}: ${x.n} vezes, ${money(x.a)} em média, ${money0(x.s)} no total`)}" data-a="pick" data-t="lugar" data-v="${esc(x.k)}"/>`;});
+  const fs=big?11:10,boxes=d.map(x=>({x0:X(x.n)-5,x1:X(x.n)+5,y0:Y(x.a)-5,y1:Y(x.a)+5}));const imp=[...byN.slice(0,big?5:3),...byA.slice(0,big?2:1)].filter((x,i,arr)=>arr.indexOf(x)===i);
+  const ov=(a,b)=>a.x0<b.x1&&b.x0<a.x1&&a.y0<b.y1&&b.y0<a.y1;
+  imp.forEach(x=>{const cx=X(x.n),cy=Y(x.a),w=x.k.length*fs*.52;const cand=[[cx+8,cy+3.5,'start'],[cx-8,cy+3.5,'end'],[cx,cy-9,'middle'],[cx,cy+15,'middle']];
+    for(const[tx,ty,an]of cand){const x0=an==='start'?tx:an==='end'?tx-w:tx-w/2;const bx={x0,x1:x0+w,y0:ty-fs+2,y1:ty+2};if(bx.x0<pl||bx.x1>W||bx.y0<0||bx.y1>H-pb)continue;if(boxes.some(o=>ov(o,bx)))continue;boxes.push(bx);g+=`<text x="${tx}" y="${ty}" text-anchor="${an}" style="fill:var(--tinta);font-size:${fs}px">${esc(x.k)}</text>`;break;}});
+  return `<svg class="ch" viewBox="0 0 ${W} ${H}">${g}</svg>`+(big?'<div class="hint">Valor médio em escala log. Tocar num ponto para usar o lugar como filtro.</div>':'');}
+
+/* ---------- fluxo ---------- */
+function spread(ys,gap,lo,hi){const o=ys.map((y,i)=>({y,i})).sort((a,b)=>a.y-b.y);for(let k=1;k<o.length;k++)if(o[k].y<o[k-1].y+gap)o[k].y=o[k-1].y+gap;if(o.length&&o[o.length-1].y>hi){o[o.length-1].y=hi;for(let k=o.length-2;k>=0;k--)if(o[k].y>o[k+1].y-gap)o[k].y=o[k+1].y-gap;}const r=[];o.forEach(x=>r[x.i]=Math.max(lo,x.y));return r;}
+function sFluxo(c){const o=wo(c.st,'fluxo');const f=fluxoData(c.rows,o);if(!f.left.length)return'Nada lançado no intervalo.';const v=f.left[0].k;const ds=f.links.filter(l=>l.a===v).sort((a,b)=>b.v-a.v).slice(0,2).map(l=>l.b).filter(b=>b!=='outros');return ds.length>1?`${v} vai mais para ${ds[0]} e ${ds[1]}.`:`${v} vai mais para ${ds[0]||'outros'}.`;}
+function fluxoData(rows,o){const kf=o.to==='lugar'?t=>[t.lugar]:t=>t.tags;const lm={},rm={},lk={};rows.forEach(t=>{const ks=kf(t),share=t.v/ks.length;lm[t.verba]=(lm[t.verba]||0)+t.v;ks.forEach(k=>rm[k]=(rm[k]||0)+share);});
+  const rTop=Object.keys(rm).sort((a,b)=>rm[b]-rm[a]).slice(0,6);const rk=k=>rTop.includes(k)?k:'outros';
+  rows.forEach(t=>{const ks=kf(t),share=t.v/ks.length;ks.forEach(k=>{const id=t.verba+'|'+rk(k);lk[id]=(lk[id]||0)+share;});});
+  const right={};Object.keys(rm).forEach(k=>right[rk(k)]=(right[rk(k)]||0)+rm[k]);
+  return{left:Object.keys(lm).sort((a,b)=>lm[b]-lm[a]).map(k=>({k,v:lm[k]})),right:[...rTop,...(right.outros?['outros']:[])].map(k=>({k,v:right[k]})),links:Object.keys(lk).map(id=>{const[a,b]=id.split('|');return{a,b,v:lk[id]}})};}
+function wFluxo(c,big){const o=wo(c.st,'fluxo');const f=fluxoData(c.rows,o);if(!f.left.length)return '<div class="hint">Nada lançado no intervalo.</div>';
+  const W=316,H=big?300:150,lx=70,rx=242,bw=6,gap=big?6:4,tot=f.left.reduce((a,x)=>a+x.v,0);
+  const sc=(n)=>(H-gap*(n-1))/tot;const sl=sc(f.left.length),sr=sc(f.right.length),s=Math.min(sl,sr);
+  const pos=(arr)=>{let y=0;const m={};const used=arr.reduce((a,x)=>a+x.v*s,0)+gap*(arr.length-1);y=(H-used)/2;arr.forEach(x=>{m[x.k]={y,h:Math.max(1,x.v*s),o:0};y+=x.v*s+gap;});return m;};
+  const L=pos(f.left),Rr=pos(f.right);let g='';const lgap=big?24:11;const showL=f.left.filter(x=>big||L[x.k].h>7),showR=f.right.filter(x=>big||Rr[x.k].h>7);const lyL=spread(showL.map(x=>L[x.k].y+L[x.k].h/2+3.5),lgap,9,H-(big?14:2)),lyR=spread(showR.map(x=>Rr[x.k].y+Rr[x.k].h/2+3.5),lgap,9,H-(big?14:2));const LY={},RY={};showL.forEach((x,i)=>LY[x.k]=lyL[i]);showR.forEach((x,i)=>RY[x.k]=lyR[i]);
+  f.links.sort((a,b)=>f.left.findIndex(x=>x.k===a.a)-f.left.findIndex(x=>x.k===b.a)||f.right.findIndex(x=>x.k===a.b)-f.right.findIndex(x=>x.k===b.b)).forEach(l=>{const h=l.v*s;if(h<.3)return;const a=L[l.a],b=Rr[l.b];const y0=a.y+a.o,y1=b.y+b.o;a.o+=h;b.o+=h;const x0=lx+bw,x1=rx,xm=(x0+x1)/2;
+    g+=`<path d="M${x0} ${y0}C${xm} ${y0} ${xm} ${y1} ${x1} ${y1}L${x1} ${y1+h}C${xm} ${y1+h} ${xm} ${y0+h} ${x0} ${y0+h}Z" style="fill:${VCOL[l.a]};opacity:.32" data-tip="${esc(`${l.a} → ${l.b}: ${money0(l.v)}`)}"/>`;});
+  f.left.forEach(x=>{const p=L[x.k];g+=`<rect class="hit" x="${lx}" y="${p.y}" width="${bw}" height="${p.h}" style="fill:${VCOL[x.k]}" data-a="pick" data-t="verba" data-v="${esc(x.k)}" data-tip="${esc(x.k+': '+money0(x.v))}"/>`;if(LY[x.k]!=null)g+=`<text x="${lx-5}" y="${LY[x.k]}" text-anchor="end" style="fill:var(--tinta);font-size:10.5px">${esc(x.k)}</text>${big?`<text x="${lx-5}" y="${LY[x.k]+11.5}" text-anchor="end" style="fill:var(--tinta-3);font-size:9.5px">${money0(x.v)}</text>`:''}`;});
+  f.right.forEach(x=>{const p=Rr[x.k];g+=`<rect class="hit" x="${rx}" y="${p.y}" width="${bw}" height="${p.h}" style="fill:var(--tinta-2)" ${x.k!=='outros'?`data-a="pick" data-t="${o.to}" data-v="${esc(x.k)}"`:''} data-tip="${esc(x.k+': '+money0(x.v))}"/>`;if(RY[x.k]!=null)g+=`<text x="${rx+bw+5}" y="${RY[x.k]}" style="fill:var(--tinta);font-size:10.5px">${esc(x.k)}</text>${big?`<text x="${rx+bw+5}" y="${RY[x.k]+11.5}" style="fill:var(--tinta-3);font-size:9.5px">${money0(x.v)}</text>`:''}`;});
+  return `<svg class="ch" viewBox="0 0 ${W} ${H}">${g}</svg>`+(big?`<div class="hint">Lançamento com vários marcadores divide o valor entre eles. Tocar numa ponta usa como filtro.</div>`:'');}
+
+/* ---------- previstos ---------- */
+function prevData(c){const ms=[];for(let m=c.st.from.slice(0,7);m<=c.st.to.slice(0,7);m=mAdd(m,1))ms.push(m);const use=ms.slice(-6);
+  const open=OPEN.filter(t=>t.date>=c.st.from&&t.date<=c.st.to&&(!c.st.chips.length||c.st.chips.some(ch=>matchChip(t,ch))));
+  return use.map(m=>{const rs=c.rows.filter(t=>t.date.startsWith(m));return{m,p:sum(rs.filter(t=>t.prev)),v:sum(rs.filter(t=>!t.prev)),o:sum(open.filter(t=>t.date.startsWith(m)))};});}
+function sPrev(c){const p=sum(c.rows.filter(t=>t.prev)),a=sum(c.rows);if(!p)return'Nenhum previsto neste filtro.';return `Previstos são ${pct(p,a)}% do gasto.`;}
+function wPrev(c,big){const d=prevData(c);const W=big?316:144,H=big?170:70,pb=14,pt=10,pl=big?30:0;const n=d.length,bw=(W-pl)/n;const mx=nice(Math.max(1,...d.map(x=>x.p+x.v+x.o)));const Y=v=>(H-pt-pb)*v/mx;
+  let g=`<line x1="${pl}" x2="${W}" y1="${H-pb}" y2="${H-pb}" style="stroke:var(--fio)"/>`;
+  if(big)[.5,1].forEach(k=>{const y=H-pb-Y(mx*k);g+=`<line x1="${pl}" x2="${W}" y1="${y}" y2="${y}" style="stroke:var(--fio)"/><text x="${pl-5}" y="${y+3.5}" text-anchor="end" style="fill:var(--tinta-3);font-size:10px">${axisM(mx*k)}</text>`;});
+  d.forEach((x,i)=>{const w=Math.min(big?34:18,bw-6),cx=pl+i*bw+bw/2,x0=cx-w/2;let y=H-pb;const tip=`${MESL[+x.m.slice(5)-1]}: previstos ${money0(x.p)} · variável ${money0(x.v)}${x.o?' · em aberto '+money0(x.o):''}`;
+    const hp=Y(x.p);if(hp>0){g+=`<rect x="${x0}" y="${y-hp}" width="${w}" height="${hp}" style="fill:var(--tinta-3)" data-tip="${esc(tip)}"/>`;y-=hp+2;}
+    const hv=Y(x.v);if(hv>0){g+=`<rect x="${x0}" y="${y-hv}" width="${w}" height="${hv}" rx="2" style="fill:var(--tinta)" data-tip="${esc(tip)}"/>`;y-=hv+2;}
+    const ho=Y(x.o);if(ho>0)g+=`<rect x="${x0+.75}" y="${y-ho}" width="${w-1.5}" height="${ho}" rx="2" style="fill:none;stroke:var(--tinta-3);stroke-width:1.2;stroke-dasharray:3 2" data-tip="${esc(tip)}"/>`;
+    g+=`<text x="${cx}" y="${H-2}" text-anchor="middle" style="fill:var(--tinta-3);font-size:${big?10:9.5}px">${MES[+x.m.slice(5)-1]}</text>`;});
+  let h=`<svg class="ch" viewBox="0 0 ${W} ${H}">${g}</svg><div class="${big?'lg':'mlg'}"><span><i class="bx" style="width:9px;height:9px;border-radius:2px;background:var(--tinta-3)"></i>previstos</span><span><i class="bx" style="width:9px;height:9px;border-radius:2px;background:var(--tinta)"></i>variável</span>${d.some(x=>x.o)?'<span><i class="bx" style="width:9px;height:9px;border-radius:2px;border:1.2px dashed var(--tinta-3)"></i>em aberto</span>':''}</div>`;
+  if(big){const pm={};c.rows.filter(t=>t.prev).forEach(t=>{(pm[t.prev]=pm[t.prev]||{n:0,s:0,v:t.verba}).n++;pm[t.prev].s+=t.v;});
+    const op=OPEN.filter(t=>t.date>=c.st.from&&t.date<=c.st.to&&(!c.st.chips.length||c.st.chips.some(ch=>matchChip(t,ch))));
+    h+='<div class="lh"><span class="rub">Previstos no intervalo</span><span></span></div><div class="ptab">'+(Object.keys(pm).length?Object.keys(pm).sort((a,b)=>pm[b].s-pm[a].s).map(k=>{const nx=op.find(t=>t.prev===k);return `<div class="pr"><span><i>${esc(k)}</i><small>${pm[k].v} · ${pm[k].n} ${pm[k].n===1?'vez':'vezes'}${nx?' · a caminho, '+fmtD(nx.date):''}</small></span><span>${money(pm[k].s)}</span></div>`;}).join(''):'<div class="hint">Nenhum previsto neste filtro.</div>')+'</div>';}
+  return h;}
+
+/* ---------- história ---------- */
+function histSentences(c){const{st,rows}=c,out=[];const tot=sum(rows),n=rows.length;if(!n)return[{t:'Nada lançado no intervalo.',w:'acum'}];
+  const len=c.days.length,pf=addDays(st.from,-len),pt=addDays(st.from,-1);const pr=pf>=DATA_START?sel(st,{from:pf,to:addDays(pf,c.past.length-1)<pt?addDays(pf,c.past.length-1):pt}):null;
+  out.push({t:`Em ${c.past.length} dias, <em>${money0(tot)}</em> em ${n} lançamentos.${pr?` No intervalo anterior, até o mesmo dia, ${money0(sum(pr))}.`:''}`,w:'mes'});
+  const vm={};rows.forEach(t=>vm[t.verba]=(vm[t.verba]||0)+t.v);const vs=Object.keys(vm).sort((a,b)=>vm[b]-vm[a]);if(vs.length>2)out.push({t:`<em>${vs[0]}</em> e <em>${vs[1]}</em> levam ${pct(vm[vs[0]]+vm[vs[1]],tot)}%.`,w:'rank'});
+  if(relVerbas(st)||c.past.length)out.push({t:sAcum(c),w:'acum'});
+  const sc=sCal(c);if(!sc.startsWith('Nenhum')&&!sc.startsWith('Com ')){const o=wo(st,'cal');const by=dayVals(rows,c.days,o);let s=0,a=0,nd=0;const w=DSP.findIndex(x=>sc.includes(x));c.past.forEach(d=>{a+=by[d]||0;if(dow(d)===w){s+=by[d]||0;nd++;}});out.push({t:`${sc.slice(0,-1)}: ${pct(s,a)}% do gasto variável em ${pct(nd,c.past.length)}% dos dias.`,w:'cal'});}
+  const tm={};rows.forEach(t=>t.tags.forEach(k=>{(tm[k]=tm[k]||{n:0,s:0}).n++;tm[k].s+=t.v;}));const tk=Object.keys(tm).sort((a,b)=>tm[b].n-tm[a].n)[0];if(tk&&tm[tk].n>=3)out.push({t:`<em>${tk}</em> apareceu ${tm[tk].n} vezes, ${money0(tm[tk].s/tm[tk].n)} em média.`,w:'lug'});
+  const big=rows.filter(t=>!t.prev).sort((a,b)=>b.v-a.v)[0];if(big)out.push({t:`O maior foi ${big.leg?`<i>${esc(big.leg)}</i>, em ${big.lugar}`:big.lugar}: <em>${money(big.v)}</em>, ${fmtD(big.date)}.`,w:'faixa'});
+  const sp=sPrev(c);if(!sp.startsWith('Nenhum'))out.push({t:sp,w:'prev'});
+  const bs=buckets(c,'mês');if(bs.length>1){out.push({t:sMes(c),w:'mes'});}
+  return out.slice(0,8);}
+function wHist(c){return histSentences(c).slice(0,3).map(s=>`<div class="hsm">${s.t}</div>`).join('');}
+
+const S={acum:sAcum,mes:sMes,cal:sCal,sem:sSem,rank:sRank,lug:sLug,faixa:sFaixa,prev:sPrev,fluxo:sFluxo,hist:()=>''};
+const F={acum:wAcum,mes:wMes,cal:wCal,sem:wSem,rank:wRank,lug:wLug,faixa:wFaixa,prev:wPrev,fluxo:wFluxo,hist:wHist};
+
+/* ================= screens ================= */
+const TICO={acum:'leitura',hist:'recado',mes:'leitura',cal:'periodo',sem:'periodo',rank:'verba',lug:'lugar',faixa:'leitura',prev:'previsto',fluxo:'marcador'};
+function sbar(){return `<div class="sbar"><span>9:41</span><span>●●● ▮</span></div>`;}
+function navb(){return `<nav class="navb"><a>${ico('verba')}Verbas</a><a>${ico('pauta')}Pauta<span class="bdg">4</span></a><a>${ico('lancamento')}Lançamentos</a><a class="on">${ico('leitura')}Leitura</a><a>${ico('ajustes')}Ajustes</a></nav>`;}
+function fhead(st,c){
+  if(st.editing){return `<div class="fh"><div class="fbox">${st.chips.map((ch,i)=>`${i?'<span class="ou">ou</span>':''}<span class="fc">${ico(chipIco(ch),'xs')}${st.split?`<i class="sq" style="background:${ch.color}"></i>`:''}${esc(chipLabel(ch))}<button class="x" data-a="rm" data-i="${i}" aria-label="Tirar">${ico('fechar','xs')}</button></span>`).join('')}<input data-q value="${esc(st.q)}" placeholder="${st.chips.length?'ou mais um…':'Buscar verba, marcador, lugar ou aviso'}" aria-label="Filtro"></div>
+    <div class="fs"><span>${st.chips.length>1?'Qualquer um basta: os filtros se somam com OU.':st.chips.length?'Mais um chip soma com OU.':'Escolha uma ou mais coisas.'}</span><button class="done" data-a="done">Pronto</button></div></div>`;}
+  const chips=st.chips;let inner;
+  if(!chips.length)inner=`${ico('lupa','s')}<span class="ph-t">Buscar verba, marcador, lugar ou aviso</span>`;
+  else{const show=chips.slice(0,2);inner=`${ico('lupa','s')}`+show.map((ch,i)=>`${i?'<span class="ou">ou</span>':''}<span class="mc">${ico(chipIco(ch),'xs')}${c.split?`<i class="sq" style="background:${ch.color}"></i>`:''}<span class="mt">${esc(chipLabel(ch))}</span></span>`).join('')+(chips.length>2?`<span class="more">+${chips.length-2}</span>`:'');}
+  const sw=chips.length>1?`<button class="sw${st.split?' on':''}" data-a="split"><i></i>Separar</button>`:'';
+  return `<div class="fh"><div class="fr"><button class="ff" data-a="edit">${inner}</button><button class="rp" data-a="range">${ico('periodo','s')}${rangeLabel(st.from,st.to)}</button></div>
+  <div class="fs"><span><b>${money0(sum(c.rows))}</b> · ${c.rows.length} lançamentos${st.to>TODAY&&st.from<=TODAY?' · até hoje':''}</span>${sw}</div></div>`;}
+function gridView(st,c){return `<div class="grid">`+ORDER.map(w=>{const d=WD[w];const s=S[w](c);return `<div role="button" tabindex="0" class="tile ${d.size}" data-a="${w==='hist'?'hist':'open'}" data-w="${w}"><div class="th"><span class="rub">${d.title}</span>${ico(TICO[w],'xs')}</div>${s?`<div class="ts">${s}</div>`:''}${F[w](c,false)}</div>`;}).join('')+`</div>`;}
+function toolbar(st,w,c){const d=WD[w],o=wo(st,w);if(!d.rows&&!d.tog)return '';
+  let h='<div class="tbar">';(d.rows||[]).forEach(([k,vs])=>{h+=`<div class="orow"><span class="ol">${OL[k]}</span>${vs.map(v=>`<button class="oc${o[k]===v?' on':''}" data-a="opt" data-k="${k}" data-v="${v}">${v}</button>`).join('')}</div>`;});
+  if(d.tog){h+='<div class="otog">'+d.tog.map(k=>{if(k==='split'){const ok=st.chips.length>1;return `<button class="sw${st.split&&ok?' on':''}${ok?'':' dis'}" data-a="${ok?'split':''}"><i></i>${TL.split}${ok?'':' (2+ chips)'}</button>`;}return `<button class="sw${o[k]?' on':''}" data-a="tog" data-k="${k}"><i></i>${TL[k]}</button>`;}).join('')+'</div>';}
+  return h+'</div>';}
+function txRow(t,st){const nm=t.prev?`<i>${esc(t.prev)}</i> <span class="em">em ${esc(t.lugar)}</span>`:t.leg?`<i>${esc(t.leg)}</i> <span class="em">em ${esc(t.lugar)}</span>`:esc(t.lugar);
+  const hit=(s,c)=>st.chips.length&&st.chips.some(ch=>ch.t===c&&ch.v===s)?`<b>${esc(s)}</b>`:esc(s);
+  const meta=`${hit(t.verba,'verba')} · ${t.tags.map(k=>hit(k,'marcador')).join(', ')}${st.chips.some(ch=>ch.t==='aviso'&&ch.sub==='fonte'&&ch.v===t.fonte)?' · <b>'+esc(t.fonte)+'</b>':''}`;
+  return `<div class="li"><div class="ln"><span class="nm">${nm}</span><span class="mt">${meta}</span></div><div><span class="am">${money(t.v)}</span>${t.prev?'<span class="pv">previsto</span>':''}</div></div>`;}
+function txList(rows,st,lim){const rs=[...rows].sort((a,b)=>a.date<b.date?1:a.date>b.date?-1:b.id-a.id);let h='',last='';const shown=rs.slice(0,lim);
+  const daySum={};rs.forEach(t=>daySum[t.date]=(daySum[t.date]||0)+t.v);
+  shown.forEach(t=>{if(t.date!==last){last=t.date;h+=`<div class="dayh"><span>${fmtDW(t.date)}</span><span>${money(daySum[t.date])}</span></div>`;}h+=txRow(t,st);});
+  if(rs.length>lim)h+=`<button class="morel" data-a="more">Ver mais ${Math.min(20,rs.length-lim)} de ${rs.length-lim}</button>`;
+  if(!rs.length)h+='<div class="hint" style="padding:12px 2px">Nenhum lançamento.</div>';return h;}
+function detailView(st,c){const w=st.w,d=WD[w];
+  let rows=c.rows;let bb='';
+  if(st.brush){const[b0,b1]=st.brush;rows=rows.filter(t=>t.date>=b0&&t.date<=b1);bb=`<div class="bb"><span class="tx"><b>${b0===b1?fmtD(b0):rangeLabel(b0,b1)}</b> · ${money0(sum(rows))} · ${rows.length} lançamentos</span><button class="use" data-a="usebrush">Usar como intervalo</button><button class="x" data-a="clrbrush" aria-label="Limpar recorte">${ico('fechar','xs')}</button></div>`;}
+  else if(d.brush&&(w!=='mes'||wo(st,'mes').gran!=='mês'))bb='<div class="hint">Arraste no gráfico para recortar o intervalo.</div>';
+  if(w==='faixa'&&st.bucket!=null){rows=rows.filter(t=>bkOf(t.v)===st.bucket);bb=`<div class="bb"><span class="tx"><b>R$ ${BKL[st.bucket]}</b> · ${rows.length} lançamentos · ${money0(sum(rows))}</span><button class="x" data-a="bucket" data-b="${st.bucket}" aria-label="Limpar">${ico('fechar','xs')}</button></div>`;}
+  return `<div class="dsent">${S[w](c)}</div><div class="dsub">${rangeLabel(st.from,st.to)}${st.chips.length?' · '+st.chips.map(chipLabel).join(' ou '):' · tudo'}</div>${toolbar(st,w,c)}<div class="cc">${F[w](c,true)}</div>${bb}
+  <div class="lh"><span class="rub">Lançamentos</span><span>${rows.length} · ${money(sum(rows))}</span></div>${txList(rows,st,st.lim)}`;}
+function weekLine(c){const{st,rows}=c;const out=[];let a=addDays(st.to>TODAY?TODAY:st.to,0);a=addDays(a,-dow(a));
+  for(let k=0;k<8&&addDays(a,6)>=st.from;k++,a=addDays(a,-7)){const f=a<st.from?st.from:a,b0=addDays(a,6),t=b0>st.to?st.to:b0;const rs=rows.filter(x=>x.date>=f&&x.date<=t);
+    const vr=rs.filter(x=>!x.prev),big=[...vr].sort((x,y)=>y.v-x.v)[0];const pv=rs.filter(x=>x.prev);
+    const dv=range(f,t>TODAY?TODAY:t).map(d=>sum(vr.filter(x=>x.date===d)));const mx=Math.max(1,...dv);const wd=dv.indexOf(Math.max(...dv));
+    let p=rs.length?`${rs.length} lançamentos.`:'Nada lançado.';if(big)p+=` O maior: ${big.leg?`<i>${esc(big.leg)}</i>`:esc(big.lugar)}, ${money(big.v)}.`;if(pv.length)p+=` ${pv.map(x=>`<i>${esc(x.prev)}</i>`).join(', ')} ${pv.length>1?'lançados':'lançado'}.`;
+    const spark=dv.length>1?`<svg class="spark" viewBox="0 0 140 22" width="140" height="22">${dv.map((v,i)=>`<rect x="${i*20+2}" y="${20-18*v/mx}" width="14" height="${Math.max(1,18*v/mx)}" rx="1.5" style="fill:${i===wd&&v?'var(--argila)':'var(--fio-forte)'}"/>`).join('')}</svg>`:'';
+    out.push(`<div class="tli"><div class="wk"><span>Semana de ${fmtD(f)} a ${fmtD(t)}</span><b>${money0(sum(rs))}</b></div><p>${p}</p>${spark}</div>`);}
+  return out.join('');}
+function histView(st,c){const ss=histSentences(c);const op=OPEN.filter(t=>t.date>=st.from&&t.date<=st.to&&(!st.chips.length||st.chips.some(ch=>matchChip(t,ch))));
+  return `<div class="over-r">${rangeLabel(st.from,st.to)}${st.chips.length?' · '+st.chips.map(chipLabel).join(' ou '):''}</div><h3 class="hl">${st.to>=TODAY?'O intervalo até aqui':'O intervalo'}</h3>`+
+  ss.map(s=>`<button class="hs" data-a="open" data-w="${s.w}"><span>${s.t}</span>${ico('avancar','s')}</button>`).join('')+
+  (op.length?`<div class="acam">${ico('previsto','s')}<span>A caminho: ${op.length} ${op.length>1?'previstos':'previsto'} · ${money(sum(op))}, fora destas contas.</span></div>`:'')+
+  `<div class="lh"><span class="rub">Semana a semana</span><span>o dia que mais pesou em argila</span></div><div class="tl">${weekLine(c)}</div>`;}
+
+/* ---------- sheets ---------- */
+function rangeSheet(st){const r=st.draft;const m=st.calM;const first=m+'-01',n=dim(m),off=dow(first);const maxD=TODAY.slice(0,7)+'-'+dim(TODAY.slice(0,7));
+  let cells=DI.map(x=>`<span class="wd">${x}</span>`).join('')+'<span></span>'.repeat(off);
+  for(let i=1;i<=n;i++){const d=m+'-'+String(i).padStart(2,'0');const cls=[d<DATA_START||d>maxD?'off':'',d>TODAY?'fut':'',d===r.f||d===r.t?'e':(d>r.f&&d<r.t?'in':''),d===TODAY?'td':''].join(' ');cls.includes('off')?cells+=`<button class="${cls}">${i}</button>`:cells+=`<button class="${cls}" data-a="rday" data-d="${d}">${i}</button>`;}
+  const nd=diffDays(r.f,r.t)+1;
+  return `<div class="scrim" data-a="close"></div><div class="sheet"><div class="grab"></div><div class="rub">Intervalo</div>
+  <div class="pres">${PRESETS.map(([k,l])=>`<button class="oc${r.p===k?' on':''}" data-a="preset" data-p="${k}">${l}</button>`).join('')}</div>
+  <div class="ft"><div class="${r.pick==='f'?'on':''}"><small>De</small>${fmtDW(r.f)}</div><div class="${r.pick==='t'?'on':''}"><small>Até</small>${fmtDW(r.t)}</div></div>
+  <div class="calh"><button data-a="calnav" data-n="-1" aria-label="Mês anterior">${ico('voltar','s')}</button><span>${MESL[+m.slice(5)-1]} de ${m.slice(0,4)}</span><button data-a="calnav" data-n="1" aria-label="Próximo mês">${ico('avancar','s')}</button></div>
+  <div class="calg">${cells}</div>
+  <div class="btns"><button class="btn pri full" data-a="apply">Usar ${rangeLabel(r.f,r.t)} · ${nd} ${nd===1?'dia':'dias'}</button></div></div>`;}
+function pickSheet(st,c){const p=st.pick;
+  if(p.day){const rs=c.rows.filter(t=>t.date===p.day);return `<div class="scrim" data-a="close"></div><div class="sheet"><div class="grab"></div><div class="rub">Dia</div><h4>${cap(fmtDW(p.day))}</h4><div class="dek">${money(sum(rs))} em ${rs.length} lançamentos${st.chips.length?', com o filtro':''}.</div>${txList(rs,st,5)}<div class="btns"><button class="btn pri full" data-a="useday">Usar este dia como intervalo</button><button class="btn sec full" data-a="close">Fechar</button></div></div>`;}
+  if(p.month){const a=p.month+'-01',b=p.month+'-'+dim(p.month);const rs=sel(st,{from:a,to:b});return `<div class="scrim" data-a="close"></div><div class="sheet"><div class="grab"></div><div class="rub">Mês</div><h4>${cap(MESL[+p.month.slice(5)-1])} de ${p.month.slice(0,4)}</h4><div class="dek">${money(sum(rs))} em ${rs.length} lançamentos.</div><div class="btns"><button class="btn pri full" data-a="usemonth">Usar ${MESL[+p.month.slice(5)-1]} como intervalo</button><button class="btn sec full" data-a="close">Fechar</button></div></div>`;}
+  const ch={t:p.t,v:p.v,sub:p.sub};const rs=sel(st,{chips:[ch]});const has=st.chips.findIndex(x=>x.t===ch.t&&x.v===ch.v);
+  const tl={verba:'Verba',marcador:'Marcador',lugar:'Lugar',aviso:ch.sub==='fonte'?'Aviso · fonte':'Aviso · texto do banco'}[ch.t];
+  return `<div class="scrim" data-a="close"></div><div class="sheet"><div class="grab"></div><div class="rub">${tl}</div><h4>${ico(chipIco(ch))}${esc(chipLabel(ch))}</h4><div class="dek">${money(sum(rs))} em ${rs.length} lançamentos no intervalo, ${money0(rs.length?sum(rs)/rs.length:0)} em média.</div>
+  <div class="btns">${has>=0?`<button class="btn sec full" data-a="rm" data-i="${has}">Tirar do filtro</button>`:`<button class="btn pri full" data-a="usechip">Usar como filtro</button>${st.chips.length?`<div class="hint" style="text-align:center">Entra com OU, junto ${st.chips.length===1?'do outro':'dos outros '+st.chips.length}.</div>`:''}`}<button class="btn txt full" data-a="close">Fechar</button></div></div>`;}
+
+/* ---------- autocomplete ---------- */
+function hl(s,q){if(!q)return esc(s);const i=norm(s).indexOf(norm(q));if(i<0)return esc(s);return esc(s.slice(0,i))+'<b>'+esc(s.slice(i,i+q.length))+'</b>'+esc(s.slice(i+q.length));}
+function suggest(st){const q=st.q.trim(),nq=norm(q);const inR=TX.filter(t=>t.date>=st.from&&t.date<=st.to);const used=(t,v)=>st.chips.some(c=>c.t===t&&c.v===v);
+  const stat=f=>{const rs=inR.filter(f);return{n:rs.length,s:sum(rs)};};
+  const mk=(t,list,f,sub)=>list.filter(v=>!used(t,v)&&(!nq||norm(v).includes(nq))).map(v=>({t,v,sub,...stat(x=>f(x,v))})).filter(x=>x.n||nq).sort((a,b)=>b.n-a.n);
+  const sec=[['Verbas',mk('verba',VERBAS,(x,v)=>x.verba===v)],['Marcadores',mk('marcador',TAGS,(x,v)=>x.tags.includes(v))],['Lugares',mk('lugar',LUGS,(x,v)=>x.lugar===v)],
+    ['Avisos',[...mk('aviso',FONTES,(x,v)=>x.fonte===v,'fonte'),...mk('aviso',BANCOS,(x,v)=>x.banco===v,'texto')].sort((a,b)=>b.n-a.n)]];
+  return sec.map(([l,a])=>[l,a.slice(0,nq?3:2)]).filter(([l,a])=>a.length);}
+function acView(st){const secs=suggest(st);if(!secs.length)return `<div class="ac"><div class="acnote">Nada com “${esc(st.q)}” no intervalo. A busca olha verbas, marcadores, lugares (apelidos e texto do banco) e avisos.</div></div>`;
+  return `<div class="ac">${st.q?'':'<div class="acnote" style="padding-top:8px">Os mais usados no intervalo:</div>'}`+secs.map(([l,a])=>`<div class="acs"><div class="rub">${l}</div>`+a.map(x=>{const c={t:x.t,v:x.v,sub:x.sub};const sm=x.t==='aviso'?`<small>${x.sub==='fonte'?'fonte':'texto do banco'}</small>`:x.t==='verba'?`<small>cota ${money0(COTA[x.v])}</small>`:'';
+    return `<button class="aci" data-a="add" data-t="${x.t}" data-v="${esc(x.v)}"${x.sub?` data-sub="${x.sub}"`:''}>${ico(chipIco(c))}<span class="an">${x.sub==='texto'?'“'+hl(x.v,st.q)+'”':hl(x.v,st.q)}${sm}</span><span class="am">${x.n}× · ${money0(x.s)}</span></button>`;}).join('')+'</div>').join('')+`<div class="acnote">Cada escolha vira um chip. Um lançamento entra se bater em qualquer um.</div></div>`;}
+
+/* ================= app ================= */
+function render(st){const c=ctxOf(st);let top,body;
+  if(st.view==='grid'){top=`<div class="tb"><span class="t">Leitura</span></div>`;body=st.editing?acView(st):gridView(st,c);}
+  else if(st.view==='hist'){top=`<div class="tb"><button class="back" data-a="back" aria-label="Voltar">${ico('voltar')}</button><span class="t">História</span></div>`;body=st.editing?acView(st):histView(st,c);}
+  else{top=`<div class="tb"><button class="back" data-a="back" aria-label="Voltar">${ico('voltar')}</button><span class="t">${WD[st.w].title}</span></div>`;body=st.editing?acView(st):detailView(st,c);}
+  let sh='';if(st.sheet==='range')sh=rangeSheet(st);else if(st.pick)sh=pickSheet(st,c);
+  return sbar()+top+fhead(st,c)+`<div class="bd">${body}</div>`+navb()+sh;}
+
+function baseState(o={}){const[f,t]=presetRange(o.preset||'3m')||[o.from,o.to];return Object.assign({view:'grid',w:null,from:f,to:t,preset:'3m',chips:[],split:false,editing:false,q:'',sheet:null,pick:null,brush:null,bucket:null,lim:10,rlim:10,wo:{},draft:null,calM:TODAY.slice(0,7)},o,{from:o.from||f,to:o.to||t});}
+function chipsOf(list){const st={chips:[]};list.forEach(([t,v,sub])=>st.chips.push(mkChip(st,t,v,sub)));return st.chips;}
+const C3=()=>chipsOf([['marcador','padaria'],['verba','Delivery'],['lugar','Café Pinheiros']]);
+const FRAMES={
+ grade:()=>baseState(),
+ mes:()=>baseState({preset:'mes'}),
+ grade2:()=>baseState({scroll:520}),
+ grade3:()=>baseState({scroll:1040}),
+ busca:()=>baseState({editing:true,q:'pa'}),
+ chips:()=>baseState({chips:C3()}),
+ periodo:()=>{const s=baseState({preset:'pers',from:'2026-10-12',to:'2026-11-03'});s.sheet='range';s.draft={f:'2026-10-12',t:'2026-11-03',p:'pers',pick:'t'};s.calM='2026-10';return s;},
+ 'd-acum':()=>baseState({view:'detail',w:'acum',chips:C3(),split:true,brush:['2026-10-12','2026-10-18'],wo:{acum:{cmp:true}}}),
+ 'd-rank':()=>baseState({view:'detail',w:'rank',wo:{rank:{group:'marcador',cmp:true}},pick:{t:'marcador',v:'feira'}}),
+ 'd-cal':()=>baseState({view:'detail',w:'cal',chips:C3(),split:true}),
+ 'd-mes':()=>baseState({view:'detail',w:'mes',preset:'6m',wo:{mes:{group:'verba'}}}),
+ 'd-lug':()=>baseState({view:'detail',w:'lug'}),
+ 'd-fluxo':()=>baseState({view:'detail',w:'fluxo'}),
+ hist:()=>baseState({view:'hist'}),
+ 'hist-f':()=>baseState({view:'hist',chips:C3()}),
+};
+
+function mount(ph,st){const scr=document.createElement('div');scr.className='scr';ph.appendChild(scr);
+  const draw=(keepScroll)=>{const bd=scr.querySelector('.bd');const y=keepScroll&&bd?bd.scrollTop:0;scr.innerHTML=render(st);const nb=scr.querySelector('.bd');if(nb){nb.scrollTop=y;if(st.scroll){const sy=st.scroll;st.scroll=0;nb.scrollTop=sy;}}
+    const inp=scr.querySelector('input[data-q]');if(inp&&st.editing&&st.focus){inp.focus();inp.setSelectionRange(inp.value.length,inp.value.length);st.focus=false;}};
+  const addChip=(t,v,sub)=>{if(!st.chips.some(c=>c.t===t&&c.v===v))st.chips.push(mkChip(st,t,v,sub));};
+  const act=(a,ds)=>{switch(a){
+    case'edit':st.editing=true;st.focus=true;break;
+    case'done':st.editing=false;st.q='';break;
+    case'add':addChip(ds.t,ds.v,ds.sub);st.q='';st.focus=true;break;
+    case'rm':{const ch=st.chips.splice(+ds.i,1);st.pick=null;if(st.chips.length<2)st.split=false;if(st.editing)st.focus=true;break;}
+    case'split':st.split=!st.split;break;
+    case'range':st.sheet='range';st.draft={f:st.from,t:st.to,p:st.preset,pick:null};st.calM=(st.to>TODAY?TODAY:st.to).slice(0,7);break;
+    case'preset':{const r=presetRange(ds.p);st.draft.p=ds.p;if(r){st.draft.f=r[0];st.draft.t=r[1];st.calM=(r[1]>TODAY?TODAY:r[1]).slice(0,7);}else st.draft.pick='f';break;}
+    case'rday':{const d=ds.d,r=st.draft;r.p='pers';if(r.pick!=='t'){r.f=d;r.t=d;r.pick='t';}else{if(d<r.f){r.t=r.f;r.f=d;}else r.t=d;r.pick=null;}break;}
+    case'calnav':st.calM=mAdd(st.calM,+ds.n);break;
+    case'apply':st.from=st.draft.f;st.to=st.draft.t;st.preset=st.draft.p;st.sheet=null;st.brush=null;st.bucket=null;break;
+    case'close':st.sheet=null;st.pick=null;break;
+    case'open':st.view='detail';st.w=ds.w;st.brush=null;st.bucket=null;st.lim=10;st.rlim=10;draw(false);return;
+    case'hist':st.view='hist';draw(false);return;
+    case'back':st.view=st.view==='detail'&&st.fromHist?'hist':'grid';st.brush=null;st.bucket=null;st.pick=null;draw(false);return;
+    case'opt':st.wo[st.w]=Object.assign({},st.wo[st.w],{[ds.k]:ds.v});st.brush=null;break;
+    case'tog':{const o=wo(st,st.w);st.wo[st.w]=Object.assign({},st.wo[st.w],{[ds.k]:!o[ds.k]});break;}
+    case'pick':st.pick={t:ds.t,v:ds.v,sub:ds.sub};break;
+    case'pickday':if(st.view!=='detail'){st.view='detail';st.w='cal';draw(false);return;}st.pick={day:ds.d};break;
+    case'pickmonth':st.pick={month:ds.m};break;
+    case'usechip':addChip(st.pick.t,st.pick.v,st.pick.sub);st.pick=null;break;
+    case'useday':st.from=st.to=st.pick.day;st.preset='pers';st.pick=null;break;
+    case'usemonth':st.from=st.pick.month+'-01';st.to=st.pick.month+'-'+dim(st.pick.month);st.preset='pers';st.pick=null;break;
+    case'usebrush':st.from=st.brush[0];st.to=st.brush[1];st.preset='pers';st.brush=null;break;
+    case'clrbrush':st.brush=null;break;
+    case'bucket':st.bucket=st.bucket===+ds.b?null:+ds.b;break;
+    case'more':st.lim+=20;break;
+    case'rmore':st.rlim=999;break;
+    default:return;}
+    draw(true);};
+  scr.addEventListener('click',e=>{const el=e.target.closest('[data-a]');if(!el||!scr.contains(el))return;if(scr._dragged){scr._dragged=false;return;}
+    if(el.dataset.a==='open'&&st.view==='hist')st.fromHist=true;else if(el.dataset.a==='open')st.fromHist=false;
+    act(el.dataset.a,el.dataset);});
+  scr.addEventListener('input',e=>{if(!e.target.matches('input[data-q]'))return;st.q=e.target.value;const bd=scr.querySelector('.bd');bd.innerHTML=acView(st);});
+  scr.addEventListener('keydown',e=>{if(e.target.matches('input[data-q]')){if(e.key==='Enter'){const b=scr.querySelector('.aci');if(b)act('add',b.dataset);}else if(e.key==='Backspace'&&!st.q&&st.chips.length){act('rm',{i:st.chips.length-1});}else if(e.key==='Escape')act('done',{});}});
+  // brushing
+  let br=null;
+  scr.addEventListener('pointerdown',e=>{const svg=e.target.closest('svg[data-brush]');if(!svg)return;const ds=svg.dataset,rc=svg.getBoundingClientRect(),k=(+ds.w)/rc.width;
+    const toI=cx=>{const x=(cx-rc.left)*k;const n=+ds.n;return Math.max(0,Math.min(n-1,Math.round((x-ds.x0)/(ds.x1-ds.x0)*(ds.bucket?n:n-1)-(ds.bucket?.5:0))));};
+    br={svg,ds,toI,i0:toI(e.clientX),i1:toI(e.clientX),x:e.clientX,rect:null};svg.setPointerCapture(e.pointerId);});
+  scr.addEventListener('pointermove',e=>{if(!br)return;br.i1=br.toI(e.clientX);if(Math.abs(e.clientX-br.x)<4)return;const{ds}=br,n=+ds.n;const a=Math.min(br.i0,br.i1),b=Math.max(br.i0,br.i1);
+    const X=i=>+ds.x0+(ds.x1-ds.x0)*(ds.bucket?i/n:i/Math.max(1,n-1));
+    if(!br.rect){br.rect=document.createElementNS('http://www.w3.org/2000/svg','rect');br.rect.setAttribute('style','fill:var(--anil);opacity:.18;pointer-events:none');br.svg.appendChild(br.rect);}
+    const x0=ds.bucket?X(a):X(a)-2,x1=ds.bucket?X(b+1):X(b)+2;br.rect.setAttribute('x',x0);br.rect.setAttribute('width',x1-x0);br.rect.setAttribute('y',ds.pt);br.rect.setAttribute('height',ds.h);});
+  scr.addEventListener('pointerup',e=>{if(!br)return;const b=br;br=null;if(Math.abs(e.clientX-b.x)<4)return;scr._dragged=true;setTimeout(()=>scr._dragged=false,0);
+    const a=Math.min(b.i0,b.i1),z=Math.max(b.i0,b.i1),step=+b.ds.step;let f=addDays(b.ds.d0,a*step),t=addDays(b.ds.d0,z*step+step-1);if(f<st.from)f=st.from;if(t>st.to)t=st.to;st.brush=[f,t];draw(true);});
+  draw(false);}
+
+/* tooltip */
+const tip=document.getElementById('tip');
+document.addEventListener('pointerover',e=>{const el=e.target.closest&&e.target.closest('[data-tip]');if(!el){tip.style.opacity=0;return;}tip.textContent=el.dataset.tip;tip.style.opacity=1;});
+document.addEventListener('pointermove',e=>{if(tip.style.opacity==='1'){tip.style.left=Math.min(window.innerWidth-230,e.clientX+12)+'px';tip.style.top=(e.clientY-36)+'px';}});
+
+document.querySelectorAll('[data-frame]').forEach(ph=>mount(ph,FRAMES[ph.dataset.frame]()));
+const tb=document.getElementById('tema');tb.onclick=()=>{const dk=document.documentElement.dataset.theme==='dark';document.documentElement.dataset.theme=dk?'light':'dark';tb.textContent=dk?'Escuro':'Claro';};
+</script>
+</body>
+</html>

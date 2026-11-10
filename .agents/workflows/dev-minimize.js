@@ -12,7 +12,7 @@ export const meta = {
 
 // The caller reads the single project configuration before invoking a workflow.
 const config = args.config
-if (!config || config.version !== 1) throw new Error('Pass .claude/pipeline/config.json as args.config')
+if (!config || config.version !== 1) throw new Error('Pass .agents/pipeline/config.json as args.config')
 
 const { slug, base, root, apiMaturity = 'settled' } = args
 
@@ -21,7 +21,7 @@ const { slug, base, root, apiMaturity = 'settled' } = args
 const exploratory = apiMaturity === 'exploratory'
 const W = `${root}/.work/${slug}`
 const S = `${root}/scripts/pipeline`
-const PRELUDE = `Read ${root}/.claude/pipeline/config.json and ${root}/.claude/pipeline/RULES.md first and obey it, in particular the
+const PRELUDE = `Read ${root}/.agents/pipeline/config.json and ${root}/.agents/pipeline/RULES.md first and obey it, in particular the
 I/O boundary list and the deletion classes. Feature slug: ${slug}.
 Requirement and acceptance criteria: ${W}/requirement.md. Manifest: ${W}/manifest.md.
 Base ref: ${base}. Only lines this feature ADDED are in scope — never pre-existing code.
@@ -165,7 +165,7 @@ const saved = await agent(`${PRELUDE}
 
 Close the stage 4 automatic removals.
 
-1. Read ${root}/.claude/skills/caveman-commit/SKILL.md and write messages by its rules,
+1. Read ${root}/.agents/skills/caveman-commit/SKILL.md and write messages by its rules,
    with the overrides in the "Commits and checkpoints" section of RULES.md.
 2. If \`git status --porcelain\` shows changes outside .work/, run
    \`${S}/commit-progress.sh -m "refactor(${slug}): remove surface no requirement asks for"\`.

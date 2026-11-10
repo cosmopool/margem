@@ -70,7 +70,7 @@ than by argument.
 
 ## Testing
 
-`.claude/pipeline/TESTING.md` governs every test this pipeline writes. Read it before
+`.agents/pipeline/TESTING.md` governs every test this pipeline writes. Read it before
 authoring or judging a test. It is the authority; the notes below only resolve where it
 meets the mechanics of this pipeline.
 

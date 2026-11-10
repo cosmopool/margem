@@ -13,7 +13,7 @@ export const meta = {
 
 // The caller reads the single project configuration before invoking a workflow.
 const config = args.config
-if (!config || config.version !== 1) throw new Error('Pass .claude/pipeline/config.json as args.config')
+if (!config || config.version !== 1) throw new Error('Pass .agents/pipeline/config.json as args.config')
 
 const {
   slug, base, root, candidates = config.workflow.candidates,
@@ -30,7 +30,7 @@ const raceSize = exploratory ? 1 : candidates
 
 const W = `${root}/.work/${slug}`
 const S = `${root}/scripts/pipeline`
-const PRELUDE = `Read ${root}/.claude/pipeline/config.json and ${root}/.claude/pipeline/RULES.md first and obey it. Feature slug: ${slug}.
+const PRELUDE = `Read ${root}/.agents/pipeline/config.json and ${root}/.agents/pipeline/RULES.md first and obey it. Feature slug: ${slug}.
 Its folder is ${W}/ — requirement.md, code-map.md and manifest.md are the contract.
 The feature's base ref is ${base}. This feature's API is ${apiMaturity}.
 Pipeline scripts live in ${S}/.`
@@ -121,7 +121,7 @@ const checkpoint = (step, what, metrics = false) => agent(`${PRELUDE}
 
 Close the stage 1 step "${step}": ${what}
 
-1. Read ${root}/.claude/skills/caveman-commit/SKILL.md and write messages by its rules,
+1. Read ${root}/.agents/skills/caveman-commit/SKILL.md and write messages by its rules,
    with the overrides in the "Commits and checkpoints" section of RULES.md.
 2. If \`git status --porcelain\` shows changes outside .work/, write a message for them
    (scope ${slug}) and run \`${S}/commit-progress.sh -m "<message>"\`.
@@ -148,7 +148,7 @@ acceptance criteria alone — that is what makes them a valid oracle later. The 
 test against is the one declared in manifest.md; it does not exist yet, so the suite
 will not compile or will fail. That is the expected outcome.
 
-Rules — ${root}/.claude/pipeline/TESTING.md is the authority, read it first:
+Rules — ${root}/.agents/pipeline/TESTING.md is the authority, read it first:
 - integration tests by default: set up real state, go in through the public entry point,
   assert on the observable outcome. Never a unit test per function, never a test file
   per source file.
@@ -220,7 +220,7 @@ tests. Read the contract from ${W}/, not from this worktree's .work/ copy.
 5. Measure: \`${S}/budget.sh --base ${base} ${BUDGET_FLAGS}\`
 6. Write your patch against the commit you started from, so it holds only your work:
    \`mkdir -p ${W}/candidates && git add -A -N && git diff HEAD -- . ':(exclude).work'
-   ':(exclude).claude' ':(exclude)scripts/pipeline' > ${W}/candidates/${i + 1}.patch\`
+   ':(exclude).claude' ':(exclude).agents' ':(exclude)scripts/pipeline' > ${W}/candidates/${i + 1}.patch\`
 
 Report the numbers from budget.sh exactly as printed. Do not adjust them.`,
       { label: `candidate ${i + 1}`, phase: 'Implement', isolation: 'worktree', schema: CANDIDATE })

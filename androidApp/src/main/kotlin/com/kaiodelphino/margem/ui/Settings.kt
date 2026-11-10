@@ -36,12 +36,14 @@ import androidx.compose.ui.draw.shadow
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.platform.testTag
 import androidx.compose.ui.semantics.semantics
+import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.window.Dialog
 import androidx.compose.ui.window.DialogProperties
 import com.kaiodelphino.margem.BudgetOrder
 import com.kaiodelphino.margem.CobudgetImport
 import com.kaiodelphino.margem.Db
+import com.kaiodelphino.margem.BuildConfig
 import com.kaiodelphino.margem.R
 import com.kaiodelphino.margem.SpendKind
 import com.kaiodelphino.margem.TagRow
@@ -151,6 +153,9 @@ object SettingsTags {
 
     /** "Importar do cobudget" · "recados de um backup do app antigo". Click opens Importar do cobudget. */
     const val COBUDGET = "settings.cobudget"
+
+    /** "Margem X.Y.Z" at the bottom of the page: BuildConfig.VERSION_NAME, from the latest git tag. */
+    const val VERSION = "settings.version"
 
     // ---- Riscados (spec §2.3, §7.6) ----
 
@@ -328,6 +333,10 @@ fun Settings(db: Db, granted: Boolean, go: (Screen) -> Unit) {
             SectionLine("Dados")
             Entry("Backup", "exportar · importar", SettingsTags.BACKUP) { go(Screen.Backup) }
             Entry("Importar do cobudget", "recados de um backup do app antigo", SettingsTags.COBUDGET) { go(Screen.Cobudget) }
+            Text(
+                "Margem ${BuildConfig.VERSION_NAME}", sans(12.5f, 400, 17f),
+                Modifier.fillMaxWidth().padding(top = 24.dp).testTag(SettingsTags.VERSION), Margem.colors.inkTertiary, align = TextAlign.Center,
+            )
         }
     }
 }

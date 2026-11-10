@@ -35,11 +35,16 @@ intent_to_add
 mapfile -t DIFF_PATHS < <(config pathspec production)
 DIFF="$(git diff -U0 "$BASE" -- "${DIFF_PATHS[@]}")"
 
-python3 - "$UNCOVERED" "$(cat "$LOG.uninstrumented")" "$ANALYZER" "$BUDGET" "$DIFF" \
+# Large values go through files: one argv string is capped at 128 KiB (MAX_ARG_STRLEN).
+TMP="$(mktemp -d)"; trap 'rm -rf "$TMP"' EXIT
+printf '%s' "$UNCOVERED" > "$TMP/uncovered"; cp "$LOG.uninstrumented" "$TMP/uninstrumented"
+printf '%s' "$ANALYZER" > "$TMP/analyzer"; printf '%s' "$BUDGET" > "$TMP/budget"; printf '%s' "$DIFF" > "$TMP/diff"
+python3 - "$TMP/uncovered" "$TMP/uninstrumented" "$TMP/analyzer" "$TMP/budget" "$TMP/diff" \
   "${PACKAGE_TESTS[@]+"${PACKAGE_TESTS[@]}"}" <<'PY'
 from pipeline_config import CONFIG
 import json, os, re, sys
-uncovered, uninstrumented, analyzer, budget, diff, *package_tests = sys.argv[1:]
+uncovered, uninstrumented, analyzer, budget, diff = (open(p).read() for p in sys.argv[1:6])
+package_tests = sys.argv[6:]
 
 added, file = {}, None
 for line in diff.splitlines():

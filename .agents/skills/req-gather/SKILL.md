@@ -3,14 +3,14 @@ name: req-gather
 description: Stage 0 of the feature pipeline. Turns a product owner's raw requirement into a reviewed requirement.md — acceptance criteria, non-goals, and an explicit assumptions list — by interrogating the paste against the actual codebase. Use when starting any new feature, or when asked to gather, clarify or grill a requirement.
 ---
 
-Before starting, read `.claude/pipeline/config.json` as `config`. It is the source for
+Before starting, read `.agents/pipeline/config.json` as `config`. It is the source for
 project paths, commands, review instructions, budgets and workflow limits. Pass the
 entire parsed object as `config` in every Workflow call. Use its commands and test
 naming conventions; do not infer a stack from examples below.
 
 # Stage 0 — gather the requirement
 
-Read `.claude/pipeline/RULES.md` first.
+Read `.agents/pipeline/RULES.md` first.
 
 This stage is a conversation. It runs in the main loop and never delegates the
 questioning to a subagent, because a subagent cannot ask the user anything.

@@ -132,6 +132,14 @@ class AjustesUiTest {
     }
 
     @Test
+    fun `the version from the latest git tag shows at the bottom of Ajustes`() {
+        open()
+        waitFor(SettingsTags.VERSION)
+        compose.onNodeWithTag(SettingsTags.VERSION).performScrollTo().assertTextContains("Margem ${BuildConfig.VERSION_NAME}")
+        assertTrue(BuildConfig.VERSION_NAME, Regex("""\d+\.\d+\.\d+""").matches(BuildConfig.VERSION_NAME))
+    }
+
+    @Test
     fun `a dismissed notice comes back to the Pauta from Riscados`() {
         val id = post("Compra de R$ 12,00 aprovada em PADARIA", 1_791_900_000_000)
         runBlocking { assertTrue(db.dismiss(id)) }

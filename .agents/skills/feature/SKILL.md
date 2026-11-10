@@ -3,7 +3,7 @@ name: feature
 description: Runs the whole feature pipeline for one slug, from the PO paste to MR text on disk — requirement questions and manifest approval up front, then build, a verify loop, an automatic bench decision and minimize unattended, then one stop for defensive deletions. Checkpoints every step, so a run resumes on any machine. Use when the user wants a feature built end to end, or invokes /feature.
 ---
 
-Before starting, read `.claude/pipeline/config.json` as `config`. It is the source for
+Before starting, read `.agents/pipeline/config.json` as `config`. It is the source for
 project paths, commands, review instructions, budgets and workflow limits. Pass the
 entire parsed object as `config` in every Workflow call. Use its commands and test
 naming conventions; do not infer a stack from examples below.
@@ -12,7 +12,7 @@ naming conventions; do not infer a stack from examples below.
 
 Usage: `/feature <slug>`, with the PO's requirement pasted alongside it or asked for.
 
-Read `.claude/pipeline/RULES.md` first. This skill is a driver: each stage's rules live in
+Read `.agents/pipeline/RULES.md` first. This skill is a driver: each stage's rules live in
 RULES.md, in the stage skills and in the workflows, and this file only decides what runs
 next and where to stop. You talk to the user at the opening and at the end. Between them
 the run is unattended and stops only when the design check fires, a critical bug
@@ -65,12 +65,12 @@ ahead, state does not match the branch) and end the turn. Otherwise read `mode`:
 
 ## 2. Opening session — you answer here
 
-1. **Capture, map, ask, write.** Follow `.claude/skills/req-gather/SKILL.md` steps 1 to 4
+1. **Capture, map, ask, write.** Follow `.agents/skills/req-gather/SKILL.md` steps 1 to 4
    exactly: the paste goes verbatim to `requirement-raw.md`, the code map to
    `code-map.md`, the traceable and consequential questions (at most 4 per round, at most
    config.workflow.question_rounds rounds, every touched boundary's failure asked), then `requirement.md`.
    Do not stop after step 4 as that skill does: the hand-back happens in the approval below.
-2. **Draft the manifest.** Follow "Draft the manifest" in `.claude/skills/dev-build/SKILL.md`.
+2. **Draft the manifest.** Follow "Draft the manifest" in `.agents/skills/dev-build/SKILL.md`.
 3. **Lint.** `scripts/pipeline/lint-feature.sh --slug <slug>`. Fix every error it lists
    in the two files and run it again until it exits 0. Keep its `budget` and `api`.
 4. **Approve.** Show the manifest, then the Assumed list and the non-goals from
@@ -149,7 +149,7 @@ queue, already stored as `pending`. On `ok: false`, stop (see "When something fa
 
 ## 7. Deletion queue — you answer here
 
-Follow "The approval queue" in `.claude/skills/dev-minimize/SKILL.md`: one batch,
+Follow "The approval queue" in `.agents/skills/dev-minimize/SKILL.md`: one batch,
 multi-select, each item with its construct, why nothing needs it, and what breaks if it
 was needed. `AskUserQuestion` takes at most 4 options per question and 4 questions per
 call, so split a longer queue into several questions. Boundary-protected code is listed,
@@ -168,7 +168,7 @@ checkpointed: say it was empty.
 3. Ask with `AskUserQuestion` for the name of the clean branch the MR will be opened
    from. Then `scripts/pipeline/finish.sh --slug <slug> --into <name>`: it cherry-picks
    every code commit, without checkpoints, onto a new branch from the base.
-4. Follow `.claude/skills/mr-description/SKILL.md` for that branch against the configured `git.base`,
+4. Follow `.agents/skills/mr-description/SKILL.md` for that branch against the configured `git.base`,
    and write the title and description to `.work/<slug>/mr.md`.
 5. Checkpoint `finish/done`.
 

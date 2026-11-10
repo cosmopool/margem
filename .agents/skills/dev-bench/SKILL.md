@@ -3,14 +3,14 @@ name: dev-bench
 description: Stage 3 of the feature pipeline. Runs only when perf-signals.sh finds a cost signal; measures the feature, proposes only optimisations backed by numbers, and implements the ones whose gain justifies their added lines.
 ---
 
-Before starting, read `.claude/pipeline/config.json` as `config`. It is the source for
+Before starting, read `.agents/pipeline/config.json` as `config`. It is the source for
 project paths, commands, review instructions, budgets and workflow limits. Pass the
 entire parsed object as `config` in every Workflow call. Use its commands and test
 naming conventions; do not infer a stack from examples below.
 
 # Stage 3 — measure, then maybe optimise
 
-Read `.claude/pipeline/RULES.md` first.
+Read `.agents/pipeline/RULES.md` first.
 
 ## Decide whether to run it at all
 
@@ -24,7 +24,7 @@ scripts/pipeline/perf-signals.sh --slug <slug>
 ```
 
 `run: false` means skip: say so, and checkpoint `bench/skipped` as the "Commits" section
-of `.claude/skills/feature/SKILL.md` describes. `run: true` means it is worth measuring.
+of `.agents/skills/feature/SKILL.md` describes. `run: true` means it is worth measuring.
 
 ## Run
 

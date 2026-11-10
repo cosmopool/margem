@@ -3,14 +3,14 @@ name: dev-minimize
 description: Stage 4 of the feature pipeline. Runs the dev-minimize workflow to find code no requirement asks for, auto-removes the mechanically dead parts, and asks the user to approve any defensive deletions. Use as the last stage before opening the MR.
 ---
 
-Before starting, read `.claude/pipeline/config.json` as `config`. It is the source for
+Before starting, read `.agents/pipeline/config.json` as `config`. It is the source for
 project paths, commands, review instructions, budgets and workflow limits. Pass the
 entire parsed object as `config` in every Workflow call. Use its commands and test
 naming conventions; do not infer a stack from examples below.
 
 # Stage 4 — remove what nothing asked for
 
-Read `.claude/pipeline/RULES.md` first.
+Read `.agents/pipeline/RULES.md` first.
 
 ## Preconditions
 

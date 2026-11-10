@@ -31,5 +31,6 @@ fi
 git reset -q
 git add -f -A -- .work
 git commit -q --allow-empty -m "$MESSAGE"
-git push -q -u "$(config get git.remote)" HEAD
+# PIPELINE_NO_PUSH=1 leaves the push to the user (a sandbox without credentials).
+[ -n "${PIPELINE_NO_PUSH:-}" ] || git push -q -u "$(config get git.remote)" HEAD
 git rev-parse HEAD

@@ -7,7 +7,7 @@
 # Because the test suite is derived only from the acceptance criteria in
 # requirement.md — never from the implementation — an added line that no test reaches
 # is a line no requirement asked for. That makes it a deletion *candidate*: classify it
-# per .claude/pipeline/RULES.md before removing anything. Defensive code at an I/O
+# per .agents/pipeline/RULES.md before removing anything. Defensive code at an I/O
 # boundary is exempt even when uncovered.
 #
 # Lines with no coverage record (comments, braces, declarations) are not executable and

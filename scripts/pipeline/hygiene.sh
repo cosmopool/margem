@@ -19,10 +19,14 @@ ADDED="$(git diff -U0 "$BASE" -- "${DIFF_PATHS[@]}")"
 mapfile -t DEP_PATHS < <(config pathspec dependencies)
 DEPS="$(git diff --name-only "$BASE" -- "${DEP_PATHS[@]}")"
 
-python3 - "$BASE" "$(work_dir "$SLUG")/manifest.md" "$ADDED" "$DEPS" <<'PY'
+# The diff goes through a file: one argv string is capped at 128 KiB (MAX_ARG_STRLEN).
+ADDED_FILE="$(mktemp)"; trap 'rm -f "$ADDED_FILE"' EXIT
+printf '%s' "$ADDED" > "$ADDED_FILE"
+python3 - "$BASE" "$(work_dir "$SLUG")/manifest.md" "$ADDED_FILE" "$DEPS" <<'PY'
 from pipeline_config import CONFIG
 import json, re, subprocess, sys
 base, manifest, added, deps = sys.argv[1:]
+added = open(added).read()
 violations = []
 
 rules = [(name, re.compile(pattern)) for name, pattern in CONFIG['patterns']['rules']]

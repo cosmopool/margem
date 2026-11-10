@@ -13,12 +13,12 @@ export const meta = {
 
 // The caller reads the single project configuration before invoking a workflow.
 const config = args.config
-if (!config || config.version !== 1) throw new Error('Pass .claude/pipeline/config.json as args.config')
+if (!config || config.version !== 1) throw new Error('Pass .agents/pipeline/config.json as args.config')
 
 const { slug, base, root, signals = [] } = args
 const W = `${root}/.work/${slug}`
 const S = `${root}/scripts/pipeline`
-const PRELUDE = `Read ${root}/.claude/pipeline/config.json and ${root}/.claude/pipeline/RULES.md first and obey it. Feature slug: ${slug}.
+const PRELUDE = `Read ${root}/.agents/pipeline/config.json and ${root}/.agents/pipeline/RULES.md first and obey it. Feature slug: ${slug}.
 Requirement: ${W}/requirement.md. Base ref: ${base}. Scope: code this feature added.
 Pipeline scripts live in ${S}/.`
 
@@ -105,7 +105,7 @@ const finish = async result => {
 
 Close stage 3: ${result.implemented?.length ? `implemented ${result.implemented.join('; ')}` : 'nothing implemented'}.
 
-1. Read ${root}/.claude/skills/caveman-commit/SKILL.md and write messages by its rules,
+1. Read ${root}/.agents/skills/caveman-commit/SKILL.md and write messages by its rules,
    with the overrides in the "Commits and checkpoints" section of RULES.md.
 2. If \`git status --porcelain\` shows changes outside .work/, run
    \`${S}/commit-progress.sh -m "perf(${slug}): <what and the measured gain>"\`.

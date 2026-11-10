@@ -1,0 +1,1461 @@
+<!doctype html>
+<html lang="pt-BR">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Margem · proposta C · a verba é a porta</title>
+<meta name="description" content="Proposta C de redesenho do Margem: a verba fica simples e cada número dela é uma porta para uma das seis ideias da Análise (margem, previstos, ritmo, passo, fim do mês, teto), cada uma com ajuda e com os números da pessoa.">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Newsreader:ital,opsz,wght@0,6..72,300..700;1,6..72,300..700&family=Source+Sans+3:ital,wght@0,300..800;1,400..600&display=swap" rel="stylesheet">
+<style>
+/* Fontes do app, do próprio repositório, quando o Google Fonts não carrega */
+@font-face{font-family:'Newsreader Local';src:url('../../androidApp/src/main/res/font/newsreader.ttf') format('truetype');font-weight:200 800;font-style:normal}
+@font-face{font-family:'Newsreader Local';src:url('../../androidApp/src/main/res/font/newsreader_italic.ttf') format('truetype');font-weight:200 800;font-style:italic}
+@font-face{font-family:'Source Sans Local';src:url('../../androidApp/src/main/res/font/source_sans.ttf') format('truetype');font-weight:200 900;font-style:normal}
+@font-face{font-family:'Source Sans Local';src:url('../../androidApp/src/main/res/font/source_sans_italic.ttf') format('truetype');font-weight:200 900;font-style:italic}
+
+/* ===== TOKENS: widgets/Theme.kt = design_system.html §4 ===== */
+:root,.t-light{
+  color-scheme:light;
+  --papel:#F3EEE4; --folha:#FBF8F1; --folha-2:#ECE5D8;
+  --fio:#DDD3C2; --fio-forte:#8A7E6A;
+  --tinta:#1E1B16; --tinta-2:#514A40; --tinta-3:#6B6254;
+  --argila:#A44D29;
+  --musgo:#3E5E38; --musgo-fundo:#E3EADB;
+  --ocre:#85590F; --ocre-fundo:#F4E7CC;
+  --lacre:#9A2A20; --lacre-fundo:#F6E3DC;
+  --anil:#2D4C6E; --anil-fundo:#DFE6EE;
+  --acao:#1E1B16; --sobre-acao:#FBF8F1;
+  --scrim:rgba(30,27,22,.45);
+  --sombra:0 2px 4px rgba(30,27,22,.10),0 10px 28px -6px rgba(30,27,22,.28);
+  --parede:linear-gradient(165deg,#E4E2D2 0%,#EDE4D2 50%,#D9C6AA 100%);
+  --wg-fundo:rgba(251,248,241,.95);
+}
+:root[data-theme="dark"],.t-dark{
+  color-scheme:dark;
+  --papel:#171512; --folha:#201D19; --folha-2:#2A2621;
+  --fio:#36312A; --fio-forte:#7C7262;
+  --tinta:#EEE7DA; --tinta-2:#BDB3A3; --tinta-3:#988E7F;
+  --argila:#E09470;
+  --musgo:#A3C092; --musgo-fundo:#24301F;
+  --ocre:#DDB063; --ocre-fundo:#382C17;
+  --lacre:#EE937E; --lacre-fundo:#3A221C;
+  --anil:#A3BCDB; --anil-fundo:#1F2A36;
+  --acao:#EEE7DA; --sobre-acao:#171512;
+  --scrim:rgba(0,0,0,.6);
+  --sombra:0 2px 4px rgba(0,0,0,.4),0 12px 30px -6px rgba(0,0,0,.7);
+  --parede:linear-gradient(165deg,#1B211B 0%,#13120F 55%,#211913 100%);
+  --wg-fundo:rgba(32,29,25,.95);
+}
+@media (prefers-color-scheme:dark){
+  :root:not([data-theme="light"]){
+    color-scheme:dark;
+    --papel:#171512; --folha:#201D19; --folha-2:#2A2621;
+    --fio:#36312A; --fio-forte:#7C7262;
+    --tinta:#EEE7DA; --tinta-2:#BDB3A3; --tinta-3:#988E7F;
+    --argila:#E09470;
+    --musgo:#A3C092; --musgo-fundo:#24301F;
+    --ocre:#DDB063; --ocre-fundo:#382C17;
+    --lacre:#EE937E; --lacre-fundo:#3A221C;
+    --anil:#A3BCDB; --anil-fundo:#1F2A36;
+    --acao:#EEE7DA; --sobre-acao:#171512;
+    --scrim:rgba(0,0,0,.6);
+    --sombra:0 2px 4px rgba(0,0,0,.4),0 12px 30px -6px rgba(0,0,0,.7);
+    --parede:linear-gradient(165deg,#1B211B 0%,#13120F 55%,#211913 100%);
+    --wg-fundo:rgba(32,29,25,.95);
+  }
+}
+:root{--serif:'Newsreader','Newsreader Local',Georgia,serif;--sans:'Source Sans 3','Source Sans Local',system-ui,sans-serif}
+
+/* ===== PÁGINA DO DOCUMENTO ===== */
+*{box-sizing:border-box;margin:0;padding:0}
+html{-webkit-text-size-adjust:100%}
+body{background:var(--papel);color:var(--tinta);font:400 17px/1.6 var(--sans);overflow-x:hidden}
+h1,h2,h3,h4{font-family:var(--serif);font-weight:400}
+.wrap{max-width:1260px;margin:0 auto;padding:0 16px 96px}
+@media (min-width:720px){.wrap{padding:0 40px 120px}}
+header.cover{padding:48px 0 40px;border-bottom:2px solid var(--tinta)}
+.kick{font:600 12px/1.3 var(--sans);letter-spacing:.14em;text-transform:uppercase;color:var(--argila)}
+h1{font:italic 400 clamp(44px,8vw,92px)/.95 var(--serif);letter-spacing:-.03em;margin:14px 0 18px}
+.lede{font:300 clamp(19px,2.4vw,24px)/1.45 var(--serif);color:var(--tinta-2);max-width:42em}
+.lede em{color:var(--tinta)}
+section{padding:60px 0 24px;border-bottom:1px solid var(--fio)}
+h2{font:400 clamp(30px,4.4vw,44px)/1.05 var(--serif);letter-spacing:-.015em;margin:8px 0 18px;max-width:22em}
+h2 em{color:var(--argila)}
+h3.sub{font:500 24px/1.25 var(--serif);margin:44px 0 10px}
+p{max-width:46em;margin-bottom:14px}
+.muted{color:var(--tinta-2)}
+.small{font-size:15px}
+a{color:var(--anil)}
+.tblw{overflow-x:auto;margin:12px 0 20px;-webkit-overflow-scrolling:touch}
+table{width:100%;border-collapse:collapse;font-size:15px;line-height:1.45}
+th{font:600 11px/1.3 var(--sans);letter-spacing:.12em;text-transform:uppercase;text-align:left;padding:10px 14px 10px 0;border-top:2px solid var(--tinta);border-bottom:1px solid var(--tinta);white-space:nowrap}
+td{padding:10px 14px 10px 0;border-bottom:1px solid var(--fio);vertical-align:top}
+td.t{font:500 17px/1.3 var(--serif)}
+td.n,th.n{text-align:right;font-variant-numeric:lining-nums tabular-nums;white-space:nowrap}
+tr.sum td{border-top:1px solid var(--tinta);font-weight:600}
+.map td{min-width:150px}
+.map td:first-child{min-width:170px}
+.tag{display:inline-block;font:600 10.5px/1.2 var(--sans);letter-spacing:.06em;text-transform:uppercase;padding:3px 6px;border-radius:3px;white-space:nowrap;margin:0 4px 2px 0}
+.tg-fica{background:var(--musgo-fundo);color:var(--musgo)}
+.tg-muda{background:var(--anil-fundo);color:var(--anil)}
+.tg-junta{background:var(--ocre-fundo);color:var(--ocre)}
+.tg-nova{background:var(--folha-2);color:var(--tinta)}
+ol.rules{list-style:none;counter-reset:r;border-top:2px solid var(--tinta);max-width:52em;margin:24px 0}
+ol.rules li{counter-increment:r;padding:14px 0 14px 46px;border-bottom:1px solid var(--fio);position:relative;font-size:16.5px;line-height:1.5;color:var(--tinta-2)}
+ol.rules li::before{content:counter(r);position:absolute;left:0;top:10px;font:italic 300 30px/1 var(--serif);color:var(--argila)}
+ol.rules li b{color:var(--tinta);font-weight:600}
+ol.dec{padding-left:24px;max-width:52em}
+ol.dec li{margin-bottom:16px;line-height:1.5}
+ol.dec li b{font-weight:600}
+ol.dec li .rec{display:block;margin-top:4px;color:var(--tinta-2)}
+ol.dec li .rec::before{content:"Recomendo: ";font-weight:600;color:var(--musgo)}
+#tema{position:fixed;bottom:16px;right:16px;z-index:20;min-height:44px;padding:0 16px;border-radius:4px;border:1px solid var(--fio-forte);background:var(--folha);color:var(--tinta);font:600 13px var(--sans);letter-spacing:.06em;text-transform:uppercase;cursor:pointer}
+.dr-in{display:inline-grid;place-items:center;width:20px;height:20px;border-radius:50%;border:1px solid var(--fio-forte);font:700 11px/1 var(--sans);color:var(--tinta-2);vertical-align:2px;margin:0 2px;font-style:normal}
+
+/* esquema da grade */
+.scheme{display:grid;grid-template-columns:repeat(auto-fit,minmax(min(100%,250px),1fr));gap:18px;margin:20px 0 8px}
+.scheme .col{border-top:3px solid var(--tinta);padding-top:10px}
+.scheme .col.new{border-color:var(--argila)}
+.scheme h4{font:500 22px/1.2 var(--serif)}
+.scheme h4 small{display:block;font:14px/1.4 var(--sans);color:var(--tinta-3);margin-top:2px}
+.scheme ul{list-style:none;margin-top:8px;font-size:15px;line-height:1.4}
+.scheme li{padding:7px 0;border-bottom:1px solid var(--fio);display:flex;gap:8px;align-items:baseline}
+.scheme li small{display:block;font-size:13px;color:var(--tinta-3)}
+.scheme li .dr-in{flex:none}
+
+/* dois toques */
+.flow{display:flex;flex-wrap:wrap;align-items:flex-start;gap:20px 10px;margin:28px 0 8px}
+.flow .step{width:190px}
+.flow .arr{align-self:center;font:italic 300 34px/1 var(--serif);color:var(--argila);padding:0 4px;margin-top:-60px}
+@media (max-width:640px){.flow .arr{display:none}}
+.thumb{width:190px;height:410px;overflow:hidden;border-radius:24px}
+.thumb>.ph{transform:scale(.5);transform-origin:0 0;width:380px;max-width:none}
+.flow .step p{font:14px/1.45 var(--sans);color:var(--tinta-2);margin:10px 0 0}
+.flow .step p b{color:var(--tinta)}
+
+/* lições */
+.lesson{border-top:1px solid var(--tinta);padding-top:22px;margin-top:52px}
+.lesson:first-of-type{margin-top:28px}
+.lh{display:flex;gap:18px;align-items:flex-start}
+.lnum{flex:none;width:58px;height:58px;border-radius:50%;border:1.5px solid var(--argila);display:grid;place-items:center;font:400 30px/1 var(--serif);color:var(--argila)}
+.lh h3{font:400 clamp(28px,3.6vw,38px)/1.05 var(--serif);letter-spacing:-.01em;margin:2px 0 4px}
+.lh .lq{font:italic 400 19px/1.35 var(--serif);color:var(--tinta-2);margin:0}
+.lmeta{display:grid;grid-template-columns:repeat(auto-fit,minmax(min(100%,260px),1fr));gap:4px 28px;margin:16px 0 4px;max-width:1100px}
+.lmeta p{font-size:15px;line-height:1.5;color:var(--tinta-2);margin:0;padding:8px 0;border-bottom:1px solid var(--fio)}
+.lmeta p b{display:block;font:600 11px/1.3 var(--sans);letter-spacing:.12em;text-transform:uppercase;color:var(--tinta);margin-bottom:2px}
+.spec{width:360px;max-width:100%;background:var(--papel);border:1px solid var(--fio);border-radius:14px;padding:20px 24px 22px;color:var(--tinta);font:400 15px/1.4 var(--sans)}
+.spec .grid{margin-top:0}
+.spec-note{font:13px/1.4 var(--sans);color:var(--tinta-3);margin-top:10px}
+
+/* parede do widget */
+.wall{width:380px;max-width:100%;border-radius:32px;padding:26px 18px;background:var(--parede);box-shadow:0 0 0 1px var(--fio)}
+.hw{background:var(--wg-fundo);border-radius:22px;padding:14px 16px 12px;box-shadow:var(--sombra);color:var(--tinta)}
+.hw .h{display:flex;justify-content:space-between;font:600 10.5px/1.3 var(--sans);letter-spacing:.12em;text-transform:uppercase;color:var(--tinta-3)}
+.hw .big{font:400 32px/1.1 var(--serif);font-variant-numeric:lining-nums tabular-nums;margin:2px 0 6px}
+.hw .r{display:grid;grid-template-columns:1fr auto;gap:0 8px;align-items:baseline;padding:5px 0 0;font:500 14px/1.2 var(--sans)}
+.hw .r .v{font:500 15px/1.2 var(--serif);font-variant-numeric:lining-nums tabular-nums}
+.hw .r .v.neg{color:var(--lacre)}
+.hw .r .tank{grid-column:1/-1;margin-top:4px;height:4px}
+
+/* ===== TELEFONE ===== */
+.shots{display:flex;flex-wrap:wrap;gap:44px 32px;align-items:flex-start;margin:28px 0}
+.shot{margin:0;width:380px;max-width:100%}
+.shot figcaption{margin-top:12px;font:italic 15px/1.45 var(--serif);color:var(--tinta-2)}
+.shot figcaption b{display:block;font:600 11px/1.3 var(--sans);letter-spacing:.12em;text-transform:uppercase;color:var(--tinta);font-style:normal;margin-bottom:4px}
+.ph{width:380px;max-width:100%;padding:10px;border-radius:48px;background:#0D0C0A;box-shadow:0 0 0 1px #3a352e,0 40px 70px -40px rgba(20,16,10,.55)}
+.scr{width:360px;max-width:100%;height:800px;border-radius:38px;overflow:hidden;position:relative;background:var(--papel);color:var(--tinta);font:400 15px/1.4 var(--sans);display:flex;flex-direction:column}
+.sbar{height:32px;padding:4px 26px 0;display:flex;justify-content:space-between;align-items:center;font:600 13px var(--sans);flex:none;color:var(--tinta)}
+.sbar .ri{display:flex;gap:6px;align-items:center}
+.ico{width:24px;height:24px;fill:none;stroke:currentColor;stroke-width:1.5;stroke-linecap:round;stroke-linejoin:round;flex:none}
+.ico.s16{width:16px;height:16px}.ico.s18{width:18px;height:18px}.ico.s20{width:20px;height:20px}
+/* TopBar §8.7: 56 dp; título Newsreader 24/500 na raiz, 21/500 com voltar */
+.tb{height:56px;display:flex;align-items:center;gap:2px;padding:0 4px 0 16px;flex:none}
+.tb .t{font:500 24px/30px var(--serif);flex:1;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;padding-left:4px;display:flex;align-items:center;gap:8px}
+.tb.bk{padding-left:4px}
+.tb.bk .t{font:500 21px/26px var(--serif)}
+.tb .back,.tb .ib{width:48px;height:48px;display:grid;place-items:center;color:var(--tinta);flex:none}
+.tb .ib{color:var(--tinta-2)}
+.tb .tx{font:600 14.5px var(--sans);color:var(--anil);padding:0 12px;min-height:48px;display:flex;align-items:center}
+.tb .rgt{font:500 13px var(--sans);color:var(--tinta-3);white-space:nowrap}
+.wmk{font:italic 500 24px/30px var(--serif);letter-spacing:-.02em;flex:1;display:flex;align-items:center;gap:8px}
+.wmk svg{width:22px;height:22px;--marca-tinta:var(--tinta);--marca-fio:var(--argila)}
+.bd{flex:1;overflow:hidden;padding:0 24px 24px;position:relative;min-height:0}
+.navb{height:72px;display:grid;grid-template-columns:repeat(5,1fr);border-top:1px solid var(--fio);background:var(--papel);flex:none}
+.navb a{display:flex;flex-direction:column;align-items:center;justify-content:center;gap:3px;font:500 11.5px/14px var(--sans);color:var(--tinta-3);position:relative;text-decoration:none}
+.navb a.on{color:var(--tinta);font-weight:700}
+.navb a.on::before{content:"";position:absolute;top:-1px;left:24%;right:24%;height:2px;background:var(--tinta)}
+.navb .bdg{position:absolute;top:9px;left:calc(50% + 6px);min-width:18px;height:18px;border-radius:9px;background:var(--argila);color:var(--folha);font:700 11px/18px var(--sans);text-align:center;padding:0 5px}
+.gbar{height:16px;flex:none;display:grid;place-items:center;background:var(--papel)}
+.gbar::after{content:"";width:108px;height:4px;border-radius:2px;background:var(--tinta);opacity:.35}
+
+/* tipografia de tela */
+.over{font:600 11px/14px var(--sans);letter-spacing:.12em;text-transform:uppercase;color:var(--tinta-3)}
+.num{font-variant-numeric:lining-nums tabular-nums}
+.secl{display:flex;justify-content:space-between;align-items:baseline;gap:8px;margin-top:20px;padding-bottom:6px;border-bottom:1px solid var(--tinta);font:600 11px/14px var(--sans);letter-spacing:.12em;text-transform:uppercase}
+.secl span{color:var(--tinta-3);letter-spacing:.06em}
+.secl .lk{color:var(--anil);letter-spacing:0;text-transform:none;font-size:13px}
+.secl .dr{margin-left:6px;vertical-align:1px}
+.st{font:600 13px/1.2 var(--sans);display:inline-flex;align-items:center;gap:5px}
+.st::before{content:"";width:8px;height:8px;flex:none}
+.st.ok{color:var(--musgo)}.st.ok::before{border-radius:50%;background:var(--musgo)}
+.st.at{color:var(--ocre)}.st.at::before{background:var(--ocre);clip-path:polygon(50% 0,100% 100%,0 100%)}
+.st.ov{color:var(--lacre)}.st.ov::before{background:repeating-linear-gradient(-45deg,var(--lacre) 0 1.5px,transparent 1.5px 3px);box-shadow:inset 0 0 0 1px var(--lacre)}
+.st.nt{color:var(--tinta-3)}.st.nt::before{border-radius:50%;box-shadow:inset 0 0 0 1.5px var(--tinta-3)}
+/* a porta: o número da ideia, na cor do texto, num círculo de fio forte */
+.dr{display:inline-grid;place-items:center;width:17px;height:17px;border-radius:50%;border:1px solid var(--fio-forte);font:700 10px/1 var(--sans);color:var(--tinta-2);flex:none;font-style:normal;letter-spacing:0;text-transform:none;background:var(--papel)}
+.dr.lg{width:22px;height:22px;font-size:12px;vertical-align:1.3em;margin-left:6px}
+.btn{display:inline-flex;align-items:center;justify-content:center;gap:8px;min-height:40px;padding:0 14px;border-radius:4px;font:600 14px/20px var(--sans);border:1px solid transparent;white-space:nowrap}
+.btn.pri{background:var(--acao);color:var(--sobre-acao)}
+.btn.sec{border-color:var(--fio-forte);color:var(--tinta)}
+.btn.txt{color:var(--anil);padding:0 10px}
+.btn.txt.lac{color:var(--lacre)}
+.chip{display:inline-flex;align-items:center;gap:4px;height:32px;padding:0 2px 0 10px;border-radius:3px;border:1px solid var(--fio-forte);background:var(--folha);font:500 14px/16px var(--sans);white-space:nowrap}
+.chip .ico{width:12px;height:12px;margin:0 8px 0 4px;color:var(--tinta-2)}
+
+/* Verbas */
+.vh{margin:0 -12px;padding:4px 12px 2px;border-radius:6px}
+.hero{font:400 52px/1 var(--serif);letter-spacing:-.025em;margin:8px 0 4px;font-variant-numeric:lining-nums tabular-nums;white-space:nowrap}
+.hero .cur{font:500 .34em var(--sans);color:var(--tinta-2);vertical-align:.95em;margin-right:.14em;letter-spacing:0}
+.hero .ct{font-size:.46em;color:var(--tinta-2);letter-spacing:0}
+.hero.md{font-size:46px}
+.hero.neg,.hero.neg .cur,.hero.neg .ct{color:var(--lacre)}
+.hero .al{font:500 .44em var(--serif);color:var(--lacre);letter-spacing:0;margin-left:.2em}
+.herosub{font:15px/1.4 var(--sans);color:var(--tinta-2)}
+.herosub.neg{color:var(--tinta-2)}
+.tl{display:flex;align-items:center;gap:6px;min-height:40px;margin-top:4px;font:13.5px var(--sans);color:var(--tinta-3);font-variant-numeric:tabular-nums}
+.tl .ico{color:var(--tinta-3);margin-left:-2px}
+.strip{display:flex;align-items:center;gap:10px;margin-top:6px;padding:4px 0 4px 12px;background:var(--folha);border:1px solid var(--fio);border-radius:6px}
+.strip>.ico{color:var(--argila)}
+.strip .t{flex:1;font:500 17px/22px var(--serif);padding:6px 0}
+.strip .t small{display:block;font:13px/17px var(--sans);color:var(--tinta-2)}
+.strip .go{width:44px;height:44px;display:grid;place-items:center}
+.vr{padding:10px 0 9px;border-bottom:1px solid var(--fio)}
+.vr .l1{display:flex;justify-content:space-between;align-items:baseline;gap:10px}
+.vr .nm{font:500 19px/24px var(--serif)}
+.vr .v{font:500 17px/22px var(--serif);font-variant-numeric:lining-nums tabular-nums;white-space:nowrap}
+.vr .v small{font:400 12.5px var(--sans);color:var(--tinta-3);margin-left:4px}
+.vr .v.neg{color:var(--lacre)}
+.vr .st{margin-top:7px}
+/* a barra da verba: esvazia com a margem (margem ÷ cota) */
+.tank{height:6px;background:var(--fio);margin-top:8px;position:relative}
+.tank b{display:block;height:100%;background:var(--tinta-2)}
+.tank.ov{background:transparent;box-shadow:inset 0 0 0 1px var(--lacre)}
+.tank.lg{height:10px;margin-top:12px}
+
+/* detalhe */
+.tiles{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));margin-top:16px;border:1px solid var(--fio);border-radius:6px;background:var(--folha);overflow:hidden}
+.tile{display:flex;flex-direction:column;gap:2px;padding:8px 8px 9px 10px;min-height:68px;position:relative;text-decoration:none;color:inherit;min-width:0}
+.tile+.tile{border-left:1px solid var(--fio)}
+.tile .tl2{display:flex;align-items:center;gap:5px;font:600 10px/13px var(--sans);letter-spacing:.08em;text-transform:uppercase;color:var(--tinta-3);white-space:nowrap}
+.tile .tl2 .dr{width:15px;height:15px;font-size:9px}
+.tile .tv{font:500 17px/21px var(--serif);font-variant-numeric:lining-nums tabular-nums;white-space:nowrap;margin-top:2px}
+.tile .tv.at{color:var(--ocre)}.tile .tv.ok{color:var(--musgo)}.tile .tv.nt{color:var(--tinta-3)}
+.tile .ts{font:12px/15px var(--sans);color:var(--tinta-3);white-space:nowrap;overflow:hidden;text-overflow:ellipsis;font-variant-numeric:tabular-nums}
+.pressed{position:relative;background:var(--folha-2)!important;box-shadow:inset 0 0 0 2px var(--anil);border-radius:4px}
+.pressed::after{content:"";position:absolute;left:50%;top:50%;width:38px;height:38px;margin:-19px 0 0 -19px;border-radius:50%;background:var(--anil);opacity:.28;pointer-events:none}
+.conta{margin-top:4px}
+.conta .r{display:flex;justify-content:space-between;align-items:center;gap:8px;padding:5px 0;font:14.5px/1.3 var(--sans);color:var(--tinta-2);font-variant-numeric:lining-nums tabular-nums;border-bottom:1px dotted var(--fio)}
+.conta .r:last-child{border-bottom:0}
+.conta .r span:first-child{display:flex;align-items:center;gap:6px}
+.conta .r.tot{border-top:1px solid var(--tinta);border-bottom:0;margin-top:2px;padding-top:7px;color:var(--tinta);font-weight:600}
+.conta .r.tot.neg span:last-child{color:var(--lacre)}
+.conta .r .mut{color:var(--tinta-3)}
+.lrow{display:flex;align-items:center;gap:12px;padding:8px 0;border-bottom:1px solid var(--fio);min-height:48px}
+.lrow .tx{flex:1;min-width:0}
+.lrow .n{display:block;font:500 17px/22px var(--serif);white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.lrow .w{display:block;font:13px/17px var(--sans);color:var(--tinta-3);white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.lrow .w.lk{color:var(--anil);font-weight:600}
+.lrow .a{font:500 17px/22px var(--serif);font-variant-numeric:lining-nums tabular-nums;white-space:nowrap;text-align:right}
+.lrow .a small{display:block;font:500 12px/16px var(--sans);color:var(--tinta-3)}
+.lrow .a small.lac{color:var(--lacre)}
+.lrow .a.res{color:var(--tinta-2)}
+.lrow.cp{min-height:40px;padding:6px 0}
+.lrow.cp .n{font-size:16.5px;line-height:21px}
+.lrow .n small{font:400 12.5px var(--sans);color:var(--tinta-3);margin-left:8px}
+.lrow .sm{width:58px;flex:none;text-align:right;font:500 12.5px/1 var(--sans);color:var(--tinta-3);font-variant-numeric:lining-nums tabular-nums}
+.lrow .sm.lac{color:var(--lacre);font-weight:700}
+.dia{width:40px;flex:none;border:1px dashed var(--fio-forte);border-radius:3px;text-align:center;padding:2px 0 3px}
+.dia small{display:block;font:700 9px/1.2 var(--sans);letter-spacing:.12em;text-transform:uppercase;color:var(--tinta-3)}
+.dia b{display:block;font:500 19px/1.05 var(--serif);font-variant-numeric:lining-nums tabular-nums}
+.cut{display:flex;align-items:center;gap:8px;padding:7px 0;font:600 10.5px/14px var(--sans);letter-spacing:.12em;text-transform:uppercase;color:var(--lacre)}
+.cut::after{content:"";flex:1;border-top:1px dashed var(--lacre)}
+.mbars{display:flex;gap:8px;align-items:flex-end;height:74px;margin-top:10px;position:relative}
+.mbars>div{flex:1;display:flex;flex-direction:column;align-items:center;justify-content:flex-end;gap:4px;font:11.5px var(--sans);color:var(--tinta-3);height:100%}
+.mbars i{display:block;width:100%;background:var(--tinta-3)}
+.mbars i.o{background:repeating-linear-gradient(-45deg,var(--lacre) 0 1.5px,transparent 1.5px 4px);box-shadow:inset 0 0 0 1px var(--lacre)}
+.mbars i.p{background:transparent;border:1px dashed var(--fio-forte);border-bottom:0}
+.mbars .cm{position:absolute;left:0;right:0;border-top:1px dashed var(--tinta-2);z-index:1}
+.mbars>div.now{color:var(--tinta);font-weight:700}
+
+/* Análise: filtro, contexto e grade (Insights.kt) */
+.frg{display:flex;align-items:center;gap:8px;min-height:48px;font:500 17px/22px var(--serif)}
+.frg .ico{color:var(--tinta-2);width:20px;height:20px}
+.fsl{display:flex;align-items:center;gap:8px;height:48px;border-bottom:1px solid var(--fio-forte);color:var(--tinta-3);font:16px/20px var(--sans);white-space:nowrap;overflow:hidden}
+.fsl .ico{width:20px;height:20px}
+.opk{display:flex;border-bottom:1px solid var(--fio);margin-top:4px}
+.opk span{flex:1;text-align:center;min-height:44px;display:flex;align-items:center;justify-content:center;font:500 14px var(--sans);color:var(--tinta-3);position:relative}
+.opk span.on{color:var(--tinta);font-weight:700}
+.opk span.on::after{content:"";position:absolute;left:16%;right:16%;bottom:-1px;height:2px;background:var(--tinta)}
+.fsum{font:500 14px/20px var(--sans);color:var(--tinta-2);padding-top:8px;font-variant-numeric:tabular-nums}
+.ctxh{padding-top:30px}
+.ctxh h3{font:400 29px/34px var(--serif);letter-spacing:-.01em;margin:2px 0 2px}
+.ctxh p{font:15px/21px var(--sans);color:var(--tinta-2);margin:0}
+.pin{height:44px;flex:none;display:flex;align-items:center;gap:10px;padding:0 24px;border-bottom:1px solid var(--tinta);background:var(--papel);font:500 19px/24px var(--serif)}
+.pin small{font:500 12px var(--sans);color:var(--tinta-3)}
+.grid{display:grid;grid-template-columns:minmax(0,1fr) minmax(0,1fr);gap:20px 12px;margin-top:20px}
+/* widget com fita lateral (R9): fio vertical de 2 dp, rótulo, frase, gráfico pequeno */
+.wg{border-left:2px solid var(--fio);padding:0 8px 4px 14px;min-width:0;position:relative}
+.wg.full{grid-column:1/-1}
+.wt{display:flex;align-items:center;gap:6px;min-height:22px}
+.wt .over{flex:1;min-width:0;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.wt .q{width:30px;height:30px;margin:-6px -8px -6px 0;display:grid;place-items:center;color:var(--tinta-3);flex:none}
+.wt .q .ico{width:19px;height:19px}
+.wg .sent{font:italic 400 15px/21px var(--serif);color:var(--tinta-2);margin:3px 0 0;font-variant-numeric:lining-nums tabular-nums}
+.wg .sent b{font-weight:600;color:var(--tinta)}
+.wg .wn{font:12.5px/16px var(--sans);color:var(--tinta-3);margin:6px 0 0;font-variant-numeric:tabular-nums}
+.wg svg.ch{display:block;width:100%;height:auto;margin-top:8px;overflow:visible}
+.wg .mini{margin-top:6px}
+.wg .mini div{display:flex;align-items:center;gap:6px;padding:3px 0;font:13px/17px var(--sans)}
+.wg .mini .d{width:20px;height:18px;border:1px dashed var(--fio-forte);border-radius:2px;display:grid;place-items:center;font:600 10.5px var(--sans);color:var(--tinta-2);flex:none;font-variant-numeric:tabular-nums}
+.wg .mini .n{flex:1;min-width:0;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.wg .mini .a{font-weight:600;color:var(--tinta-2);font-variant-numeric:tabular-nums}
+.wg .mini .st{font-size:12.5px}
+.sb{display:flex;gap:2px;height:10px;margin-top:10px}
+.sb i{display:block;height:100%;min-width:2px}
+.sb .g{background:var(--tinta-2)}
+.sb .r{border:1px dashed var(--fio-forte)}
+.sb .m{box-shadow:inset 0 0 0 1px var(--fio-forte)}
+.sb .dd{background:var(--fio)}
+.leg{display:flex;flex-wrap:wrap;gap:4px 12px;font:500 11.5px/15px var(--sans);color:var(--tinta-3);margin-top:7px}
+.leg span{display:inline-flex;align-items:center;gap:5px}
+.leg i{display:inline-block;flex:none}
+.leg i.ln{width:20px;border-top:2px solid var(--tinta-2)}
+.leg i.ds{width:20px;border-top:1.5px dashed var(--tinta-3)}
+.leg i.dt{width:20px;border-top:2.5px dotted var(--ocre)}
+.leg i.dl{width:16px;height:5px;border-top:1px solid var(--argila);border-bottom:1px solid var(--argila)}
+.leg i.bx{width:9px;height:9px;background:var(--tinta-2)}
+.leg i.bo{width:9px;height:9px;border:1px dashed var(--fio-forte)}
+.leg i.be{width:9px;height:9px;box-shadow:inset 0 0 0 1px var(--fio-forte)}
+.leg i.br{width:3px;height:12px;background:var(--ocre)}
+.leg i.ht{width:9px;height:9px;background:repeating-linear-gradient(-45deg,var(--lacre) 0 1.2px,transparent 1.2px 3.2px);box-shadow:inset 0 0 0 1px var(--lacre)}
+
+/* página da ideia */
+.pf{display:flex;align-items:center;gap:8px;min-height:48px;flex-wrap:nowrap}
+.pf .rp{display:inline-flex;align-items:center;gap:6px;height:32px;padding:0 10px 0 8px;border:1px solid var(--fio-forte);border-radius:4px;background:var(--folha);font:600 13.5px var(--sans);white-space:nowrap;font-variant-numeric:lining-nums}
+.pf .rp .ico{width:17px;height:17px;color:var(--tinta-2)}
+.pf .kd{margin-left:auto;font:500 13px var(--sans);color:var(--tinta-3)}
+.psum{font:500 13.5px/18px var(--sans);color:var(--tinta-3);padding:2px 0 0;font-variant-numeric:tabular-nums}
+.phd{font:400 26px/31px var(--serif);letter-spacing:-.01em;margin:14px 0 6px;font-variant-numeric:lining-nums tabular-nums}
+.phd.neg{color:var(--lacre)}
+.pdek{font:14.5px/21px var(--sans);color:var(--tinta-2);margin:0;font-variant-numeric:lining-nums tabular-nums}
+.pch{display:block;width:100%;height:auto;margin-top:14px;overflow:visible}
+.pch text{font-family:var(--sans);font-variant-numeric:lining-nums tabular-nums}
+.pnote{font:13px/18px var(--sans);color:var(--tinta-3);margin:10px 0 0}
+.pnote b{color:var(--tinta-2);font-weight:600}
+.trilha{display:flex;align-items:center;justify-content:space-between;gap:8px;margin-top:22px;border-top:1px solid var(--tinta);min-height:52px;font:600 14px var(--sans)}
+.trilha a{display:inline-flex;align-items:center;gap:6px;color:var(--tinta);text-decoration:none;min-height:48px}
+.trilha a.nx{color:var(--anil)}
+.trilha .pos{font:500 12px var(--sans);color:var(--tinta-3)}
+.trilha .ico{width:18px;height:18px}
+.byday{margin-top:8px}
+.byday .r{display:grid;grid-template-columns:52px 1fr 70px 70px;gap:6px;align-items:baseline;padding:5px 0;border-bottom:1px solid var(--fio);font:13.5px/1.3 var(--sans);color:var(--tinta-2);font-variant-numeric:lining-nums tabular-nums}
+.byday .r.h{font:600 10.5px/1.3 var(--sans);letter-spacing:.1em;text-transform:uppercase;color:var(--tinta-3);border-bottom:1px solid var(--tinta)}
+.byday .r span:nth-child(3),.byday .r span:nth-child(4){text-align:right}
+.byday .r small{color:var(--tinta-3);font-size:12px}
+.byday .r b{color:var(--ocre);font-weight:600}
+.steps{display:flex;border-bottom:1px solid var(--fio);margin-top:2px}
+.steps div{flex:1;text-align:center;padding:6px 2px 7px;min-height:52px;position:relative}
+.steps div small{display:block;font:600 10.5px/14px var(--sans);color:var(--tinta-3)}
+.steps div b{display:block;font:500 16px/20px var(--serif);font-variant-numeric:lining-nums tabular-nums;margin-top:2px;white-space:nowrap}
+.steps div.cur{background:var(--folha-2)}
+.steps div.cur::after{content:"";position:absolute;left:0;right:0;bottom:-1px;height:2px;background:var(--tinta)}
+.steps div.cur small{color:var(--tinta);font-weight:700}
+.steps div.ed b{color:var(--tinta)}
+.steps div.ed::before{content:"";position:absolute;left:50%;bottom:6px;width:4px;height:4px;margin-left:-2px;border-radius:2px;background:var(--argila)}
+.stsum{display:flex;justify-content:space-between;align-items:center;gap:10px;padding:9px 0 8px;border-top:2px solid var(--tinta);margin-top:12px;font:600 15px/20px var(--sans)}
+.stsum small{display:block;font:400 12.5px/16px var(--sans);color:var(--tinta-3)}
+.stsum .a{font:500 17px/22px var(--serif);font-variant-numeric:lining-nums tabular-nums}
+.band{display:flex;gap:10px;align-items:flex-start;margin-top:12px;padding:9px 12px;border-radius:6px;background:var(--anil-fundo);font:13.5px/1.35 var(--sans);color:var(--tinta-2)}
+.band .ico{color:var(--anil);width:18px;height:18px;margin-top:1px}
+.band b{color:var(--tinta);font-weight:600}
+.teto{position:relative;height:16px;margin-top:16px}
+.teto .rail{position:absolute;left:0;top:7px;height:1px;background:var(--fio-forte)}
+.teto .seg{position:absolute;top:3px;height:9px;background:var(--tinta-2)}
+.teto .dbl{position:absolute;top:0;bottom:0;width:5px;border-left:1px solid var(--argila);border-right:1px solid var(--argila)}
+.tlabels{position:relative;height:16px;margin-top:4px;font:600 11px/14px var(--sans);color:var(--tinta-3);font-variant-numeric:tabular-nums}
+.tlabels span{position:absolute;white-space:nowrap}
+
+/* folha da ajuda e diálogo */
+.scrim{position:absolute;inset:0;background:var(--scrim);z-index:5}
+.sheet{position:absolute;left:0;right:0;bottom:0;z-index:6;background:var(--folha);border-radius:16px 16px 0 0;padding:10px 24px 22px;box-shadow:var(--sombra)}
+.sheet::before{content:"";display:block;width:32px;height:4px;border-radius:2px;background:var(--fio-forte);margin:0 auto 14px}
+.sheet h4{font:500 23px/28px var(--serif);margin:4px 0 6px}
+.sheet .lead{font:400 17px/23px var(--serif);margin:0 0 12px}
+.sheet .nums{background:var(--folha-2);border-radius:6px;padding:9px 12px 6px}
+.sheet .nums .over{margin-bottom:4px}
+.sheet .nums .r{display:flex;justify-content:space-between;gap:10px;padding:4px 0;font:14px/1.3 var(--sans);color:var(--tinta-2);font-variant-numeric:lining-nums tabular-nums;border-bottom:1px dotted var(--fio-forte)}
+.sheet .nums .r:last-child{border-bottom:0}
+.sheet .nums .r.tot{border-top:1px solid var(--tinta);border-bottom:0;margin-top:2px;padding-top:6px;color:var(--tinta);font-weight:600}
+.sheet .nums .r.tot .at{color:var(--ocre)}
+.sheet .nums .r.tot .ov{color:var(--lacre)}
+.sheet p{font:14px/20px var(--sans);color:var(--tinta-2);margin:10px 0 0}
+.sheet p b{color:var(--tinta);font-weight:600}
+.sheet .where{font:13px/18px var(--sans);color:var(--tinta-3)}
+.sheet .acts{display:flex;justify-content:space-between;align-items:center;gap:8px;margin-top:14px;padding-top:10px;border-top:1px solid var(--fio)}
+.sheet .acts .btn.sec{gap:6px}
+.sheet .acts .btn .dr{width:16px;height:16px;font-size:9.5px}
+.dlg{position:absolute;left:28px;right:28px;top:50%;transform:translateY(-50%);z-index:6;background:var(--folha);border-radius:8px;padding:22px 22px 10px;box-shadow:var(--sombra)}
+.dlg h4{font:500 22px/28px var(--serif);margin-bottom:10px}
+.fld{padding:6px 0 4px}
+.fld .lab{display:block;font:600 11px/1.3 var(--sans);letter-spacing:.12em;text-transform:uppercase;color:var(--tinta)}
+.fld .in{display:flex;align-items:baseline;gap:6px;min-height:52px;border-bottom:2px solid var(--tinta);font:400 30px/1.2 var(--serif);font-variant-numeric:lining-nums tabular-nums;padding-top:6px}
+.fld .in small{font:500 15px var(--sans);color:var(--tinta-2)}
+.fld .in.txt{font-size:19px;border-bottom:1px solid var(--fio-forte);min-height:44px}
+.fld .in::after{content:"";width:1.5px;height:.9em;background:var(--anil);align-self:center;margin-left:-3px}
+.fld .in.txt::after,.fld .in.nc::after{display:none}
+.hint{font:13.5px/18px var(--sans);color:var(--tinta-2);margin-top:8px}
+.hint.mut{color:var(--tinta-3)}
+.dlg .acts{display:flex;justify-content:flex-end;align-items:center;gap:2px;margin-top:12px}
+.dlg .acts .sp{flex:1}
+.setr{display:flex;align-items:center;gap:10px;min-height:56px;border-bottom:1px solid var(--fio)}
+.setr .tx{flex:1;min-width:0}
+.setr b{display:block;font:500 17px/22px var(--serif)}
+.setr small{display:block;font:13px/17px var(--sans);color:var(--tinta-3);white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.setr .ico{color:var(--tinta-3);width:20px;height:20px}
+.setl{font:13px/17px var(--sans);color:var(--tinta-2);margin-top:10px}
+.setn{font:12.5px/17px var(--sans);color:var(--tinta-3);margin-top:6px}
+.setn b{color:var(--tinta-2);font-weight:600}
+
+/* formas de estado, quando a palavra vai junto (nunca só a cor) */
+.sh{display:inline-block;width:8px;height:8px;margin-right:5px;vertical-align:1px;flex:none}
+.sh.at{background:var(--ocre);clip-path:polygon(50% 0,100% 100%,0 100%)}
+.sh.ok{border-radius:50%;background:var(--musgo)}
+.sh.ov{background:repeating-linear-gradient(-45deg,var(--lacre) 0 1.5px,transparent 1.5px 3px);box-shadow:inset 0 0 0 1px var(--lacre)}
+.sh.nt{border-radius:50%;box-shadow:inset 0 0 0 1.5px var(--tinta-3)}
+.vr>.st{display:flex;margin-top:7px}
+.lrow .a::before{content:"R$\00A0";font:500 11.5px var(--sans);color:var(--tinta-2)}
+.lrow .a.res::before{color:var(--tinta-3)}
+/* últimos meses: rótulo de 14 px, barras 2 px acima dele */
+.mbars>div{gap:2px;font:11.5px/14px var(--sans)}
+/* cartão do ritmo: uma linha por verba, o tracejado dos passos até hoje */
+.rr{position:relative;margin-top:10px}
+.rw{display:grid;grid-template-columns:78px minmax(0,1fr);align-items:center;height:18px}
+.rw .nm{font:500 11.5px/1 var(--sans);color:var(--tinta-2);display:flex;align-items:center;white-space:nowrap}
+.rw .tr{position:relative;height:2px;background:var(--fio)}
+.rw .tr b{position:absolute;left:0;top:-2px;height:6px;display:block}
+.rw .tr b.ov{background:repeating-linear-gradient(-45deg,var(--lacre) 0 1.5px,transparent 1.5px 4px);box-shadow:inset 0 0 0 1px var(--lacre)}
+.rw .tr b.at{background:var(--ocre)}
+.rw .tr b.ok{background:var(--musgo)}
+.rw .tr em{position:absolute;left:calc(13.33% + 6px);top:-7px;font:italic 400 12px/14px var(--serif);color:var(--tinta-3);white-space:nowrap;background:var(--papel);padding:0 4px}
+.rr .tick{position:absolute;top:-4px;bottom:-4px;width:0;border-left:1.5px dashed var(--tinta-3);left:calc(78px + (100% - 78px) * .1333)}
+.leg i.tk{width:0;height:12px;border-left:1.5px dashed var(--tinta-3)}
+/* teto: cotas contra o teto, fio duplo de argila no fim */
+.tb6{position:relative;height:15px;margin-top:12px}
+.tb6 .rl{position:absolute;left:0;right:8px;top:7px;height:1px;background:var(--fio-forte)}
+.tb6 .tc{position:absolute;left:0;top:2px;height:11px;width:calc((100% - 8px) * .95);display:flex;gap:2px}
+.tb6 .tc i{display:block;height:100%;background:var(--tinta-2);min-width:2px}
+.tb6 .db{position:absolute;right:1px;top:0;bottom:0;width:5px;border-left:1px solid var(--argila);border-right:1px solid var(--argila)}
+.tb6l{display:flex;gap:2px;width:calc((100% - 8px) * .95);margin-top:5px;font:600 11px/14px var(--sans);color:var(--tinta-3)}
+.tb6l span{overflow:hidden;white-space:nowrap;min-width:2px}
+/* margem: o fio duplo na cota e a hachura do que passou */
+.mg{position:relative;height:22px;margin-top:16px}
+.mg .rl{position:absolute;left:0;width:91.74%;top:10px;height:2px;background:var(--fio)}
+.mg .fl{position:absolute;left:0;top:5px;height:12px;background:var(--tinta-2)}
+.mg .hc{position:absolute;top:5px;height:12px;background:repeating-linear-gradient(-45deg,var(--lacre) 0 1.6px,transparent 1.6px 4px);box-shadow:inset 0 0 0 1px var(--lacre)}
+.mg .db{position:absolute;top:0;bottom:0;width:5px;margin-left:-2.5px;border-left:1px solid var(--argila);border-right:1px solid var(--argila)}
+.mgl{position:relative;height:16px;margin-top:4px;font:600 11px/14px var(--sans);color:var(--tinta-3);font-variant-numeric:tabular-nums}
+.mgl span{position:absolute;white-space:nowrap;top:0}
+/* previstos: a cota repartida em previstos e dia a dia */
+.sp{display:flex;gap:2px;height:20px;margin-top:16px}
+.sp i{display:flex;align-items:center;height:100%;position:relative;font:600 10.5px/1 var(--sans);font-style:normal;color:var(--tinta-2);padding-left:6px;white-space:nowrap;overflow:hidden;min-width:4px}
+.sp .pr{border:1px dashed var(--fio-forte)}
+.sp .dd{background:var(--fio);padding-left:0}
+.sp .dd b{position:absolute;left:0;top:0;bottom:0;background:var(--tinta-2)}
+.spl{display:flex;gap:2px;margin-top:5px;font:600 11px/14px var(--sans);color:var(--tinta-3);font-variant-numeric:tabular-nums}
+.spl span{white-space:nowrap;overflow:hidden;text-overflow:ellipsis;min-width:0}
+</style>
+</head>
+<body>
+<svg width="0" height="0" style="position:absolute" aria-hidden="true">
+  <defs>
+    <symbol id="marca" viewBox="0 0 48 48"><path d="M13 6v36M17.5 6v36" stroke="var(--marca-fio,#A44D29)" stroke-width="1.8" fill="none"/><path d="M22 15h18M22 24h14M22 33h7" stroke="var(--marca-tinta,#1E1B16)" stroke-width="3.4" fill="none"/><circle cx="34" cy="33" r="2.1" fill="var(--marca-fio,#A44D29)"/></symbol>
+    <symbol id="i-verba" viewBox="0 0 24 24"><path d="M6 3.5h12v17H6z"/><path d="M6 11h12"/><path d="M9 14.5h6M9 17.5h6"/></symbol>
+    <symbol id="i-pauta" viewBox="0 0 24 24"><path d="M3.5 13.5L6 5h12l2.5 8.5V19.5h-17z"/><path d="M3.5 13.5H8l1 2h6l1-2h4.5"/><path d="M9 8.5h6M8.5 11h7"/></symbol>
+    <symbol id="i-lancamento" viewBox="0 0 24 24"><path d="M4 4.5h16v15H4z"/><path d="M8 4.5v15M9.5 4.5v15"/><path d="M12.5 9h5M12.5 12.5h5M12.5 16h3"/></symbol>
+    <symbol id="i-leitura" viewBox="0 0 24 24"><path d="M3.5 20h17"/><path d="M7 20v-6M12 20V7M17 20v-9"/><path d="M5 9l5-4 4 3 5-4" stroke-dasharray="1.5 2.2"/></symbol>
+    <symbol id="i-ajustes" viewBox="0 0 24 24"><path d="M4 7h9M17 7h3M4 17h3M11 17h9"/><circle cx="15" cy="7" r="2"/><circle cx="9" cy="17" r="2"/></symbol>
+    <symbol id="i-mais" viewBox="0 0 24 24"><path d="M12 5v14M5 12h14"/></symbol>
+    <symbol id="i-voltar" viewBox="0 0 24 24"><path d="M14.5 5.5L8 12l6.5 6.5"/></symbol>
+    <symbol id="i-avancar" viewBox="0 0 24 24"><path d="M9.5 5.5L16 12l-6.5 6.5"/></symbol>
+    <symbol id="i-fechar" viewBox="0 0 24 24"><path d="M6 6l12 12M18 6L6 18"/></symbol>
+    <symbol id="i-lupa" viewBox="0 0 24 24"><circle cx="10.5" cy="10.5" r="6"/><path d="M15 15l5 5"/></symbol>
+    <symbol id="i-periodo" viewBox="0 0 24 24"><path d="M4 6h16v14H4z"/><path d="M4 10h16M8 3.5V7.5M16 3.5V7.5"/><path d="M8 14h3v3H8z"/></symbol>
+    <symbol id="i-previsto" viewBox="0 0 24 24"><path d="M4 6h16v14H4z" stroke-dasharray="2.2 2.2"/><path d="M8 3.5V7.5M16 3.5V7.5"/><path d="M9 13.5l2 2 4-4.5"/></symbol>
+    <symbol id="i-ajuda" viewBox="0 0 24 24"><circle cx="12" cy="12" r="8.5"/><path d="M9.6 9.7a2.5 2.5 0 1 1 3.7 2.2c-.8.4-1.3 1-1.3 1.8v.3"/><path d="M12 16.6v.3"/></symbol>
+    <symbol id="i-aviso" viewBox="0 0 24 24"><circle cx="12" cy="12" r="8.5"/><path d="M12 7.5v5.5M12 16.2v.3"/></symbol>
+    <symbol id="i-sinal" viewBox="0 0 24 24"><path d="M3 18h3v2H3zM8 14h3v6H8zM13 10h3v10h-3zM18 6h3v14h-3z" fill="currentColor" stroke="none"/></symbol>
+    <symbol id="i-bat" viewBox="0 0 24 24"><rect x="3" y="7" width="16" height="10" rx="2"/><path d="M21 10.5v3"/><rect x="5" y="9" width="10" height="6" rx="1" fill="currentColor" stroke="none"/></symbol>
+    <pattern id="hach" width="4" height="4" patternUnits="userSpaceOnUse" patternTransform="rotate(-45)"><rect width="1.5" height="4" fill="var(--lacre)"/></pattern>
+  </defs>
+</svg>
+<button id="tema" type="button" aria-label="Alternar tema claro e escuro">Tema</button>
+<div class="wrap">
+<header class="cover">
+  <div class="kick">Redesenho do Margem · proposta C · novembro, dia 4</div>
+  <h1>A verba é a porta.</h1>
+  <p class="lede">A verba responde uma pergunta só, <em>quanto ainda cabe</em>, e mostra no máximo uma palavra de estado. Margem, previstos, ritmo, passo, projeção e teto não saem do app: mudam de casa. Cada um vira uma ideia da Análise, numa trilha de seis, com um (?) que explica com os seus números. Na verba, todo número que tem uma ideia por trás leva o número dela, e um toque leva até lá.</p>
+</header>
+
+<section id="principio">
+  <div class="kick">1 · O princípio</div>
+  <h2>A verba responde. <em>A Análise explica.</em></h2>
+  <ol class="rules">
+    <li><b>A verba fica simples, como no mock anterior.</b> Na lista, um número (a margem), uma barra que esvazia e uma palavra só quando algo foge do normal. No detalhe, o número grande, a conta em três linhas, os previstos, os lançamentos e os últimos meses.</li>
+    <li><b>Todo número com uma ideia por trás é uma porta.</b> Ele leva o número da ideia (<span class="dr-in">1</span> a <span class="dr-in">6</span>). O toque abre a página daquela ideia na Análise, já filtrada na verba e no mês; voltar volta à verba. A aba de baixo acende em Análise: dá para ver que se entrou em outro lugar.</li>
+    <li><b>Uma ideia por tela, na ordem em que uma explica a outra.</b> A Análise ganha um contexto no topo, <i>A conta</i>: <span class="dr-in">1</span> Margem, <span class="dr-in">2</span> Previstos, <span class="dr-in">3</span> Ritmo, <span class="dr-in">4</span> Passo, <span class="dr-in">5</span> Fim do mês, <span class="dr-in">6</span> Teto. Cada cartão tem o (?), e cada página termina apontando a próxima ideia. Previstos vêm antes do ritmo porque o ritmo só se entende sem eles.</li>
+    <li><b>O que se edita mora com a ideia.</b> O passo de uma semana se muda na página do Passo; o teto, na do Teto; previstos se pulam, editam e apagam na dos Previstos, que também cria um novo.</li>
+    <li><b>Menos palavras, nenhuma ideia a menos.</b> Seis termos viram três: "ritmo ideal" é a soma dos passos (<i>passos até hoje</i>); "cota livre" e "gasto variável" são os dois lados do mesmo corte (<i>dia a dia</i>); "Fora da margem" e "R$ 12,00 além" diziam o mesmo fato na mesma linha (fica o número). E "no passo atual" vira <i>se continuar assim</i>, para "passo" ter um sentido só.</li>
+  </ol>
+
+  <h3 class="sub">Da verba à ideia, em dois toques</h3>
+  <div class="flow">
+    <div class="step"><div class="thumb" data-thumb="p-mercado" data-press="[data-door='3']"></div><p><b>1 · Na verba.</b> No detalhe de Mercado, o quadro <span class="dr-in">3</span> diz "acima". O toque abre a ideia.</p></div>
+    <div class="arr">→</div>
+    <div class="step"><div class="thumb" data-thumb="p-ritmo" data-press=".tb .q"></div><p><b>2 · Na ideia.</b> A página do Ritmo, já em Mercado e em novembro. A aba acende em Análise; voltar volta a Mercado.</p></div>
+    <div class="arr">→</div>
+    <div class="step"><div class="thumb" data-thumb="p-ritmo-ajuda"></div><p><b>3 · Na ajuda.</b> O (?) explica o ritmo com os números de Mercado e aponta a próxima ideia, <span class="dr-in">4</span> Passo.</p></div>
+  </div>
+
+  <h3 class="sub">Os números do mock</h3>
+  <p class="muted small">Quarta-feira, 4 de novembro de 2026, 13h05. O mês vai de 1 a 30 (começa no dia 1) e a semana começa no domingo, como está nos Ajustes: semanas de 1 a 7, 8 a 14, 15 a 21, 22 a 28 e 29 a 30. Seis verbas, nenhum passo editado, teto de R$ 6.000,00. Previstos a caminho: Aluguel R$ 2.000,00 (dia 5) e Internet R$ 120,00 (dia 10, com o recado "VIVO FIBRA" de R$ 119,90 já na Pauta), na Casa; Academia R$ 129,90 (dia 12), na Saúde. Quinze lançamentos, R$ 804,10, todos do dia a dia. Cinco recados na Pauta, R$ 323,20, três novos: iFood 38,90, Café Central 14,50, "VIVO FIBRA" 119,90, o estorno da Loja Estação 89,90 (de uma compra de outubro) e PAG*JOSEDASILVA 60,00.</p>
+  <div class="tblw"><table>
+    <thead><tr><th>Verba</th><th class="n">Cota</th><th class="n">Previstos a caminho</th><th class="n">Dia a dia</th><th class="n">Gasto</th><th class="n">Margem</th><th class="n">Passo 1–7</th><th class="n">Passos até hoje</th><th>Ritmo</th><th class="n">Se continuar assim</th></tr></thead>
+    <tbody>
+      <tr><td class="t">Delivery</td><td class="n">250,00</td><td class="n">—</td><td class="n">250,00</td><td class="n">262,00</td><td class="n">12,00 além</td><td class="n">58,33</td><td class="n">33,33</td><td>acima</td><td class="n">1.965</td></tr>
+      <tr><td class="t">Mercado</td><td class="n">1.200,00</td><td class="n">—</td><td class="n">1.200,00</td><td class="n">412,30</td><td class="n">787,70</td><td class="n">280,00</td><td class="n">160,00</td><td>acima</td><td class="n">3.092</td></tr>
+      <tr><td class="t">Casa</td><td class="n">3.000,00</td><td class="n">2.120,00</td><td class="n">880,00</td><td class="n">40,00</td><td class="n">840,00</td><td class="n">205,33</td><td class="n">117,33</td><td>no ritmo</td><td class="n">2.420</td></tr>
+      <tr><td class="t">Saúde</td><td class="n">500,00</td><td class="n">129,90</td><td class="n">370,10</td><td class="n">0,00</td><td class="n">370,10</td><td class="n">86,35</td><td class="n">49,34</td><td>sem gasto</td><td class="n">—</td></tr>
+      <tr><td class="t">Lazer</td><td class="n">400,00</td><td class="n">—</td><td class="n">400,00</td><td class="n">48,00</td><td class="n">352,00</td><td class="n">93,33</td><td class="n">53,33</td><td>no ritmo</td><td class="n">360</td></tr>
+      <tr><td class="t">Transporte</td><td class="n">350,00</td><td class="n">—</td><td class="n">350,00</td><td class="n">41,80</td><td class="n">308,20</td><td class="n">81,66</td><td class="n">46,66</td><td>no ritmo</td><td class="n">314</td></tr>
+      <tr class="sum"><td class="t">Todas</td><td class="n">5.700,00</td><td class="n">2.249,90</td><td class="n">3.450,10</td><td class="n">804,10</td><td class="n">2.646,00</td><td class="n">805,00</td><td class="n">459,99</td><td>2 acima</td><td class="n"></td></tr>
+    </tbody>
+  </table></div>
+  <p class="muted small">Margem = cota − gasto − previstos a caminho. Dia a dia = cota − previstos do mês. Passo de semana cheia = dia a dia × 7 ÷ 30, para baixo; a semana de 29 e 30 fica com a diferença (Mercado: 4 × 280,00 + 80,00 = 1.200,00). Passos até hoje = passo de 1 a 7 × 4 ÷ 7. Se continuar assim = gasto do dia a dia × dia a dia ÷ passos até hoje + previstos do mês (Mercado: 412,30 × 1.200 ÷ 160 = 3.092,25; Casa: 300,00 + 2.120,00). Mercado tem 8 lançamentos (Pão de Açúcar 238,40; Feira do José 52,00; Hortifruti Pomar 46,00; Padaria do Zé 16,40, 14,80, 15,60, 15,20 e 13,90), Delivery 4 (iFood 89,20, 63,90 e 54,30; Zé Delivery 54,60); Casa, Lazer e Transporte, 1 cada (Ultragaz 40,00; Cinemark 48,00; Uber 41,80).</p>
+</section>
+
+<section id="mapa">
+  <div class="kick">2 · Mapa dos conceitos</div>
+  <h2>Cada ideia: <em>de onde sai, onde mora</em></h2>
+  <p class="muted">Tudo o que hoje aparece nas verbas: lista, cabeçalho, detalhe, formulário da verba e widget. Nada sai sem dizer por quê. O que junta, junta porque era uma ideia só com dois nomes.</p>
+  <p class="small" style="margin-bottom:6px"><span class="tag tg-fica">fica</span>mesmo lugar e nome <span class="tag tg-muda">muda</span>muda de casa ou de nome <span class="tag tg-junta">junta</span>dois nomes viram um <span class="tag tg-nova">novo</span>não existia</p>
+  <div class="tblw"><table class="map">
+    <thead><tr><th>Conceito, hoje</th><th>Onde aparece hoje</th><th>Onde fica</th><th>Porta na verba</th><th>Por quê</th></tr></thead>
+    <tbody>
+      <tr><td class="t">Margem</td><td>Linha de cada verba ("margem R$ 787,70"), total do cabeçalho de Verbas, manchete do detalhe ("Sobram…"), Lançar (campo e prévia), widget, Leitura ▸ Margem</td><td>O número de cada verba na lista; o número grande de Verbas e do detalhe; "A conta" do detalhe; Lançar e widget como hoje; Análise <span class="dr-in">1</span></td><td>Número grande de Verbas e do detalhe; "= Margem" na conta</td><td><span class="tag tg-fica">fica</span>É a pergunta do app. A <span class="dr-in">1</span> ensina a conta das três parcelas.</td></tr>
+      <tr><td class="t">Cota</td><td>Lista ("de 1.200"), régua ("cota R$ 1.200,00"), Editar verba</td><td>Lista ("de 1.200"), primeira linha da conta, Editar verba; a <span class="dr-in">6</span> mostra todas</td><td>—</td><td><span class="tag tg-fica">fica</span></td></tr>
+      <tr><td class="t">Gasto do mês</td><td>Lista ("R$ 412,30 de 1.200,00"), manchete do detalhe ("Você lançou…")</td><td>"− Gasto" na conta do detalhe; os lançamentos do mês</td><td>—</td><td><span class="tag tg-muda">muda</span>A lista mostra o que cabe, não o que saiu: número e barra dizem a mesma coisa.</td></tr>
+      <tr><td class="t">Previstos reservando na margem</td><td>Contorno tracejado da régua, manchete ("tem R$ 2.120,00 em previstos"), Previstos de novembro no detalhe, cabeçalho ("previstos 2.249,90"), Leitura ▸ Previstos do mês</td><td>Detalhe: "− Previstos a caminho" na conta e a lista dos previstos. Análise <span class="dr-in">2</span>, com as ações do previsto e "Novo previsto"</td><td>"− Previstos a caminho <span class="dr-in">2</span>" e o título da lista</td><td><span class="tag tg-muda">muda</span>"Em aberto" vira "a caminho", a palavra que já nomeia o grupo de Lançamentos.</td></tr>
+      <tr><td class="t">Previsto lançado</td><td>Tinta 3 no começo da régua do detalhe</td><td><span class="dr-in">2</span>, "Vieram"</td><td><span class="dr-in">2</span></td><td><span class="tag tg-muda">muda</span>Na conta, já é gasto.</td></tr>
+      <tr><td class="t">Cota livre</td><td>Rubrica dos passos ("Passos · cota livre R$ 880,00"), "Soma = cota livre"</td><td><span class="dr-in">2</span> e <span class="dr-in">4</span>, como "dia a dia"</td><td>quadro <span class="dr-in">4</span></td><td><span class="tag tg-junta">junta</span>Cota livre e gasto variável são os dois lados do mesmo corte: previsto ou não. Um nome para o corte serve para a cota, para o gasto e para o filtro da Análise.</td></tr>
+      <tr><td class="t">Gasto variável</td><td>Frase do ritmo, Leitura ▸ "Variáveis"</td><td><span class="dr-in">3</span>, como "gasto do dia a dia"; filtro "Dia a dia"</td><td>quadro <span class="dr-in">3</span></td><td><span class="tag tg-junta">junta</span>idem</td></tr>
+      <tr><td class="t">Ritmo · No ritmo · Acima do ritmo</td><td>Estado e marca da régua na lista, manchete e linha fina do detalhe, widget, Leitura ▸ Ritmo acumulado</td><td>Lista: só "▲ acima do ritmo", quando acima. Detalhe: quadro <span class="dr-in">3</span>. Análise <span class="dr-in">3</span></td><td>Quadro <span class="dr-in">3</span> e a palavra de estado</td><td><span class="tag tg-muda">muda</span>O normal não ganha selo na lista; "no ritmo" fica no quadro e na <span class="dr-in">3</span>.</td></tr>
+      <tr><td class="t">Fora da margem</td><td>Estado na lista, manchete ("R$ 12,00 além da cota."), widget</td><td>O próprio número, em lacre: "R$ 12,00 além", na lista, no detalhe e na <span class="dr-in">1</span></td><td>Número grande <span class="dr-in">1</span></td><td><span class="tag tg-junta">junta</span>"Fora da margem" e "R$ 12,00 além" diziam o mesmo fato na mesma linha.</td></tr>
+      <tr><td class="t">Sem gasto</td><td>Estado ○ na lista</td><td>Quadro <span class="dr-in">3</span> do detalhe</td><td><span class="dr-in">3</span></td><td><span class="tag tg-muda">muda</span>Não é desvio: sai da lista.</td></tr>
+      <tr><td class="t">Ritmo ideal</td><td>Linha fina do detalhe ("o ideal até hoje é R$ 117,33"), marca da régua, tracejado do gráfico da Leitura</td><td><span class="dr-in">4</span>, "passos até hoje"; é a linha tracejada da <span class="dr-in">3</span></td><td>quadro <span class="dr-in">4</span></td><td><span class="tag tg-junta">junta</span>É a soma dos passos até hoje: um número a menos para aprender, o mesmo desenho.</td></tr>
+      <tr><td class="t">Marca do ritmo na régua</td><td>Régua da lista, do detalhe e do widget</td><td>Traço vertical do cartão <span class="dr-in">3</span>; curva tracejada da página <span class="dr-in">3</span></td><td><span class="dr-in">3</span></td><td><span class="tag tg-muda">muda</span></td></tr>
+      <tr><td class="t">Passo semanal: padrão, editado, semana automática, máximo, voltar ao automático</td><td>Grade dos passos e diálogo no detalhe, prévia em Nova verba, marca do maior passo em Leitura ▸ Semanas</td><td>Análise <span class="dr-in">4</span>: a página mostra e edita, com as regras de hoje. Nova verba: uma linha. Semanas fica sem a marca</td><td>Quadro <span class="dr-in">4</span></td><td><span class="tag tg-muda">muda</span>A edição muda de casa; as regras não mudam.</td></tr>
+      <tr><td class="t">Soma = cota livre</td><td>Sob os passos, no detalhe</td><td><span class="dr-in">4</span>, "Soma = dia a dia" (cota − previstos)</td><td><span class="dr-in">4</span></td><td><span class="tag tg-muda">muda</span></td></tr>
+      <tr><td class="t">No passo atual (projeção)</td><td>Frase do Ritmo na Leitura ("o mês fecharia em R$ 3.092")</td><td>Análise <span class="dr-in">5</span> Fim do mês, "se continuar assim"; quadro <span class="dr-in">5</span> do detalhe</td><td>Quadro <span class="dr-in">5</span></td><td><span class="tag tg-muda">muda</span>"Passo" tinha dois sentidos, o plano da semana e o jeito real de gastar. Fica um.</td></tr>
+      <tr><td class="t">Teto: fio, legenda, diálogo, "só este mês", avisos de cota</td><td>Cabeçalho de Verbas; avisos em Nova verba e Editar verba</td><td>Análise <span class="dr-in">6</span>: a página mostra e edita, com o mesmo diálogo. Verbas: uma linha discreta. Os avisos ficam no formulário da cota</td><td>Linha "cotas · teto <span class="dr-in">6</span>" em Verbas</td><td><span class="tag tg-muda">muda</span>Pergunta de planejamento, de vez em quando: sai do topo da tela de todo dia e fica a um toque.</td></tr>
+      <tr><td class="t">Total do mês fundido com o teto</td><td>Cabeçalho de Verbas</td><td>O total volta a ser a margem (número grande e <span class="dr-in">1</span>); o teto fica com as cotas (<span class="dr-in">6</span>)</td><td><span class="dr-in">1</span> e <span class="dr-in">6</span></td><td><span class="tag tg-muda">muda</span>A mesma régua respondia duas perguntas.</td></tr>
+      <tr><td class="t">Régua: trilho, previstos lançados e a caminho, gasto na cor do estado, marca do ritmo, fio duplo, hachura</td><td>Lista, detalhe, widget</td><td>Lista, detalhe e widget: uma barra de uma camada, que esvazia com a margem. Cada camada vira o desenho da sua ideia: previstos na <span class="dr-in">2</span>, dia a dia e marca na <span class="dr-in">3</span>, fio duplo e hachura na <span class="dr-in">1</span></td><td>—</td><td><span class="tag tg-muda">muda</span>Uma camada por tela.</td></tr>
+      <tr><td class="t">Cota atingida aqui (soma corrida)</td><td>Lançamentos do detalhe</td><td>Página <span class="dr-in">1</span>, "Em ordem, com a soma"</td><td><span class="dr-in">1</span></td><td><span class="tag tg-muda">muda</span>Fala da margem; o detalhe lista sem soma.</td></tr>
+      <tr><td class="t">Virada ("o mês recomeça")</td><td>Manchete do detalhe, fora da margem</td><td>Linha sob o número em lacre, no detalhe; <span class="dr-in">1</span> e a ajuda dela</td><td><span class="dr-in">1</span></td><td><span class="tag tg-fica">fica</span></td></tr>
+      <tr><td class="t">Ordem das verbas: risco, manual, A–Z</td><td>"Ordenar" no topo de Verbas; "Ordem do widget" em Ajustes</td><td>Ajustes, "Ordem das verbas", para a lista e o widget; em manual, segura-se e arrasta-se na lista; a <span class="dr-in">1</span> também ordena</td><td>—</td><td><span class="tag tg-junta">junta</span>Dois ajustes para a mesma ordem.</td></tr>
+      <tr><td class="t">Seletor de mês do detalhe</td><td>Topo do detalhe</td><td>Barras de "Últimos meses": tocar num mês abre a verba naquele mês; "Mês a mês" leva à Análise</td><td>As barras</td><td><span class="tag tg-muda">muda</span>Um controle a menos no topo; o histórico vira o próprio seletor.</td></tr>
+      <tr><td class="t">Dia do mês ("Dia 4 de 30. Faltam 27 dias, contando hoje.")</td><td>Manchete do cabeçalho de Verbas</td><td>A rubrica "Novembro · dia 4 de 30", sobre o número grande, em Verbas e no detalhe; o prazo fica na virada e na <span class="dr-in">5</span></td><td>—</td><td><span class="tag tg-muda">muda</span>A manchete passa a ser o número.</td></tr>
+      <tr><td class="t">Dia de início do mês e da semana</td><td>Ajustes</td><td>Ajustes, com a nota de que os passos seguem a semana</td><td>—</td><td><span class="tag tg-fica">fica</span></td></tr>
+      <tr><td class="t">Verba criada no meio do mês</td><td>Prévia dos passos em Nova verba</td><td>Uma linha em Nova verba; ajuda da <span class="dr-in">4</span></td><td>—</td><td><span class="tag tg-fica">fica</span></td></tr>
+      <tr><td class="t">Ponto de cor da verba</td><td>Lista</td><td>Sai da lista; a cor segue nos gráficos</td><td>—</td><td><span class="tag tg-muda">muda</span>Na lista não ligava a verba a nada.</td></tr>
+      <tr><td class="t">Ritmo contra o intervalo anterior ou o costume</td><td>Leitura ▸ Ritmo acumulado, fora de um mês inteiro</td><td>Quanto ▸ Total e costume, opção "acumulado"</td><td>—</td><td><span class="tag tg-junta">junta</span>É a comparação do Total e costume, desenhada por dia.</td></tr>
+      <tr><td class="t">Ajuda de cada ideia</td><td>Não existe</td><td>O (?) de cada cartão e de cada página da conta</td><td>—</td><td><span class="tag tg-nova">novo</span>Uma ideia, uma frase, a conta com os números da pessoa.</td></tr>
+    </tbody>
+  </table></div>
+</section>
+
+<section id="telas">
+  <div class="kick">3 · Telas</div>
+  <h2>As telas, em <em>novembro, dia 4</em></h2>
+  <p class="muted">Telas de 360 × 800 dp com os tokens, tipos e peças de hoje (TopBar, TabBar, SectionLine, OptionPicker, InfoBand, BottomSheet, StepsEditor, a folhinha do previsto). A barra de baixo continua com cinco abas; Leitura passa a se chamar Análise. Telas sem tema fixo seguem o botão Tema, no canto.</p>
+
+  <h3 class="sub">3.1 · Verbas e o detalhe da verba</h3>
+  <div class="shots">
+
+  <figure class="shot">
+    <div class="ph"><div class="scr t-light" id="p-verbas" data-tab="verbas">
+      <div class="tb"><span class="wmk"><svg viewBox="0 0 48 48"><use href="#marca"/></svg>margem</span><span class="ib" aria-label="Nova verba"><svg class="ico"><use href="#i-mais"/></svg></span></div>
+      <div class="bd">
+        <div class="vh">
+          <div class="over">Novembro · dia 4 de 30</div>
+          <div class="hero"><span class="cur">R$</span>2.646<span class="ct">,00</span><b class="dr lg">1</b></div>
+          <div class="herosub">cabem até 30 de novembro, nas seis verbas</div>
+        </div>
+        <div class="tl">cotas R$ 5.700,00 · teto R$ 6.000,00 <b class="dr">6</b><svg class="ico s16"><use href="#i-avancar"/></svg></div>
+        <div class="strip"><svg class="ico"><use href="#i-pauta"/></svg><span class="t">5 recados na pauta<small>3 novos desde a última vez</small></span><span class="go"><svg class="ico"><use href="#i-avancar"/></svg></span></div>
+        <div class="secl">Verbas<span>margem</span></div>
+        <div class="vr"><div class="l1"><span class="nm">Delivery</span><span class="v neg">R$ 12,00 além<small>de 250</small></span></div><div class="tank ov"></div></div>
+        <div class="vr"><div class="l1"><span class="nm">Mercado</span><span class="v">R$ 787,70<small>de 1.200</small></span></div><div class="tank"><b style="width:65.64%"></b></div><span class="st at">acima do ritmo</span></div>
+        <div class="vr"><div class="l1"><span class="nm">Casa</span><span class="v">R$ 840,00<small>de 3.000</small></span></div><div class="tank"><b style="width:28%"></b></div></div>
+        <div class="vr"><div class="l1"><span class="nm">Saúde</span><span class="v">R$ 370,10<small>de 500</small></span></div><div class="tank"><b style="width:74.02%"></b></div></div>
+        <div class="vr"><div class="l1"><span class="nm">Lazer</span><span class="v">R$ 352,00<small>de 400</small></span></div><div class="tank"><b style="width:88%"></b></div></div>
+        <div class="vr"><div class="l1"><span class="nm">Transporte</span><span class="v">R$ 308,20<small>de 350</small></span></div><div class="tank"><b style="width:88.06%"></b></div></div>
+      </div>
+    </div></div>
+    <figcaption><b>Verbas · claro</b>Um número por verba, a margem, e uma barra que esvazia com ela: barra e número dizem a mesma coisa. A palavra aparece só fora do normal: Delivery passou (o número já diz, em lacre) e Mercado está acima do ritmo. O número grande soma as margens e é a porta da <span class="dr-in">1</span>; a linha de baixo, a da <span class="dr-in">6</span>. Sem "Ordenar" no topo: a ordem é um ajuste só, risco de fábrica. A Casa já está em 28% com R$ 40,00 gastos porque o aluguel reserva antes de chegar; o porquê está na <span class="dr-in">2</span>, pela porta do detalhe.</figcaption>
+  </figure>
+
+  <figure class="shot">
+    <div class="ph" data-twin="p-verbas"></div>
+    <figcaption><b>Verbas · escuro</b>Os mesmos tokens do livro, no escuro. Ocre e lacre só nos dois desvios, sempre com a forma (▲, ▨) e a palavra ou o número. O musgo do "No ritmo" sai da lista; o normal não pede leitura. TalkBack: "Mercado: cabem R$ 787,70 de R$ 1.200,00. Acima do ritmo."</figcaption>
+  </figure>
+
+  <figure class="shot">
+    <div class="ph"><div class="scr t-light" id="p-mercado" data-tab="verbas">
+      <div class="tb bk"><span class="back"><svg class="ico"><use href="#i-voltar"/></svg></span><span class="t">Mercado</span><span class="tx">Editar</span></div>
+      <div class="bd">
+        <div class="over">Novembro · dia 4 de 30</div>
+        <div class="hero md"><span class="cur">R$</span>787<span class="ct">,70</span><b class="dr lg">1</b></div>
+        <div class="herosub">cabem até 30 de novembro, de R$ 1.200,00</div>
+        <div class="tank lg"><b style="width:65.64%"></b></div>
+        <div class="tiles">
+          <a class="tile" data-door="3"><span class="tl2"><b class="dr">3</b>Ritmo</span><span class="tv at"><i class="sh at"></i>acima</span><span class="ts">412 contra 160</span></a>
+          <a class="tile" data-door="4"><span class="tl2"><b class="dr">4</b>Passo</span><span class="tv">R$ 280,00</span><span class="ts">semana de 1 a 7</span></a>
+          <a class="tile" data-door="5"><span class="tl2"><b class="dr">5</b>Fim do mês</span><span class="tv">R$ 3.092</span><span class="ts">se continuar</span></a>
+        </div>
+        <div class="secl">A conta<span>novembro</span></div>
+        <div class="conta">
+          <div class="r"><span>Cota</span><span>R$ 1.200,00</span></div>
+          <div class="r"><span>− Gasto</span><span>R$ 412,30</span></div>
+          <div class="r tot"><span>= Margem <b class="dr">1</b></span><span>R$ 787,70</span></div>
+        </div>
+        <div class="secl">Lançamentos de novembro<span>R$ 412,30</span></div>
+        <div class="lrow"><span class="tx"><span class="n">Padaria do Zé</span><span class="w">qua, 4 · padaria</span></span><span class="a">13,90</span></div>
+        <div class="lrow"><span class="tx"><span class="n">Pão de Açúcar</span><span class="w">ter, 3 · mercado</span></span><span class="a">238,40</span></div>
+        <div class="lrow"><span class="tx"><span class="n">Padaria do Zé</span><span class="w">ter, 3 · padaria</span></span><span class="a">15,20</span></div>
+        <div class="lrow"><span class="tx"><span class="n">Feira do José</span><span class="w">seg, 2 · feira</span></span><span class="a">52,00</span></div>
+        <div class="lrow"><span class="tx"><span class="n">Padaria do Zé</span><span class="w">seg, 2 · padaria</span></span><span class="a">15,60</span></div>
+        <div class="lrow"><span class="tx"><span class="n">Padaria do Zé</span><span class="w">seg, 2 · padaria</span></span><span class="a">14,80</span></div>
+      </div>
+    </div></div>
+    <figcaption><b>Detalhe de Mercado · a verba como porta</b>O número grande (<span class="dr-in">1</span>), a barra, três quadros que abrem a Análise e a conta em três linhas. Cada quadro leva o número da sua ideia: <span class="dr-in">3</span> o estado do ritmo (o dia a dia até hoje contra os passos até hoje), <span class="dr-in">4</span> o passo desta semana, <span class="dr-in">5</span> o fim do mês se continuar assim. O toque abre a página da ideia já em Mercado e em novembro. A grade dos passos, a régua com a marca e a linha fina com o "ideal" saem daqui. Embaixo da lista (rolando), as barras de Últimos meses.</figcaption>
+  </figure>
+
+  <figure class="shot">
+    <div class="ph"><div class="scr t-dark" id="p-casa" data-tab="verbas">
+      <div class="tb bk"><span class="back"><svg class="ico"><use href="#i-voltar"/></svg></span><span class="t">Casa</span><span class="tx">Editar</span></div>
+      <div class="bd">
+        <div class="over">Novembro · dia 4 de 30</div>
+        <div class="hero md"><span class="cur">R$</span>840<span class="ct">,00</span><b class="dr lg">1</b></div>
+        <div class="herosub">cabem até 30 de novembro, de R$ 3.000,00</div>
+        <div class="tank lg"><b style="width:28%"></b></div>
+        <div class="tiles">
+          <a class="tile"><span class="tl2"><b class="dr">3</b>Ritmo</span><span class="tv ok"><i class="sh ok"></i>no ritmo</span><span class="ts">40 contra 117</span></a>
+          <a class="tile"><span class="tl2"><b class="dr">4</b>Passo</span><span class="tv">R$ 205,33</span><span class="ts">semana de 1 a 7</span></a>
+          <a class="tile"><span class="tl2"><b class="dr">5</b>Fim do mês</span><span class="tv">R$ 2.420</span><span class="ts">se continuar</span></a>
+        </div>
+        <div class="secl">A conta<span>novembro</span></div>
+        <div class="conta">
+          <div class="r"><span>Cota</span><span>R$ 3.000,00</span></div>
+          <div class="r"><span>− Gasto</span><span>R$ 40,00</span></div>
+          <div class="r"><span>− Previstos a caminho <b class="dr">2</b></span><span>R$ 2.120,00</span></div>
+          <div class="r tot"><span>= Margem <b class="dr">1</b></span><span>R$ 840,00</span></div>
+        </div>
+        <div class="secl"><span style="color:var(--tinta);letter-spacing:.12em">Previstos de novembro <b class="dr">2</b></span><span>a caminho</span></div>
+        <div class="lrow"><span class="dia"><small>nov</small><b>5</b></span><span class="tx"><span class="n">Aluguel</span><span class="w">esperando · todo mês</span></span><span class="a res">2.000,00</span></div>
+        <div class="lrow"><span class="dia"><small>nov</small><b>10</b></span><span class="tx"><span class="n">Internet</span><span class="w lk">recado na Pauta</span></span><span class="a res">120,00</span></div>
+        <div class="secl">Lançamentos de novembro<span>R$ 40,00</span></div>
+        <div class="lrow"><span class="tx"><span class="n">Ultragaz</span><span class="w">seg, 2 · gás</span></span><span class="a">40,00</span></div>
+        <div class="secl">Últimos meses<span class="lk">Mês a mês ›</span></div>
+        <div class="mbars"><span class="cm" style="bottom:68px"></span>
+          <div><i style="height:50px"></i>jun</div><div><i class="o" style="height:4px"></i><i style="height:52px"></i>jul</div><div><i style="height:51px"></i>ago</div><div><i style="height:52px"></i>set</div><div><i style="height:52px"></i>out</div><div class="now"><i class="p" style="height:37px"></i><i style="height:1px"></i>nov</div>
+        </div>
+      </div>
+    </div></div>
+    <figcaption><b>Detalhe da Casa · escuro</b>Com previsto, a conta ganha uma linha: R$ 3.000,00 − R$ 40,00 − R$ 2.120,00 de previstos a caminho = R$ 840,00. A lista dos previstos fica, com a folhinha tracejada, e o título dela é a porta da <span class="dr-in">2</span>; tocar num previsto abre a folha dele, como hoje. As barras de Últimos meses fazem o papel do seletor de mês: tocar em julho (R$ 140,00 além, em hachura) abre a Casa em julho. Novembro mostra os previstos tracejados sobre os R$ 40,00 do gás.</figcaption>
+  </figure>
+
+  <figure class="shot">
+    <div class="ph"><div class="scr t-light" id="p-delivery" data-tab="verbas">
+      <div class="tb bk"><span class="back"><svg class="ico"><use href="#i-voltar"/></svg></span><span class="t">Delivery</span><span class="tx">Editar</span></div>
+      <div class="bd">
+        <div class="over">Novembro · dia 4 de 30</div>
+        <div class="hero md neg"><span class="cur">R$</span>12<span class="ct">,00</span><span class="al">além</span><b class="dr lg">1</b></div>
+        <div class="herosub">da cota de R$ 250,00. Nada foi bloqueado: o mês recomeça em 1 de dezembro, com a cota inteira.</div>
+        <div class="tank lg ov"></div>
+        <div class="tiles">
+          <a class="tile"><span class="tl2"><b class="dr">3</b>Ritmo</span><span class="tv at"><i class="sh at"></i>acima</span><span class="ts">262 contra 33</span></a>
+          <a class="tile"><span class="tl2"><b class="dr">4</b>Passo</span><span class="tv">R$ 58,33</span><span class="ts">semana de 1 a 7</span></a>
+          <a class="tile"><span class="tl2"><b class="dr">5</b>Fim do mês</span><span class="tv">R$ 1.965</span><span class="ts">se continuar</span></a>
+        </div>
+        <div class="secl">A conta<span>novembro</span></div>
+        <div class="conta">
+          <div class="r"><span>Cota</span><span>R$ 250,00</span></div>
+          <div class="r"><span>− Gasto</span><span>R$ 262,00</span></div>
+          <div class="r tot neg"><span>= Margem <b class="dr">1</b></span><span>R$ 12,00 além</span></div>
+        </div>
+        <div class="secl">Lançamentos de novembro<span>R$ 262,00</span></div>
+        <div class="lrow"><span class="tx"><span class="n">Zé Delivery</span><span class="w">ter, 3 · bebida</span></span><span class="a">54,60</span></div>
+        <div class="lrow"><span class="tx"><span class="n">iFood</span><span class="w">ter, 3 · ifood</span></span><span class="a">54,30</span></div>
+        <div class="lrow"><span class="tx"><span class="n">iFood</span><span class="w">seg, 2 · ifood</span></span><span class="a">63,90</span></div>
+        <div class="lrow"><span class="tx"><span class="n">iFood</span><span class="w">dom, 1 · ifood</span></span><span class="a">89,20</span></div>
+        <div class="secl">Últimos meses<span class="lk">Mês a mês ›</span></div>
+        <div class="mbars"><span class="cm" style="bottom:60px"></span>
+          <div><i style="height:37px"></i>jun</div><div><i class="o" style="height:4px"></i><i style="height:44px"></i>jul</div><div><i style="height:41px"></i>ago</div><div><i class="o" style="height:7px"></i><i style="height:44px"></i>set</div><div><i style="height:43px"></i>out</div><div class="now"><i class="o" style="height:3px"></i><i style="height:44px"></i>nov</div>
+        </div>
+      </div>
+    </div></div>
+    <figcaption><b>Detalhe de Delivery · além da cota</b>O número diz o estado: "R$ 12,00 além", em lacre, com a data da virada logo embaixo. A conta mostra de onde vem. A soma corrida e a marca "cota atingida aqui" saem da lista e vão para a página <span class="dr-in">1</span>, que é onde a margem se explica. O ritmo também está acima (R$ 262,00 contra R$ 33,33), mas a lista mostra uma palavra só, e o número em lacre vem primeiro.</figcaption>
+  </figure>
+
+  </div>
+
+  <h3 class="sub">3.2 · A Análise: a conta no topo</h3>
+  <p class="muted">A Análise de hoje (filtro, contextos, widgets de fita lateral, página do widget) com um contexto novo no topo. As seis ideias da conta são widgets como os outros, numerados e com o (?) no título. Para onde e Quando não mudam; Quanto fica com o que não é da verba.</p>
+  <div class="shots">
+
+  <figure class="shot">
+    <div class="ph"><div class="scr t-light" id="p-analise" data-tab="analise">
+      <div class="tb"><span class="t">Análise</span></div>
+      <div class="bd">
+        <div class="frg"><svg class="ico"><use href="#i-periodo"/></svg>1 a 30 nov</div>
+        <div class="fsl"><svg class="ico"><use href="#i-lupa"/></svg>Buscar verba, marcador, estabelecimento ou recado</div>
+        <div class="opk"><span class="on">Tudo</span><span>Previstos</span><span>Dia a dia</span></div>
+        <div class="fsum">R$ 804,10 · 15 lançamentos · até hoje</div>
+        <div class="ctxh"><div class="over">Contexto</div><h3>A conta</h3><p>Cabe no que planejei? Seis ideias, uma de cada vez.</p></div>
+        <div class="grid">
+          <div class="wg" id="w-margem">
+            <div class="wt"><b class="dr">1</b><span class="over">Margem</span><span class="q" aria-label="O que é a margem?"><svg class="ico"><use href="#i-ajuda"/></svg></span></div>
+            <p class="sent">Em novembro, cabem R$ 2.646,00.</p>
+            <div class="sb"><i class="g" style="flex:804.1"></i><i class="r" style="flex:2249.9"></i><i class="m" style="flex:2646"></i></div>
+            <div class="leg"><span><i class="bx"></i>gasto</span><span><i class="bo"></i>previstos</span><span><i class="be"></i>cabem</span></div>
+          </div>
+          <div class="wg" id="w-previstos">
+            <div class="wt"><b class="dr">2</b><span class="over">Previstos</span><span class="q" aria-label="O que é um previsto?"><svg class="ico"><use href="#i-ajuda"/></svg></span></div>
+            <p class="sent">Em novembro, 3 a caminho: R$ 2.249,90.</p>
+            <div class="mini">
+              <div><span class="d">5</span><span class="n">Aluguel</span><span class="a">2.000</span></div>
+              <div><span class="d">10</span><span class="n">Internet</span><span class="a">120</span></div>
+              <div><span class="d">12</span><span class="n">Academia</span><span class="a">129,90</span></div>
+            </div>
+          </div>
+          <div class="wg full" id="w-ritmo">
+            <div class="wt"><b class="dr">3</b><span class="over">Ritmo</span><span class="q" aria-label="O que é o ritmo?"><svg class="ico"><use href="#i-ajuda"/></svg></span></div>
+            <p class="sent">Delivery e Mercado acima do ritmo; as outras quatro, no ritmo.</p>
+            <div class="rr">
+              <div class="rw"><span class="nm"><i class="sh ov"></i>Delivery</span><span class="tr"><b class="ov" style="width:100%"></b></span></div>
+              <div class="rw"><span class="nm"><i class="sh at"></i>Mercado</span><span class="tr"><b class="at" style="width:34.36%"></b></span></div>
+              <div class="rw"><span class="nm"><i class="sh ok"></i>Casa</span><span class="tr"><b class="ok" style="width:4.55%"></b></span></div>
+              <div class="rw"><span class="nm"><i class="sh nt"></i>Saúde</span><span class="tr"><em>sem gasto</em></span></div>
+              <div class="rw"><span class="nm"><i class="sh ok"></i>Lazer</span><span class="tr"><b class="ok" style="width:12%"></b></span></div>
+              <div class="rw"><span class="nm"><i class="sh ok"></i>Transporte</span><span class="tr"><b class="ok" style="width:11.94%"></b></span></div>
+              <i class="tick"></i>
+            </div>
+            <div class="leg"><span><i class="tk"></i>passos até hoje</span><span>trilho: o dia a dia do mês de cada verba</span></div>
+          </div>
+        </div>
+      </div>
+    </div></div>
+    <figcaption><b>Análise · topo · claro</b>O filtro é o de hoje, com "Dia a dia" no lugar de "Variáveis". Logo abaixo, A conta. <span class="dr-in">1</span> e <span class="dr-in">2</span> vinham do antigo Quanto; <span class="dr-in">3</span> é o Ritmo acumulado, agora só contra os passos e por verba: o tracejado cai no mesmo lugar em todas (dia 4 de 30, nenhum passo editado), e a barra de cada uma vai até o gasto do dia a dia. Sem chip, a conta é a soma das seis verbas; tocar num cartão abre a página da ideia.</figcaption>
+  </figure>
+
+  <figure class="shot">
+    <div class="ph" data-twin="p-analise"></div>
+    <figcaption><b>Análise · topo · escuro</b>A mesma grade. A fita lateral, os números das ideias e o (?) ficam em fio e tinta 3; cor só no estado, com a forma junto.</figcaption>
+  </figure>
+
+  <figure class="shot">
+    <div class="ph"><div class="scr t-light" id="p-analise2" data-tab="analise">
+      <div class="tb"><span class="t">Análise</span><span class="rgt">1 a 30 nov</span><span class="ib"><svg class="ico"><use href="#i-lupa"/></svg></span></div>
+      <div class="pin">A conta</div>
+      <div class="bd">
+        <div class="grid" style="margin-top:14px">
+          <div class="wg full" id="w-passo">
+            <div class="wt"><b class="dr">4</b><span class="over">Passo</span><span class="q" aria-label="O que é o passo?"><svg class="ico"><use href="#i-ajuda"/></svg></span></div>
+            <p class="sent">Nesta semana, os passos dão R$ 805,00; já foram R$ 804,10.</p>
+            <svg class="ch" viewBox="0 0 290 70" role="img" aria-label="Passos de novembro, as seis verbas somadas: R$ 805,00 nas semanas de 1 a 7, 8 a 14, 15 a 21 e 22 a 28, R$ 230,10 em 29 e 30. Gasto do dia a dia de 1 a 7: R$ 804,10.">
+              <g fill="none" stroke="var(--fio-forte)"><rect x="10.5" y="8.5" width="37" height="45.5"/><rect x="68.5" y="8.5" width="37" height="45.5"/><rect x="126.5" y="8.5" width="37" height="45.5"/><rect x="184.5" y="8.5" width="37" height="45.5"/><rect x="242.5" y="40.85" width="37" height="13.15"/></g>
+              <rect x="12.5" y="10.5" width="33" height="42" fill="var(--tinta-2)"/>
+              <line x1="0" y1="54" x2="290" y2="54" stroke="var(--tinta-3)"/>
+              <g font-size="10.5" fill="var(--tinta-3)" text-anchor="middle"><text x="29" y="66" font-weight="700" fill="var(--tinta)">1–7</text><text x="87" y="66">8–14</text><text x="145" y="66">15–21</text><text x="203" y="66">22–28</text><text x="261" y="66">29–30</text></g>
+            </svg>
+            <div class="leg"><span><i class="be"></i>passo da semana</span><span><i class="bx"></i>gasto do dia a dia</span></div>
+          </div>
+          <div class="wg" id="w-fim">
+            <div class="wt"><b class="dr">5</b><span class="over">Fim do mês</span><span class="q" aria-label="O que é o fim do mês?"><svg class="ico"><use href="#i-ajuda"/></svg></span></div>
+            <p class="sent">Se continuar assim, Mercado e Delivery passam da cota.</p>
+            <div class="mini">
+              <div><i class="sh at"></i><span class="n">Mercado</span><span class="a">3.092</span></div>
+              <div><i class="sh at"></i><span class="n">Delivery</span><span class="a">1.965</span></div>
+            </div>
+            <p class="wn">cotas de 1.200 e 250; as outras quatro cabem</p>
+          </div>
+          <div class="wg" id="w-teto">
+            <div class="wt"><b class="dr">6</b><span class="over">Teto</span><span class="q" aria-label="O que é o teto?"><svg class="ico"><use href="#i-ajuda"/></svg></span></div>
+            <p class="sent">As cotas somam R$ 5.700,00, a R$ 300,00 do teto.</p>
+            <div class="tb6"><span class="rl"></span><span class="tc"><i style="flex:1"></i></span><span class="db"></span></div>
+            <p class="wn">teto R$ 6.000,00</p>
+          </div>
+        </div>
+        <div class="ctxh"><div class="over">Contexto</div><h3>Quanto</h3><p>Quanto saiu, perto do costume?</p></div>
+        <div class="grid">
+          <div class="wg">
+            <div class="wt"><span class="over">Total e costume</span></div>
+            <p class="sent">R$ 804,10, R$ 91,70 acima do costume.</p>
+            <svg class="ch" viewBox="0 0 126 58" role="img" aria-label="Total de 1 a 4 de novembro, R$ 804,10, contra os mesmos dias dos seis meses antes: média R$ 712,40.">
+              <g fill="var(--tinta-3)"><rect x="3.25" y="10.43" width="11.5" height="35.57"/><rect x="21.25" y="7.69" width="11.5" height="38.31"/><rect x="39.25" y="6.05" width="11.5" height="39.95"/><rect x="57.25" y="8.24" width="11.5" height="37.76"/><rect x="75.25" y="4.41" width="11.5" height="41.59"/><rect x="93.25" y="5.27" width="11.5" height="40.73"/><rect x="111.25" y="2" width="11.5" height="44" fill="var(--tinta-2)"/></g>
+              <line x1="0" y1="46" x2="126" y2="46" stroke="var(--tinta-3)"/>
+              <g font-size="9.5" fill="var(--tinta-3)"><text x="3" y="56">−6</text><text x="123" y="56" text-anchor="end">agora</text></g>
+            </svg>
+          </div>
+          <div class="wg">
+            <div class="wt"><span class="over">História</span></div>
+            <p class="sent">R$ 804,10 em 15 lançamentos.</p>
+            <p class="sent">mercado puxa a fila: R$ 238,40.</p>
+            <p class="sent">O dia mais pesado foi 3 nov: R$ 362,50.</p>
+          </div>
+        </div>
+      </div>
+    </div></div>
+    <figcaption><b>Análise · rolada</b>A busca recolheu e a barra presa diz o contexto, como hoje. <span class="dr-in">4</span>, <span class="dr-in">5</span> e <span class="dr-in">6</span> fecham A conta. Depois vem Quanto, menor: Total e costume (que herda do Ritmo a comparação com o intervalo anterior e o costume, na opção "acumulado"), História e, quando há, O que ficou fora ("5 recados na Pauta: R$ 323,20."). Para onde e Quando seguem como estão.</figcaption>
+  </figure>
+
+  </div>
+
+  <div class="scheme">
+    <div class="col new"><h4>A conta<small>novo, no topo · "Cabe no que planejei?"</small></h4><ul>
+      <li><span class="dr-in">1</span><span>Margem<small>vinha de Quanto</small></span></li>
+      <li><span class="dr-in">2</span><span>Previstos<small>vinha de Quanto (Previstos do mês)</small></span></li>
+      <li><span class="dr-in">3</span><span>Ritmo<small>vinha de Quanto (Ritmo acumulado); agora só contra os passos</small></span></li>
+      <li><span class="dr-in">4</span><span>Passo<small>novo: a grade e a edição saem do detalhe da verba</small></span></li>
+      <li><span class="dr-in">5</span><span>Fim do mês<small>novo: era a frase "no passo atual" do Ritmo</small></span></li>
+      <li><span class="dr-in">6</span><span>Teto<small>novo: era o cabeçalho de Verbas</small></span></li>
+    </ul></div>
+    <div class="col"><h4>Quanto<small>"Quanto saiu, perto do costume?"</small></h4><ul>
+      <li><span>Total e costume<small>ganha "acumulado", o antigo Ritmo contra o intervalo anterior ou o costume</small></span></li>
+      <li><span>História</span></li>
+      <li><span>O que ficou fora<small>só quando há</small></span></li>
+    </ul></div>
+    <div class="col"><h4>Para onde<small>sem mudança</small></h4><ul>
+      <li>Retrato do estabelecimento</li><li>Fluxo verba → marcador</li><li>Para onde foi</li><li>O que cresceu</li><li>Estabelecimentos que voltam</li><li>Primeira vez</li><li>Tamanho</li>
+    </ul></div>
+    <div class="col"><h4>Quando<small>uma mudança</small></h4><ul>
+      <li>Calendário</li><li>Dia da semana</li><li><span>Semanas<small>sem a marca do maior passo: o passo de cada semana está na <span class="dr-in">4</span></small></span></li><li>Mês a mês</li><li>Meses à frente</li><li>Volta todo mês</li><li>Dia e hora</li>
+    </ul></div>
+  </div>
+  <ul class="small muted" style="max-width:52em;padding-left:20px;margin-top:18px;line-height:1.5">
+    <li style="margin-bottom:8px"><b>Um mês inteiro, sempre.</b> A conta fala do mês da verba em que o intervalo termina, a regra que já vale para Margem e Previstos. Com "3 meses", é a conta de novembro, e a frase diz o mês. Some o caso de hoje em que o Ritmo muda de modo fora de um mês inteiro.</li>
+    <li style="margin-bottom:8px"><b>Chips.</b> Chip de verba escolhe as verbas da conta (a soma delas). Marcador e estabelecimento não têm cota: a conta diz onde eles caem ("padaria cai em Mercado") e oferece "Só Mercado".</li>
+    <li style="margin-bottom:8px"><b>Tipo de gasto.</b> A Margem conta tudo, sempre. Ritmo, Passo e Fim do mês são do dia a dia; em Previstos, ficam no lugar com uma linha ("O ritmo mede só o dia a dia."). Previstos em Dia a dia: "Em Dia a dia, os previstos ficam fora." O Teto não depende do tipo.</li>
+    <li><b>Só a conta tem o (?).</b> São as ideias que a verba usa e que pedem explicação; os outros widgets já se explicam pela frase.</li>
+  </ul>
+
+  <h3 class="sub">3.3 · As seis ideias: cartão, página e ajuda</h3>
+  <p class="muted">Cada ideia tem o cartão da grade (aqui sem filtro, as seis verbas somadas), a página (aberta por uma porta, já filtrada numa verba) e a ajuda do (?), uma folha de baixo com a ideia numa frase, a conta com os números da pessoa, onde a ideia aparece e a próxima da trilha. A ajuda fala de "você" e diz fatos, como o resto do app.</p>
+
+  <!-- ===== 1 MARGEM ===== -->
+  <article class="lesson" id="l-margem">
+    <header class="lh"><span class="lnum">1</span><div><div class="kick">Ideia 1 de 6</div><h3>Margem</h3><p class="lq">Quanto ainda cabe?</p></div></header>
+    <div class="lmeta">
+      <p><b>Mostra</b>Cota − gasto − previstos a caminho. Sem chip, a soma das verbas e a lista delas, na ordem de risco.</p>
+      <p><b>Antes ficava em</b>Linha de cada verba, manchete do detalhe ("Sobram…"), total do cabeçalho de Verbas, Leitura ▸ Margem.</p>
+      <p><b>Porta</b>O número grande de Verbas (todas) e do detalhe (a verba); "= Margem" na conta.</p>
+      <p><b>Leva junto</b>"Além" (o antigo Fora da margem), a virada, o fio duplo e a hachura da régua, a soma corrida com "cota atingida aqui".</p>
+    </div>
+    <div class="shots">
+      <figure class="shot"><div class="spec"><div class="grid" data-spec="w-margem"></div></div>
+        <figcaption><b>Cartão na grade</b>Meia largura. A frase de hoje e uma barra das cotas: o que foi gasto, o que os previstos já separam, o que cabe. O (?) no título abre a ajuda sem sair da grade.</figcaption></figure>
+
+      <figure class="shot">
+        <div class="ph"><div class="scr" id="p-margem" data-tab="analise">
+          <div class="tb bk"><span class="back"><svg class="ico"><use href="#i-voltar"/></svg></span><span class="t"><b class="dr">1</b>Margem</span><span class="ib q" aria-label="O que é a margem?"><svg class="ico"><use href="#i-ajuda"/></svg></span></div>
+          <div class="bd">
+            <div class="pf"><span class="chip">Delivery<svg class="ico"><use href="#i-fechar"/></svg></span><span class="rp"><svg class="ico"><use href="#i-periodo"/></svg>1 a 30 nov</span><span class="kd">tudo</span></div>
+            <div class="psum">R$ 262,00 · 4 lançamentos · até hoje</div>
+            <h4 class="phd neg">R$ 12,00 além da cota.</h4>
+            <p class="pdek">Nada foi bloqueado. O mês recomeça em 1 de dezembro, com a cota inteira de R$ 250,00.</p>
+            <div class="conta" style="margin-top:12px">
+              <div class="r"><span>Cota de novembro</span><span>R$ 250,00</span></div>
+              <div class="r"><span>− Gasto</span><span>R$ 262,00</span></div>
+              <div class="r"><span>− Previstos a caminho <b class="dr">2</b></span><span class="mut">nenhum</span></div>
+              <div class="r tot neg"><span>= Margem</span><span>R$ 12,00 além</span></div>
+            </div>
+            <div class="mg"><span class="rl"></span><span class="fl" style="width:91.74%"></span><span class="db" style="left:91.74%"></span><span class="hc" style="left:calc(91.74% + 4px);width:4.4%"></span></div>
+            <div class="mgl"><span style="left:0">R$ 0</span><span style="left:91.74%;transform:translateX(-108%)">cota 250</span><span style="left:calc(91.74% + 4px);color:var(--lacre)">+ 12</span></div>
+            <div class="secl">Em ordem, com a soma<span>valor · soma</span></div>
+            <div class="lrow cp"><span class="tx"><span class="n">iFood<small>dom, 1</small></span></span><span class="a">89,20</span><span class="sm">89,20</span></div>
+            <div class="lrow cp"><span class="tx"><span class="n">iFood<small>seg, 2</small></span></span><span class="a">63,90</span><span class="sm">153,10</span></div>
+            <div class="lrow cp"><span class="tx"><span class="n">iFood<small>ter, 3</small></span></span><span class="a">54,30</span><span class="sm">207,40</span></div>
+            <div class="lrow cp"><span class="tx"><span class="n">Zé Delivery<small>ter, 3</small></span></span><span class="a">54,60</span><span class="sm lac">262,00</span></div>
+            <div class="cut">Cota atingida aqui</div>
+            <div class="trilha"><span class="pos">ideia 1 de 6</span><a class="nx">Próxima: <b class="dr">2</b> Previstos<svg class="ico"><use href="#i-avancar"/></svg></a></div>
+          </div>
+        </div></div>
+        <figcaption><b>Página · aberta pelo número de Delivery</b>O filtro vem recolhido numa linha: a verba e o mês da porta. A conta das três parcelas, a régua só com o que é da margem (o fio duplo na cota, a hachura do que passou) e os lançamentos em ordem, com a soma, até onde a cota foi atingida. Com todas as verbas (pela porta de Verbas), a página lista as seis com a ordem risco · margem · A–Z, como hoje.</figcaption>
+      </figure>
+
+      <figure class="shot">
+        <div class="ph"><div class="scr" id="p-margem-ajuda" data-tab="analise" data-under="p-margem">
+          <div class="scrim"></div>
+          <div class="sheet">
+            <div class="over">Ajuda · ideia 1 de 6</div>
+            <h4>O que é a margem?</h4>
+            <p class="lead">É quanto ainda cabe gastar na verba neste mês.</p>
+            <div class="nums">
+              <div class="over">Com os seus números · Delivery</div>
+              <div class="r"><span>Cota de novembro</span><span>R$ 250,00</span></div>
+              <div class="r"><span>− o que já foi gasto</span><span>R$ 262,00</span></div>
+              <div class="r"><span>− previstos a caminho</span><span>R$ 0,00</span></div>
+              <div class="r tot"><span>= margem</span><span class="ov">R$ 12,00 além</span></div>
+            </div>
+            <p>Abaixo de zero, o app diz <b>"além"</b> e não bloqueia nada. Em 1 de dezembro a cota volta inteira; sobra e excesso não passam para o mês seguinte.</p>
+            <p class="where">Onde aparece: o número de cada verba na lista, o número grande do detalhe e a prévia ao lançar.</p>
+            <div class="acts"><span class="btn txt">Entendi</span><span class="btn sec">Próxima: <b class="dr">2</b> Previstos</span></div>
+          </div>
+        </div></div>
+        <figcaption><b>Ajuda · o (?) aberto</b>Uma folha de baixo sobre a página. A ideia numa frase, a conta com os números da verba que está no filtro (sem chip, com a soma das seis), onde ela aparece no app e a próxima da trilha. Fecha com "Entendi" ou tocando fora.</figcaption>
+      </figure>
+    </div>
+  </article>
+
+  <!-- ===== 2 PREVISTOS ===== -->
+  <article class="lesson" id="l-previstos">
+    <header class="lh"><span class="lnum">2</span><div><div class="kick">Ideia 2 de 6</div><h3>Previstos</h3><p class="lq">O que já tem dono neste mês?</p></div></header>
+    <div class="lmeta">
+      <p><b>Mostra</b>Quanto os previstos a caminho já separam da cota, quanto sobra para o dia a dia e os que vieram.</p>
+      <p><b>Antes ficava em</b>Tracejado e tinta 3 da régua, "tem R$ 2.120,00 em previstos" na manchete, Previstos de novembro no detalhe, Leitura ▸ Previstos do mês.</p>
+      <p><b>Porta</b>"− Previstos a caminho" na conta e o título da lista de previstos, no detalhe da verba.</p>
+      <p><b>Edita</b>A folha do previsto (lançar sem recado, pular este mês, editar, apagar) e "Novo previsto", já com a verba.</p>
+    </div>
+    <div class="shots">
+      <figure class="shot"><div class="spec"><div class="grid" data-spec="w-previstos"></div></div>
+        <figcaption><b>Cartão na grade</b>A frase de hoje ("3 a caminho") com o total, e os três previstos pelo dia, numa folhinha tracejada pequena. Os valores ficam em tinta 2: ainda não são gasto.</figcaption></figure>
+
+      <figure class="shot">
+        <div class="ph"><div class="scr t-dark" id="p-previstos" data-tab="analise">
+          <div class="tb bk"><span class="back"><svg class="ico"><use href="#i-voltar"/></svg></span><span class="t"><b class="dr">2</b>Previstos</span><span class="ib q" aria-label="O que é um previsto?"><svg class="ico"><use href="#i-ajuda"/></svg></span></div>
+          <div class="bd">
+            <div class="pf"><span class="chip">Casa<svg class="ico"><use href="#i-fechar"/></svg></span><span class="rp"><svg class="ico"><use href="#i-periodo"/></svg>1 a 30 nov</span><span class="kd">tudo</span></div>
+            <div class="psum">R$ 40,00 · 1 lançamento · até hoje</div>
+            <h4 class="phd">Casa tem R$ 2.120,00 em previstos a caminho.</h4>
+            <p class="pdek">Eles já saem da margem e ficam fora do ritmo. Para o dia a dia sobram R$ 880,00.</p>
+            <div class="sp"><i class="pr" style="flex:2000">Aluguel</i><i class="pr" style="flex:120"></i><i class="dd" style="flex:880"><b style="width:4.55%"></b></i></div>
+            <div class="spl"><span style="flex:2122">previstos R$ 2.120,00</span><span style="flex:880">dia a dia R$ 880,00</span></div>
+            <div class="secl">A caminho<span>valor</span></div>
+            <div class="lrow"><span class="dia"><small>nov</small><b>5</b></span><span class="tx"><span class="n">Aluguel</span><span class="w">esperando · todo mês</span></span><span class="a res">2.000,00</span></div>
+            <div class="lrow"><span class="dia"><small>nov</small><b>10</b></span><span class="tx"><span class="n">Internet</span><span class="w lk">recado na Pauta</span></span><span class="a res">120,00</span></div>
+            <div class="secl">Vieram</div>
+            <p class="pnote">Nenhum ainda. Quando o recado chega e você lança, o previsto vem para o gasto, e a margem não muda.</p>
+            <div style="margin-top:12px"><span class="btn sec"><svg class="ico s18"><use href="#i-mais"/></svg>Novo previsto em Casa</span></div>
+            <div class="trilha"><a><svg class="ico"><use href="#i-voltar"/></svg><b class="dr">1</b> Margem</a><span class="pos">2 de 6</span><a class="nx"><b class="dr">3</b> Ritmo<svg class="ico"><use href="#i-avancar"/></svg></a></div>
+          </div>
+        </div></div>
+        <figcaption><b>Página · aberta pela conta da Casa · escuro</b>A cota da Casa repartida: os dois previstos tracejados, e o dia a dia de R$ 880,00 com os R$ 40,00 do gás dentro. Embaixo, os previstos pelo dia, como no detalhe e em Lançamentos; tocar abre a folha do previsto. "Novo previsto em Casa" abre o lançamento manual com a verba e uma data à frente, que é como um previsto nasce hoje.</figcaption>
+      </figure>
+
+      <figure class="shot">
+        <div class="ph"><div class="scr t-dark" id="p-previstos-ajuda" data-tab="analise" data-under="p-previstos">
+          <div class="scrim"></div>
+          <div class="sheet">
+            <div class="over">Ajuda · ideia 2 de 6</div>
+            <h4>O que é um previsto?</h4>
+            <p class="lead">Um gasto que você já sabe que vem, como o aluguel e a internet.</p>
+            <div class="nums">
+              <div class="over">Com os seus números · Casa</div>
+              <div class="r"><span>Cota de novembro</span><span>R$ 3.000,00</span></div>
+              <div class="r"><span>− Aluguel, dia 5</span><span>R$ 2.000,00</span></div>
+              <div class="r"><span>− Internet, dia 10</span><span>R$ 120,00</span></div>
+              <div class="r tot"><span>= dia a dia</span><span>R$ 880,00</span></div>
+            </div>
+            <p>Antes de chegar, o previsto já separa o valor dele. Por isso a margem da Casa é <b>R$ 840,00</b> (880 − 40 do gás), e não R$ 2.960,00.</p>
+            <p>Ele fica fora do ritmo: o ritmo da Casa olha só os R$ 880,00 do dia a dia. Quando o recado chega e você lança, o previsto <b>vem</b>: sai de "a caminho", entra no gasto, e a margem fica igual.</p>
+            <div class="acts"><span class="btn txt">Entendi</span><span class="btn sec">Próxima: <b class="dr">3</b> Ritmo</span></div>
+          </div>
+        </div></div>
+        <figcaption><b>Ajuda · escuro</b>A conta que explica por que a barra da Casa já está tão curta com R$ 40,00 gastos. E o fato que mais confunde hoje, dito uma vez: quando o previsto vem, a margem não muda.</figcaption>
+      </figure>
+    </div>
+  </article>
+
+  <!-- ===== 3 RITMO ===== -->
+  <article class="lesson" id="l-ritmo">
+    <header class="lh"><span class="lnum">3</span><div><div class="kick">Ideia 3 de 6</div><h3>Ritmo</h3><p class="lq">O dia a dia está rápido demais para o mês?</p></div></header>
+    <div class="lmeta">
+      <p><b>Mostra</b>O gasto do dia a dia contra os passos até hoje, dia por dia, e quanto está acima.</p>
+      <p><b>Antes ficava em</b>Estado e marca da régua na lista, linha fina do detalhe ("No ritmo: o ideal…"), Leitura ▸ Ritmo acumulado.</p>
+      <p><b>Porta</b>O quadro <span class="dr-in">3</span> do detalhe e a palavra "acima do ritmo".</p>
+      <p><b>Leva junto</b>No ritmo, acima do ritmo, sem gasto; previstos fora; sem tolerância (um centavo acima já conta).</p>
+    </div>
+    <div class="shots">
+      <figure class="shot"><div class="spec"><div class="grid" data-spec="w-ritmo"></div></div>
+        <figcaption><b>Cartão na grade</b>Uma linha por verba, na ordem de risco. O trilho é o dia a dia do mês inteiro de cada uma; a barra, o que já foi; o tracejado, os passos até hoje. Passou do tracejado, acima do ritmo. Forma e palavra junto da cor: ▨ além, ▲ acima, ● no ritmo, ○ sem gasto.</figcaption></figure>
+
+      <figure class="shot">
+        <div class="ph"><div class="scr" id="p-ritmo" data-tab="analise">
+          <div class="tb bk"><span class="back"><svg class="ico"><use href="#i-voltar"/></svg></span><span class="t"><b class="dr">3</b>Ritmo</span><span class="ib q" aria-label="O que é o ritmo?"><svg class="ico"><use href="#i-ajuda"/></svg></span></div>
+          <div class="bd">
+            <div class="pf"><span class="chip">Mercado<svg class="ico"><use href="#i-fechar"/></svg></span><span class="rp"><svg class="ico"><use href="#i-periodo"/></svg>1 a 30 nov</span><span class="kd">tudo</span></div>
+            <div class="psum">R$ 412,30 · 8 lançamentos · até hoje</div>
+            <h4 class="phd">Mercado está R$ 252,30 acima do ritmo.</h4>
+            <p class="pdek">Até hoje, R$ 412,30 do dia a dia; os passos davam R$ 160,00.</p>
+            <svg class="pch" viewBox="0 0 312 196" role="img" aria-label="Ritmo de Mercado em novembro: R$ 412,30 do dia a dia até o dia 4, contra R$ 160,00 dos passos até hoje. Cota de R$ 1.200,00.">
+              <rect x="76.27" y="0" width="235.73" height="172" fill="var(--folha-2)" opacity=".6"/>
+              <g stroke="var(--tinta-3)" stroke-opacity=".25"><line x1="40" y1="118.11" x2="312" y2="118.11"/><line x1="40" y1="64.21" x2="312" y2="64.21"/><line x1="40" y1="10.32" x2="312" y2="10.32"/></g>
+              <g font-size="11" fill="var(--tinta-3)" text-anchor="end"><text x="35" y="121.6">500</text><text x="35" y="67.7">1.000</text><text x="35" y="13.8">R$ 1.500</text></g>
+              <line x1="40" y1="172" x2="312" y2="172" stroke="var(--tinta-3)"/>
+              <g stroke="var(--argila)" stroke-width=".9"><line x1="40" y1="41.16" x2="312" y2="41.16"/><line x1="40" y1="44.16" x2="312" y2="44.16"/></g>
+              <text x="310" y="35.5" text-anchor="end" font-size="11" font-weight="600" fill="var(--tinta-2)">cota R$ 1.200</text>
+              <line x1="44.53" y1="167.69" x2="307.47" y2="42.66" stroke="var(--tinta-3)" stroke-width="1.4" stroke-dasharray="4 3"/>
+              <line x1="79" y1="129.5" x2="79" y2="153" stroke="var(--ocre)" stroke-width="3"/>
+              <polyline points="44.53,165.27 53.60,156.39 62.67,129.06 71.73,127.56" fill="none" stroke="var(--tinta-2)" stroke-width="2" stroke-linejoin="round"/>
+              <circle cx="71.73" cy="154.75" r="3" fill="var(--papel)" stroke="var(--tinta-3)" stroke-width="1.4"/>
+              <circle cx="71.73" cy="127.56" r="5" fill="var(--papel)"/><circle cx="71.73" cy="127.56" r="3.5" fill="var(--tinta)"/>
+              <text x="86" y="122" font-size="12" font-weight="700" fill="var(--tinta)">R$ 412,30 · hoje</text>
+              <text x="86" y="166" font-size="11" font-weight="600" fill="var(--tinta-3)">passos: R$ 160,00</text>
+              <g font-size="11" fill="var(--tinta-3)" text-anchor="middle"><text x="44.53" y="188">1</text><text x="108" y="188">8</text><text x="171.47" y="188">15</text><text x="234.93" y="188">22</text><text x="298.4" y="188">29</text></g>
+            </svg>
+            <div class="leg"><span><i class="ln"></i>gasto do dia a dia, somado</span><span><i class="ds"></i>passos, somados</span><span><i class="br"></i>acima do ritmo</span><span><i class="dl"></i>cota</span></div>
+            <div class="secl">Dia por dia<span>gasto · passos</span></div>
+            <div class="byday">
+              <div class="r"><span>dom, 1</span><span><small>feira, padaria</small></span><span>62,40</span><span>40,00</span></div>
+              <div class="r"><span>seg, 2</span><span><small>feira, 2 padarias</small></span><span>144,80</span><span>80,00</span></div>
+              <div class="r"><span>ter, 3</span><span><small>Pão de Açúcar</small></span><span><b>398,40</b></span><span>120,00</span></div>
+              <div class="r"><span>qua, 4</span><span><small>padaria</small></span><span>412,30</span><span>160,00</span></div>
+            </div>
+            <div class="trilha"><a><svg class="ico"><use href="#i-voltar"/></svg><b class="dr">2</b> Previstos</a><span class="pos">3 de 6</span><a class="nx"><b class="dr">4</b> Passo<svg class="ico"><use href="#i-avancar"/></svg></a></div>
+          </div>
+        </div></div>
+        <figcaption><b>Página · aberta pelo quadro de Mercado</b>O gráfico de hoje (o mês inteiro, o que falta em folha 2, a cota em fio duplo), com duas linhas só: o gasto do dia a dia e os passos somados. A projeção sai daqui e vai para a <span class="dr-in">5</span>: uma ideia por tela. A barra ocre marca a distância de hoje. Embaixo, os dias, com o que pesou em cada um: o Pão de Açúcar de terça explica quase tudo.</figcaption>
+      </figure>
+
+      <figure class="shot">
+        <div class="ph"><div class="scr" id="p-ritmo-ajuda" data-tab="analise" data-under="p-ritmo">
+          <div class="scrim"></div>
+          <div class="sheet">
+            <div class="over">Ajuda · ideia 3 de 6</div>
+            <h4>O que é o ritmo?</h4>
+            <p class="lead">O ritmo compara o que você gastou no dia a dia com o que os passos davam até hoje.</p>
+            <div class="nums">
+              <div class="over">Com os seus números · Mercado</div>
+              <div class="r"><span>Passo desta semana (1 a 7)</span><span>R$ 280,00</span></div>
+              <div class="r"><span>4 dos 7 dias: passos até hoje</span><span>R$ 160,00</span></div>
+              <div class="r"><span>Gasto do dia a dia até hoje</span><span>R$ 412,30</span></div>
+              <div class="r tot"><span>= acima do ritmo</span><span class="at">R$ 252,30</span></div>
+            </div>
+            <p>Não é bronca nem bloqueio: a margem de Mercado ainda é R$ 787,70. É um aviso cedo. Se daqui em diante você gastar só os passos, o mês fecha <b>R$ 252,30 além da cota</b>.</p>
+            <p>Os previstos ficam fora: o ritmo mede só o dia a dia. Um centavo acima dos passos já conta.</p>
+            <div class="acts"><span class="btn txt">Entendi</span><span class="btn sec">Próxima: <b class="dr">4</b> Passo</span></div>
+          </div>
+        </div></div>
+        <figcaption><b>Ajuda</b>A distância do ritmo ganha um sentido concreto: é o que vai faltar no fim, se o resto do mês seguir os passos (R$ 412,30 + R$ 1.040,00 dos passos que faltam = R$ 1.452,30, R$ 252,30 além). A margem aparece para lembrar que nada passou ainda.</figcaption>
+      </figure>
+    </div>
+  </article>
+
+  <!-- ===== 4 PASSO ===== -->
+  <article class="lesson" id="l-passo">
+    <header class="lh"><span class="lnum">4</span><div><div class="kick">Ideia 4 de 6</div><h3>Passo</h3><p class="lq">Quanto cabe em cada semana?</p></div></header>
+    <div class="lmeta">
+      <p><b>Mostra</b>O dia a dia repartido pelas semanas; o passo de cada semana contra o gasto dela; os passos até hoje, que eram o "ritmo ideal".</p>
+      <p><b>Antes ficava em</b>Passos semanais do detalhe (grade e diálogo), prévia em Nova verba, marca do maior passo em Leitura ▸ Semanas.</p>
+      <p><b>Porta</b>O quadro <span class="dr-in">4</span> do detalhe ("R$ 280,00 · semana de 1 a 7").</p>
+      <p><b>Edita</b>O passo de uma semana, com as regras de hoje: máximo, uma semana sempre automática, voltar ao automático.</p>
+    </div>
+    <div class="shots">
+      <figure class="shot"><div class="spec"><div class="grid" data-spec="w-passo"></div></div>
+        <figcaption><b>Cartão na grade</b>Largura inteira. As seis verbas somadas: R$ 805,00 em cada semana cheia, R$ 230,10 em 29 e 30. A semana de 1 a 7 está quase cheia, R$ 804,10, com três dias pela frente.</figcaption></figure>
+
+      <figure class="shot">
+        <div class="ph"><div class="scr t-dark" id="p-passo" data-tab="analise">
+          <div class="tb bk"><span class="back"><svg class="ico"><use href="#i-voltar"/></svg></span><span class="t"><b class="dr">4</b>Passo</span><span class="ib q" aria-label="O que é o passo?"><svg class="ico"><use href="#i-ajuda"/></svg></span></div>
+          <div class="bd">
+            <div class="pf"><span class="chip">Mercado<svg class="ico"><use href="#i-fechar"/></svg></span><span class="rp"><svg class="ico"><use href="#i-periodo"/></svg>1 a 30 nov</span><span class="kd">tudo</span></div>
+            <div class="psum">R$ 412,30 · 8 lançamentos · até hoje</div>
+            <h4 class="phd">Mercado anda em passos de R$ 280,00 por semana.</h4>
+            <p class="pdek">A cota de R$ 1.200,00 pelos 30 dias: R$ 40,00 por dia. Nesta semana já foram R$ 412,30.</p>
+            <div class="secl">Passos de novembro<span>toque para mudar</span></div>
+            <div class="steps">
+              <div class="cur"><small>1–7</small><b>280</b></div>
+              <div><small>8–14</small><b>280</b></div>
+              <div><small>15–21</small><b>280</b></div>
+              <div><small>22–28</small><b>280</b></div>
+              <div><small>29–30</small><b>80</b></div>
+            </div>
+            <div class="stsum"><span>Soma = dia a dia<small>Mercado não tem previstos: é a cota</small></span><span class="a">R$ 1.200,00</span></div>
+            <svg class="pch" viewBox="0 0 312 150" role="img" aria-label="Passo e gasto do dia a dia de Mercado por semana: de 1 a 7, R$ 412,30 contra o passo de R$ 280,00; as outras semanas ainda não começaram.">
+              <g fill="none" stroke="var(--fio-forte)"><rect x="11.7" y="57.17" width="39" height="72.33"/><rect x="74.1" y="57.17" width="39" height="72.33"/><rect x="136.5" y="57.17" width="39" height="72.33"/><rect x="198.9" y="57.17" width="39" height="72.33"/><rect x="261.3" y="109.55" width="39" height="19.95"/></g>
+              <rect x="12.7" y="58.67" width="37" height="71.33" fill="var(--tinta-2)"/>
+              <rect x="12.7" y="22.02" width="37" height="32.65" fill="var(--ocre)"/>
+              <line x1="0" y1="130" x2="312" y2="130" stroke="var(--tinta-3)"/>
+              <g font-size="11" text-anchor="middle" font-weight="600"><text x="31.2" y="16" fill="var(--tinta)" font-weight="700">412,30</text><text x="93.6" y="51" fill="var(--tinta-3)">280</text><text x="156" y="51" fill="var(--tinta-3)">280</text><text x="218.4" y="51" fill="var(--tinta-3)">280</text><text x="280.8" y="103.5" fill="var(--tinta-3)">80</text></g>
+              <g font-size="10.5" fill="var(--tinta-3)" text-anchor="middle"><text x="31.2" y="145" font-weight="700" fill="var(--tinta)">1–7</text><text x="93.6" y="145">8–14</text><text x="156" y="145">15–21</text><text x="218.4" y="145">22–28</text><text x="280.8" y="145">29–30</text></g>
+            </svg>
+            <div class="leg"><span><i class="be"></i>passo</span><span><i class="bx"></i>gasto do dia a dia</span><span><i class="bx" style="background:var(--ocre)"></i>acima do passo</span></div>
+            <p class="pnote">Somados até hoje, os passos dão <b>R$ 160,00</b> (4 dos 7 dias desta semana): é a linha tracejada do ritmo <b class="dr">3</b>.</p>
+            <div class="trilha"><a><svg class="ico"><use href="#i-voltar"/></svg><b class="dr">3</b> Ritmo</a><span class="pos">4 de 6</span><a class="nx"><b class="dr">5</b> Fim do mês<svg class="ico"><use href="#i-avancar"/></svg></a></div>
+          </div>
+        </div></div>
+        <figcaption><b>Página · escuro</b>A grade dos passos sai do detalhe da verba e vem para cá, igual: a semana atual em destaque, toque para mudar, a soma embaixo (na Casa, "Soma = dia a dia · cota 3.000,00 − previstos 2.120,00"). O gráfico põe o gasto de cada semana dentro do passo dela; o que passou do passo fica em ocre.</figcaption>
+      </figure>
+
+      <figure class="shot">
+        <div class="ph"><div class="scr t-dark" id="p-passo-editar" data-tab="analise" data-under="p-passo">
+          <div class="scrim"></div>
+          <div class="dlg">
+            <h4>Passo de 22 a 28 de novembro</h4>
+            <div class="fld"><span class="lab">Passo da semana</span><div class="in"><small>R$</small>400,00</div></div>
+            <p class="hint mut">no máximo R$ 1.200,00</p>
+            <p class="hint">As outras semanas se ajustam para somar a cota: 1–7, 8–14 e 15–21 ficam com R$ 243,47; 29–30, com R$ 69,59. Os passos até hoje passam a R$ 139,12.</p>
+            <div class="acts"><span class="btn txt">Cancelar</span><span class="btn txt">Salvar</span></div>
+          </div>
+        </div></div>
+        <figcaption><b>Mudar um passo · escuro</b>O diálogo de hoje, na página do passo. Ganha uma linha: o que acontece com as outras semanas e com os passos até hoje, que mudam o ritmo. Uma semana editada mostra "Voltar ao automático"; quando só resta uma automática, ela fica em tinta 3 e não abre.</figcaption>
+      </figure>
+
+      <figure class="shot">
+        <div class="ph"><div class="scr t-dark" id="p-passo-ajuda" data-tab="analise" data-under="p-passo">
+          <div class="scrim"></div>
+          <div class="sheet">
+            <div class="over">Ajuda · ideia 4 de 6</div>
+            <h4>O que é o passo?</h4>
+            <p class="lead">É quanto do dia a dia cabe em cada semana, para o mês fechar na cota.</p>
+            <div class="nums">
+              <div class="over">Com os seus números · Mercado</div>
+              <div class="r"><span>Dia a dia de novembro</span><span>R$ 1.200,00</span></div>
+              <div class="r"><span>÷ 30 dias</span><span>R$ 40,00 por dia</span></div>
+              <div class="r"><span>Semana cheia, 7 dias</span><span>R$ 280,00</span></div>
+              <div class="r"><span>Semana de 29 e 30, 2 dias</span><span>R$ 80,00</span></div>
+            </div>
+            <p>Somados até hoje, os passos dão a linha tracejada do ritmo: <b>R$ 160,00</b> no dia 4.</p>
+            <p>Não é limite: só mostra quanto cabe. Dá para mudar uma semana, a do churrasco, por exemplo; as outras se ajustam para continuar somando a cota, e uma fica sempre automática.</p>
+            <p class="where">Na Casa, os previstos ficam fora: os passos repartem só R$ 880,00. As semanas começam no domingo, como está em Ajustes.</p>
+            <div class="acts"><span class="btn txt">Entendi</span><span class="btn sec">Próxima: <b class="dr">5</b> Fim do mês</span></div>
+          </div>
+        </div></div>
+        <figcaption><b>Ajuda · escuro</b>A conta do passo em quatro linhas, e o elo com a <span class="dr-in">3</span>: o "ritmo ideal" de hoje não é outro número, é a soma dos passos até hoje.</figcaption>
+      </figure>
+    </div>
+  </article>
+
+  <!-- ===== 5 FIM DO MÊS ===== -->
+  <article class="lesson" id="l-fim">
+    <header class="lh"><span class="lnum">5</span><div><div class="kick">Ideia 5 de 6</div><h3>Fim do mês</h3><p class="lq">Se continuar assim, onde o mês chega?</p></div></header>
+    <div class="lmeta">
+      <p><b>Mostra</b>Para onde o mês vai se continuar assim; e o outro futuro, seguindo os passos daqui em diante.</p>
+      <p><b>Antes ficava em</b>"No passo atual, o mês fecharia em…", na frase do Ritmo da Leitura.</p>
+      <p><b>Porta</b>O quadro <span class="dr-in">5</span> do detalhe ("R$ 3.092 · se continuar").</p>
+      <p><b>Leva junto</b>Os previstos do mês somados; sem gasto, sem conta (Saúde mostra "sem gasto ainda").</p>
+    </div>
+    <div class="shots">
+      <figure class="shot"><div class="spec"><div class="grid" data-spec="w-fim"></div></div>
+        <figcaption><b>Cartão na grade</b>Meia largura. Só as verbas que passariam da cota, com o valor de fim de mês; as outras numa linha. ▲ em ocre: é aviso, não fato.</figcaption></figure>
+
+      <figure class="shot">
+        <div class="ph"><div class="scr" id="p-fim" data-tab="analise">
+          <div class="tb bk"><span class="back"><svg class="ico"><use href="#i-voltar"/></svg></span><span class="t"><b class="dr">5</b>Fim do mês</span><span class="ib q" aria-label="O que é o fim do mês?"><svg class="ico"><use href="#i-ajuda"/></svg></span></div>
+          <div class="bd">
+            <div class="pf"><span class="chip">Mercado<svg class="ico"><use href="#i-fechar"/></svg></span><span class="rp"><svg class="ico"><use href="#i-periodo"/></svg>1 a 30 nov</span><span class="kd">tudo</span></div>
+            <div class="psum">R$ 412,30 · 8 lançamentos · até hoje</div>
+            <h4 class="phd">Se continuar assim, fecha em R$ 3.092.</h4>
+            <p class="pdek">R$ 1.892 além da cota. Seguindo os passos daqui em diante, fecharia em R$ 1.452,30.</p>
+            <svg class="pch" viewBox="0 0 312 196" role="img" aria-label="Fim do mês de Mercado: R$ 412,30 até o dia 4. Se continuar assim, R$ 3.092 no dia 30. Seguindo os passos daqui em diante, R$ 1.452,30. Cota de R$ 1.200,00.">
+              <rect x="76.27" y="0" width="235.73" height="172" fill="var(--folha-2)" opacity=".6"/>
+              <g stroke="var(--tinta-3)" stroke-opacity=".25"><line x1="40" y1="131.58" x2="312" y2="131.58"/><line x1="40" y1="91.16" x2="312" y2="91.16"/><line x1="40" y1="50.74" x2="312" y2="50.74"/><line x1="40" y1="10.32" x2="312" y2="10.32"/></g>
+              <g font-size="11" fill="var(--tinta-3)" text-anchor="end"><text x="35" y="135.1">1.000</text><text x="35" y="94.7">2.000</text><text x="35" y="54.2">3.000</text><text x="35" y="13.8">R$ 4.000</text></g>
+              <line x1="40" y1="172" x2="312" y2="172" stroke="var(--tinta-3)"/>
+              <g stroke="var(--argila)" stroke-width=".9"><line x1="40" y1="122" x2="312" y2="122"/><line x1="40" y1="125" x2="312" y2="125"/></g>
+              <text x="305" y="139" text-anchor="end" font-size="11" font-weight="600" fill="var(--tinta-2)">cota R$ 1.200</text>
+              <line x1="71.73" y1="155.33" x2="307.47" y2="113.3" stroke="var(--tinta-3)" stroke-width="1.4" stroke-dasharray="4 3"/>
+              <line x1="71.73" y1="155.33" x2="307.47" y2="47.02" stroke="var(--ocre)" stroke-width="2.2" stroke-dasharray="1 4" stroke-linecap="round"/>
+              <polyline points="44.53,169.48 53.60,166.15 62.67,155.90 71.73,155.33" fill="none" stroke="var(--tinta-2)" stroke-width="2" stroke-linejoin="round"/>
+              <circle cx="71.73" cy="155.33" r="5" fill="var(--papel)"/><circle cx="71.73" cy="155.33" r="3.5" fill="var(--tinta)"/>
+              <text x="305" y="40" text-anchor="end" font-size="12" font-weight="700" fill="var(--tinta)">R$ 3.092</text>
+              <text x="305" y="106" text-anchor="end" font-size="11" font-weight="600" fill="var(--tinta-2)">R$ 1.452,30</text>
+              <text x="82" y="167" font-size="11" font-weight="600" fill="var(--tinta-2)">R$ 412,30 · hoje</text>
+              <g font-size="11" fill="var(--tinta-3)" text-anchor="middle"><text x="44.53" y="188">1</text><text x="108" y="188">8</text><text x="171.47" y="188">15</text><text x="234.93" y="188">22</text><text x="298.4" y="188">29</text></g>
+            </svg>
+            <div class="leg"><span><i class="dt"></i>se continuar assim</span><span><i class="ds"></i>seguindo os passos daqui em diante</span><span><i class="ln"></i>até hoje</span><span><i class="dl"></i>cota</span></div>
+            <div class="conta" style="margin-top:12px">
+              <div class="r"><span>Dia a dia ÷ passos até hoje</span><span>1.200 ÷ 160 = 7,5</span></div>
+              <div class="r"><span>Gasto do dia a dia × 7,5</span><span>R$ 3.092,25</span></div>
+              <div class="r"><span>+ previstos do mês <b class="dr">2</b></span><span class="mut">nenhum</span></div>
+              <div class="r tot"><span>= se continuar assim</span><span>R$ 3.092,25</span></div>
+            </div>
+            <p class="pnote">No começo do mês a conta balança muito: o Pão de Açúcar de R$ 238,40 pesa como se viesse de novo a cada quatro dias.</p>
+            <div class="trilha"><a><svg class="ico"><use href="#i-voltar"/></svg><b class="dr">4</b> Passo</a><span class="pos">5 de 6</span><a class="nx"><b class="dr">6</b> Teto<svg class="ico"><use href="#i-avancar"/></svg></a></div>
+          </div>
+        </div></div>
+        <figcaption><b>Página · aberta pelo quadro de Mercado</b>Dois futuros a partir de hoje: o pontilhado ocre (se continuar assim, a conta de hoje) e o tracejado (o que já foi mais os passos que faltam). O segundo é novo como desenho, não como regra: sai do gasto até hoje e dos passos. A conta embaixo é a mesma do "no passo atual" de hoje.</figcaption>
+      </figure>
+
+      <figure class="shot">
+        <div class="ph"><div class="scr" id="p-fim-ajuda" data-tab="analise" data-under="p-fim">
+          <div class="scrim"></div>
+          <div class="sheet">
+            <div class="over">Ajuda · ideia 5 de 6</div>
+            <h4>O que é o fim do mês?</h4>
+            <p class="lead">É onde o mês chega se o seu jeito de gastar até hoje continuar igual.</p>
+            <div class="nums">
+              <div class="over">Com os seus números · Mercado</div>
+              <div class="r"><span>Até hoje, 4 dos 30 dias</span><span>R$ 412,30</span></div>
+              <div class="r"><span>O mês é 7,5 vezes isso (1.200 ÷ 160)</span><span>× 7,5</span></div>
+              <div class="r tot"><span>= se continuar assim</span><span class="at">R$ 3.092,25</span></div>
+            </div>
+            <p>Quem está exatamente no ritmo fecha na cota. Os previstos do mês entram somados: na Casa, R$ 300,00 do dia a dia + R$ 2.120,00 de previstos = <b>R$ 2.420,00</b>.</p>
+            <p>É uma conta, não uma previsão: no começo do mês ela balança muito.</p>
+            <p class="where">Onde aparece: o quadro <span class="dr-in" style="width:17px;height:17px;font-size:10px">5</span> do detalhe da verba.</p>
+            <div class="acts"><span class="btn txt">Entendi</span><span class="btn sec">Próxima: <b class="dr">6</b> Teto</span></div>
+          </div>
+        </div></div>
+        <figcaption><b>Ajuda</b>A regra de três dita em palavras: o mês tem 7,5 vezes os 4 dias até hoje. E o aviso que falta hoje: no começo do mês, essa conta pula.</figcaption>
+      </figure>
+    </div>
+  </article>
+
+  <!-- ===== 6 TETO ===== -->
+  <article class="lesson" id="l-teto">
+    <header class="lh"><span class="lnum">6</span><div><div class="kick">Ideia 6 de 6</div><h3>Teto</h3><p class="lq">As cotas cabem no que você quer gastar no total?</p></div></header>
+    <div class="lmeta">
+      <p><b>Mostra</b>A soma das cotas contra o teto, verba por verba.</p>
+      <p><b>Antes ficava em</b>Cabeçalho de Verbas (o fio do teto fundido com o total do mês) e o diálogo do teto.</p>
+      <p><b>Porta</b>A linha "cotas · teto" no topo de Verbas.</p>
+      <p><b>Edita</b>O teto, com o diálogo de hoje (só este mês ou daqui em diante; tirar teto), e a cota de cada verba, pela lista.</p>
+    </div>
+    <div class="shots">
+      <figure class="shot"><div class="spec"><div class="grid" data-spec="w-teto"></div></div>
+        <figcaption><b>Cartão na grade</b>Meia largura. As cotas em tinta (não são gasto: sem cor de estado) e o fio duplo de argila no teto, como no cabeçalho de hoje. Sem teto, "As cotas somam R$ 5.700,00." e "Pôr um teto".</figcaption></figure>
+
+      <figure class="shot">
+        <div class="ph"><div class="scr" id="p-teto" data-tab="analise">
+          <div class="tb bk"><span class="back"><svg class="ico"><use href="#i-voltar"/></svg></span><span class="t"><b class="dr">6</b>Teto</span><span class="ib q" aria-label="O que é o teto?"><svg class="ico"><use href="#i-ajuda"/></svg></span></div>
+          <div class="bd">
+            <div class="pf"><span class="rp"><svg class="ico"><use href="#i-periodo"/></svg>novembro</span><span class="kd">todas as verbas</span></div>
+            <div class="psum">O teto vale para a soma das cotas, não para o gasto.</div>
+            <h4 class="phd">Cotas de R$ 5.700,00 num teto de R$ 6.000,00.</h4>
+            <p class="pdek">Sobram R$ 300,00 para uma cota nova ou maior.</p>
+            <div class="tb6"><span class="rl"></span><span class="tc"><i style="flex:3000"></i><i style="flex:1200"></i><i style="flex:500"></i><i style="flex:400"></i><i style="flex:350"></i><i style="flex:250"></i></span><span class="db"></span></div>
+            <div class="tb6l"><span style="flex:3000">Casa</span><span style="flex:1200">Mercado</span><span style="flex:500"></span><span style="flex:400"></span><span style="flex:350"></span><span style="flex:250"></span></div>
+            <div style="display:flex;gap:6px;margin-top:12px"><span class="btn sec">Mudar o teto</span><span class="btn txt lac">Tirar teto</span></div>
+            <div class="secl">Cotas de novembro<span>toque para mudar</span></div>
+            <div class="lrow cp"><span class="tx"><span class="n">Casa</span></span><span class="a">3.000,00</span></div>
+            <div class="lrow cp"><span class="tx"><span class="n">Mercado</span></span><span class="a">1.200,00</span></div>
+            <div class="lrow cp"><span class="tx"><span class="n">Saúde</span></span><span class="a">500,00</span></div>
+            <div class="lrow cp"><span class="tx"><span class="n">Lazer</span></span><span class="a">400,00</span></div>
+            <div class="lrow cp"><span class="tx"><span class="n">Transporte</span></span><span class="a">350,00</span></div>
+            <div class="lrow cp"><span class="tx"><span class="n">Delivery</span></span><span class="a">250,00</span></div>
+            <div class="stsum"><span>Soma das cotas<small>teto R$ 6.000,00 · de novembro em diante</small></span><span class="a">R$ 5.700,00</span></div>
+            <div class="trilha"><a><svg class="ico"><use href="#i-voltar"/></svg><b class="dr">5</b> Fim do mês</a><span class="pos">6 de 6</span><a class="nx">Voltar a <b class="dr">1</b><svg class="ico"><use href="#i-avancar"/></svg></a></div>
+          </div>
+        </div></div>
+        <figcaption><b>Página · aberta pela linha do teto</b>Sem chip: o teto é de todas as verbas. A régua das cotas, uma faixa por verba, com fenda entre elas, e a lista com os valores (os nomes da régua param onde a faixa fica estreita). Tocar numa cota abre Editar verba; "Mudar o teto" abre o diálogo de hoje. O gasto e os previstos não entram aqui: são da <span class="dr-in">1</span>.</figcaption>
+      </figure>
+
+      <figure class="shot">
+        <div class="ph"><div class="scr" id="p-teto-editar" data-tab="analise" data-under="p-teto">
+          <div class="scrim"></div>
+          <div class="dlg">
+            <h4>Teto de novembro</h4>
+            <div class="fld"><span class="lab">Máximo para a soma das cotas</span><div class="in"><small>R$</small>5.800,00</div></div>
+            <p class="hint">As cotas de novembro somam R$ 5.700,00: ficam a R$ 100,00 do teto.</p>
+            <div class="acts"><span class="btn txt lac">Tirar teto</span><span class="sp"></span><span class="btn txt">Cancelar</span><span class="btn txt">Salvar</span></div>
+          </div>
+        </div></div>
+        <figcaption><b>Mudar o teto</b>O diálogo de hoje, sem mudança, aberto da página do teto. Salvar pergunta "Vale para quais meses?": De novembro em diante · Só em novembro ("Em dezembro, volta a R$ 6.000,00."), com o snackbar e o Desfazer de hoje.</figcaption>
+      </figure>
+
+      <figure class="shot">
+        <div class="ph"><div class="scr" id="p-teto-ajuda" data-tab="analise" data-under="p-teto">
+          <div class="scrim"></div>
+          <div class="sheet">
+            <div class="over">Ajuda · ideia 6 de 6</div>
+            <h4>O que é o teto?</h4>
+            <p class="lead">O máximo que você quer para a soma das cotas: por exemplo, o que entra por mês.</p>
+            <div class="nums">
+              <div class="over">Com os seus números · novembro</div>
+              <div class="r"><span>Casa + Mercado + Saúde</span><span>R$ 4.700,00</span></div>
+              <div class="r"><span>Lazer + Transporte + Delivery</span><span>R$ 1.000,00</span></div>
+              <div class="r"><span>= soma das cotas</span><span>R$ 5.700,00</span></div>
+              <div class="r tot"><span>Teto R$ 6.000,00</span><span>a R$ 300,00 do teto</span></div>
+            </div>
+            <p>O teto não limita o gasto: limita o plano. Criar uma verba ou subir uma cota além do teto avisa, e você decide se salva assim.</p>
+            <p>Mudar o teto pergunta se vale só para novembro ou de novembro em diante.</p>
+            <p class="where">Onde aparece: a linha "cotas · teto" no topo de Verbas e o aviso sob a cota, em Nova verba e Editar verba.</p>
+            <div class="acts"><span class="btn txt">Entendi</span><span class="btn sec">Voltar a <b class="dr">1</b> Margem</span></div>
+          </div>
+        </div></div>
+        <figcaption><b>Ajuda</b>Fim da trilha. A ajuda separa o teto da margem com uma frase: o teto limita o plano, a margem mede o gasto. O botão leva de volta ao começo.</figcaption>
+      </figure>
+    </div>
+  </article>
+
+  <h3 class="sub">3.4 · Outras telas que mudam</h3>
+  <p class="muted">Pauta, Lançamentos, Lançar e o widget da Pauta ficam como estão: a margem continua na prévia ("Mercado: margem R$ 787,70 → R$ 773,20") e na folha da verba, e "A caminho" continua em Lançamentos. Mudam o formulário da verba, que perde a prévia dos passos, os Ajustes, que ganham a ordem das verbas, e o widget de Verbas, que fica com a barra simples.</p>
+  <div class="shots">
+
+  <figure class="shot">
+    <div class="ph"><div class="scr t-light" id="p-nova" data-tab="verbas">
+      <div class="tb bk"><span class="back"><svg class="ico"><use href="#i-fechar"/></svg></span><span class="t">Nova verba</span></div>
+      <div class="bd">
+        <div class="fld" style="margin-top:8px"><span class="lab">Nome</span><div class="in txt">Presentes</div></div>
+        <div class="fld" style="margin-top:16px"><span class="lab">Cota por mês</span><div class="in"><small>R$</small>200,00</div></div>
+        <p class="hint">Com esta cota, as cotas de novembro somam R$ 5.900,00: ficam a R$ 100,00 do teto.</p>
+        <p class="hint mut">Dá R$ 6,66 por dia, R$ 46,66 por semana cheia. Criada hoje, a verba já tem a cota cheia de novembro: os passos até hoje somam R$ 26,66.</p>
+        <div class="band"><svg class="ico"><use href="#i-leitura"/></svg><span>Os passos de cada semana, o ritmo e o fim do mês ficam na Análise, em <b>A conta</b>, cada um com o (?).</span></div>
+        <div style="margin-top:22px"><span class="btn pri" style="width:100%;min-height:48px;font-size:15px">Criar verba</span></div>
+      </div>
+    </div></div>
+    <figcaption><b>Nova verba</b>Nome e cota. A prévia dos passos (a régua com as semanas) vira uma linha: quanto dá por dia e por semana cheia, e o que já conta quando a verba nasce no meio do mês. O aviso do teto fica sob a cota, como hoje, e de novo ao salvar quando passa. Editar verba é o mesmo formulário, com "Apagar verba".</figcaption>
+  </figure>
+
+  <figure class="shot">
+    <div class="ph"><div class="scr t-light" id="p-ajustes" data-tab="ajustes">
+      <div class="tb"><span class="t">Ajustes</span></div>
+      <div class="bd">
+        <div class="setr" style="margin-top:-30px"><span class="tx"><b>Marcadores</b><small>renomear, juntar, apagar</small></span><svg class="ico"><use href="#i-avancar"/></svg></div>
+        <div class="secl">Mês e semana</div>
+        <div class="setr"><span class="tx"><b>Início do mês e da semana</b><small>dia 1 · domingo</small></span><svg class="ico"><use href="#i-avancar"/></svg></div>
+        <p class="setn">Os passos (A conta <b class="dr">4</b>) seguem a semana. Mudar apaga as edições de passo do mês atual em diante; o app avisa antes.</p>
+        <div class="secl">Verbas</div>
+        <p class="setl">Ordem das verbas</p>
+        <div class="opk"><span class="on">risco</span><span>manual</span><span>A–Z</span></div>
+        <p class="setn">Vale para a lista de Verbas e para o widget. Em manual, segure uma verba na lista e arraste.</p>
+        <div class="secl">Aparência</div>
+        <p class="setl">Tema · vale também para os widgets</p>
+        <div class="opk"><span class="on">sistema</span><span>claro</span><span>escuro</span></div>
+        <div class="secl">Análise</div>
+        <p class="setl">A Análise abre em</p>
+        <div class="opk"><span class="on">tudo</span><span>previstos</span><span>dia a dia</span></div>
+        <div class="secl">Dados</div>
+        <div class="setr"><span class="tx"><b>Backup</b><small>exportar · importar</small></span><svg class="ico"><use href="#i-avancar"/></svg></div>
+      </div>
+    </div></div>
+    <figcaption><b>Ajustes · rolado até o meio</b>Três mudanças: "Ordem das verbas" junta o "Ordenar" do topo de Verbas com a ordem do widget (um ajuste, as duas listas); "A Análise abre em" troca "variáveis" por "dia a dia"; e a nota do início da semana diz o que depende dela. Fontes, Riscados e Marcadores seguem no topo, como hoje.</figcaption>
+  </figure>
+
+  <figure class="shot">
+    <div class="wall">
+      <div class="hw">
+        <div class="h"><span>Verbas · novembro</span><span>margem</span></div>
+        <div class="r"><span>Delivery</span><span class="v neg">R$ 12,00 além</span><span class="tank ov"></span></div>
+        <div class="r"><span>Mercado <span class="st at" style="font-size:11.5px;margin-left:4px">acima do ritmo</span></span><span class="v">R$ 787,70</span><span class="tank"><b style="width:65.64%"></b></span></div>
+        <div class="r"><span>Casa</span><span class="v">R$ 840,00</span><span class="tank"><b style="width:28%"></b></span></div>
+      </div>
+    </div>
+    <figcaption><b>Widget de Verbas · 4×2</b>As mesmas linhas da lista: nome, margem, a barra que esvazia e a palavra só fora do normal. A marca do ritmo sai, como na lista. A ordem é a de Ajustes; tocar abre Verbas, como hoje.</figcaption>
+  </figure>
+
+  </div>
+</section>
+
+<section id="glossario">
+  <div class="kick">4 · Glossário</div>
+  <h2>Seis termos viram três; <em>o resto fica</em></h2>
+  <p class="muted">Os nomes em código podem ficar (<code>FreeLimit</code>, <code>VariableSpent</code>, <code>PaceLine</code>, <code>Projection</code>); muda o que a tela diz. Pauta, recado, lançar, riscar, legenda e apelido não mudam: não moram na verba.</p>
+  <div class="tblw"><table>
+    <thead><tr><th>Hoje</th><th>Na proposta</th><th></th><th>Definição</th><th>Evitar</th></tr></thead>
+    <tbody>
+      <tr><td class="t">Leitura (aba)</td><td class="t">Análise</td><td><span class="tag tg-muda">muda</span></td><td>A aba dos widgets: o filtro e quatro contextos, A conta, Quanto, Para onde e Quando.</td><td>Leitura, relatórios</td></tr>
+      <tr><td class="t">—</td><td class="t">A conta</td><td><span class="tag tg-nova">novo</span></td><td>No detalhe da verba: cota − gasto − previstos a caminho = margem. Na Análise: o contexto das seis ideias da verba, nesta ordem: margem, previstos, ritmo, passo, fim do mês, teto.</td><td>resumo, painel</td></tr>
+      <tr><td class="t">Margem</td><td class="t">Margem</td><td><span class="tag tg-fica">fica</span></td><td>Cota − gasto do mês − previstos a caminho: quanto ainda cabe. Em frase, "cabem R$ 787,70"; abaixo de zero, "R$ 12,00 além".</td><td>saldo, disponível, restante</td></tr>
+      <tr><td class="t">Fora da margem</td><td class="t">"R$ 12,00 além"</td><td><span class="tag tg-junta">junta</span></td><td>O estado é o próprio número: margem abaixo de zero, dita em reais, em lacre, com a data da virada.</td><td>fora da margem (na tela), estourou, negativo</td></tr>
+      <tr><td class="t">Previsto em aberto</td><td class="t">Previsto a caminho</td><td><span class="tag tg-muda">muda</span></td><td>O previsto que ainda não veio. Reserva o valor dele na margem do mês do dia dele. "A caminho" já era o nome do grupo em Lançamentos.</td><td>em aberto, pendente</td></tr>
+      <tr><td class="t">Previsto lançado</td><td class="t">Previsto que veio</td><td><span class="tag tg-muda">muda</span></td><td>Já está no gasto, pelo valor lançado. É a palavra do widget de hoje ("Vieram").</td><td>pago, quitado</td></tr>
+      <tr><td class="t">Cota livre</td><td class="t">Dia a dia (da verba)</td><td><span class="tag tg-junta">junta</span></td><td>Cota − previstos do mês (o que veio pelo valor lançado, o a caminho pelo do previsto), no mínimo zero. É o que os passos repartem. "O dia a dia da Casa é R$ 880,00."</td><td>cota livre, sobra, disponível</td></tr>
+      <tr><td class="t">Gasto variável</td><td class="t">Gasto do dia a dia</td><td><span class="tag tg-junta">junta</span></td><td>O gasto do mês sem os lançamentos de previsto. É o que o ritmo mede.</td><td>gasto variável, gasto livre, discricionário</td></tr>
+      <tr><td class="t">Variáveis (tipo de gasto)</td><td class="t">Dia a dia</td><td><span class="tag tg-junta">junta</span></td><td>O filtro da Análise: Tudo · Previstos · Dia a dia. "A Análise abre em" também.</td><td>variáveis, fixos</td></tr>
+      <tr><td class="t">Ritmo ideal</td><td class="t">Passos até hoje</td><td><span class="tag tg-junta">junta</span></td><td>A soma dos passos das semanas fechadas mais a parte da semana atual até hoje. É a linha tracejada do ritmo.</td><td>ideal, meta, esperado</td></tr>
+      <tr><td class="t">Passo semanal</td><td class="t">Passo (da semana)</td><td><span class="tag tg-fica">fica</span></td><td>Quanto do dia a dia cabe numa semana: dia a dia × dias da semana no mês ÷ dias do mês. Mesmas regras de edição; agora edita-se na <span class="dr-in">4</span>.</td><td>limite semanal, meta semanal</td></tr>
+      <tr><td class="t">Ritmo · No ritmo · Acima do ritmo</td><td class="t">Ritmo · No ritmo · Acima do ritmo</td><td><span class="tag tg-fica">fica</span></td><td>O gasto do dia a dia contra os passos até hoje, sem tolerância. Na lista, só "acima do ritmo"; "no ritmo" no detalhe e na Análise.</td><td>velocidade, gastando rápido</td></tr>
+      <tr><td class="t">No passo atual</td><td class="t">Se continuar assim</td><td><span class="tag tg-muda">muda</span></td><td>Gasto do dia a dia × dia a dia ÷ passos até hoje + previstos do mês. É a <span class="dr-in">5</span>, Fim do mês.</td><td>no passo atual, previsão, forecast</td></tr>
+      <tr><td class="t">—</td><td class="t">Seguindo os passos</td><td><span class="tag tg-nova">novo</span></td><td>Gasto até hoje + os passos que faltam. Só na página <span class="dr-in">5</span> e na ajuda da <span class="dr-in">3</span> (decisão 5).</td><td>meta, plano</td></tr>
+      <tr><td class="t">Teto</td><td class="t">Teto</td><td><span class="tag tg-fica">fica</span></td><td>Máximo, opcional, para a soma das cotas. Limita o plano, não o gasto. Agora mora na <span class="dr-in">6</span>, com uma linha em Verbas.</td><td>renda, limite geral</td></tr>
+      <tr><td class="t">Régua</td><td class="t">Régua (uma camada)</td><td><span class="tag tg-muda">muda</span></td><td>A barra da verba na lista, no detalhe e no widget: esvazia com a margem (margem ÷ cota). Previstos, ritmo e excesso viram o desenho da sua ideia.</td><td>barra de progresso, termômetro</td></tr>
+      <tr><td class="t">Ordenar · Ordem do widget</td><td class="t">Ordem das verbas</td><td><span class="tag tg-junta">junta</span></td><td>Um ajuste só, em Ajustes, para a lista de Verbas e o widget: risco (de fábrica), manual ou A–Z.</td><td>—</td></tr>
+      <tr><td class="t">—</td><td class="t">Ajuda</td><td><span class="tag tg-nova">novo</span></td><td>A folha do (?): a ideia numa frase, a conta com os números da pessoa, onde a ideia aparece e a próxima da trilha.</td><td>tutorial, dica</td></tr>
+      <tr><td class="t">—</td><td class="t">Fim do mês</td><td><span class="tag tg-nova">novo</span></td><td>O widget <span class="dr-in">5</span> da conta.</td><td>projeção (na tela)</td></tr>
+    </tbody>
+  </table></div>
+  <p class="muted small">"Porta" é termo deste documento, não da tela: na tela, a porta é o número da ideia (<span class="dr-in">1</span>–<span class="dr-in">6</span>) ao lado do valor.</p>
+</section>
+
+<section id="decisoes">
+  <div class="kick">5 · Para o dono decidir</div>
+  <h2>Decisões <em>em aberto</em></h2>
+  <ol class="dec">
+    <li><b>"Dia a dia" no lugar de "cota livre", "gasto variável" e do filtro "Variáveis".</b> Os três são o mesmo corte (previsto ou não), e o nome aparece na conta, no ritmo, no passo e no filtro. <span class="rec">sim. Se "Variáveis" ficar no filtro, o par vira "gasto variável" e "cota das variáveis", que é pior; e "cota livre" sozinha continua sem dizer livre de quê.</span></li>
+    <li><b>A porta abre a página da ideia ou a grade da Análise rolada até o cartão?</b> A página é um toque e uma ideia; a grade mostra o contexto. <span class="rec">a página, com o filtro recolhido numa linha (a verba e o mês) e voltar para a verba. A grade fica para quem entra pela aba.</span></li>
+    <li><b>Como marcar a porta.</b> Número da ideia ao lado do valor, seta ›, ou sublinhado. <span class="rec">o número da ideia: liga a verba à trilha da Análise e ensina a ordem sem texto. O sublinhado pontilhado já é do apelido.</span></li>
+    <li><b>A conta fala sempre de um mês inteiro.</b> Hoje o Ritmo muda de modo fora de um mês inteiro (compara com o intervalo anterior ou o costume). <span class="rec">os seis seguem a regra que já vale para Margem e Previstos: o mês em que o intervalo termina, dito na frase. A comparação com o anterior e o costume vai para Total e costume, na opção "acumulado".</span></li>
+    <li><b>Mostrar "seguindo os passos daqui em diante" na <span class="dr-in">5</span>.</b> É um segundo futuro (R$ 1.452,30 em Mercado), sem regra nova: gasto até hoje + passos que faltam. <span class="rec">sim, só na página <span class="dr-in">5</span> e na ajuda da <span class="dr-in">3</span>, onde ele explica a distância do ritmo. O quadro do detalhe mostra só "se continuar assim".</span></li>
+    <li><b>Teto em Verbas: uma linha ou nada.</b> <span class="rec">a linha discreta ("cotas R$ 5.700,00 · teto R$ 6.000,00"). Quem pôs teto vê que ele existe; sem teto, a linha diz só "cotas R$ 5.700,00", e "Pôr um teto" fica na página <span class="dr-in">6</span>.</span></li>
+    <li><b>A ajuda abre sozinha na primeira visita?</b> <span class="rec">não. Na primeira vez que se entra por uma porta, a página mostra uma faixa de uma linha ("O (?) explica o ritmo com os seus números."), que some ao tocar ou dispensar.</span></li>
+    <li><b>Dois widgets para ritmo e passo, ou um?</b> Juntos, seriam uma ideia com três leituras (por semana, até hoje, contra o gasto). <span class="rec">dois: uma ideia por tela. O que junta é o número, não a tela: o "ritmo ideal" vira "passos até hoje", e as duas páginas apontam uma para a outra.</span></li>
+    <li><b>"No ritmo" fora da lista.</b> <span class="rec">tirar da lista, como no mock anterior, e manter no quadro <span class="dr-in">3</span> do detalhe e na Análise, em musgo. A lista fica com duas palavras possíveis: "além" e "acima do ritmo".</span></li>
+    <li><b>Ordem das verbas num ajuste só (lista e widget).</b> <span class="rec">sim, em Ajustes. O "Ordenar" sai do topo da lista; em manual, arrasta-se na lista como hoje.</span></li>
+    <li><b>O seletor de mês do detalhe vira as barras de Últimos meses.</b> <span class="rec">sim: tocar num mês abre a verba naquele mês, e "Mês a mês" leva à Análise com a verba.</span></li>
+  </ol>
+</section>
+
+</div>
+<script>
+(function(){
+  var NAV=[['verbas','i-verba','Verbas'],['pauta','i-pauta','Pauta'],['lanc','i-lancamento','Lançamentos'],['analise','i-leitura','Análise'],['ajustes','i-ajustes','Ajustes']];
+  var SBAR='<div class="sbar"><span>13:05</span><span class="ri"><svg class="ico s16"><use href="#i-sinal"/></svg><svg class="ico s18"><use href="#i-bat"/></svg></span></div>';
+  function nav(t){
+    var h='<nav class="navb">';
+    NAV.forEach(function(n){h+='<a class="'+(n[0]===t?'on':'')+'"><svg class="ico"><use href="#'+n[1]+'"/></svg>'+n[2]+(n[0]==='pauta'?'<span class="bdg">5</span>':'')+'</a>';});
+    return h+'</nav><div class="gbar"></div>';
+  }
+  function strip(n){n.removeAttribute('id');n.querySelectorAll('[id]').forEach(function(e){e.removeAttribute('id');});return n;}
+  /* 1. barra de status e barra de abas em cada tela */
+  document.querySelectorAll('.scr').forEach(function(s){
+    s.insertAdjacentHTML('afterbegin',SBAR);
+    if(s.dataset.tab)s.insertAdjacentHTML('beforeend',nav(s.dataset.tab));
+  });
+  /* 2. folhas e diálogos: a página de baixo, copiada da tela de origem */
+  document.querySelectorAll('[data-under]').forEach(function(s){
+    var src=document.getElementById(s.dataset.under);if(!src)return;
+    var at=s.querySelector('.sbar');
+    ['.tb','.pin','.bd'].forEach(function(q){var n=src.querySelector(q);if(n){var c=strip(n.cloneNode(true));at.after(c);at=c;}});
+  });
+  /* 3. gêmeas no outro tema */
+  document.querySelectorAll('[data-twin]').forEach(function(ph){
+    var src=document.getElementById(ph.dataset.twin);if(!src)return;
+    var c=strip(src.cloneNode(true));c.classList.remove('t-light','t-dark');c.classList.add(ph.dataset.mode==='light'?'t-light':'t-dark');
+    ph.appendChild(c);
+  });
+  /* 4. miniaturas do caminho e cartões avulsos */
+  document.querySelectorAll('[data-thumb]').forEach(function(t){
+    var src=document.getElementById(t.dataset.thumb);if(!src)return;
+    var c=strip(src.parentElement.cloneNode(true));
+    if(t.dataset.press){var p=c.querySelector(t.dataset.press);if(p)p.classList.add('pressed');}
+    t.appendChild(c);
+  });
+  document.querySelectorAll('[data-spec]').forEach(function(g){
+    var src=document.getElementById(g.dataset.spec);if(!src)return;
+    g.appendChild(strip(src.cloneNode(true)));
+  });
+  /* tema */
+  var b=document.getElementById('tema'),r=document.documentElement;
+  try{var sv=localStorage.getItem('margem-c-tema');if(sv)r.setAttribute('data-theme',sv);}catch(e){}
+  b.addEventListener('click',function(){
+    var cur=r.getAttribute('data-theme');
+    var dark=cur?cur==='dark':matchMedia('(prefers-color-scheme: dark)').matches;
+    var n=dark?'light':'dark';r.setAttribute('data-theme',n);
+    try{localStorage.setItem('margem-c-tema',n);}catch(e){}
+  });
+})();
+</script>
+</body>
+</html>
