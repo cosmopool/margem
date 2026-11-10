@@ -195,13 +195,20 @@ object TransactionTags {
     // Rows come from Db.planned(today). Nothing here counts in any budget.
 
     /**
-     * The "A caminho" line, first in [LIST], absent when there is no open previsto. "A caminho", "4 previstos ·
-     * R$ 539,80" ("1 previsto"; Σ Planned.cents) and, only the parts that exist, "1 com recado na Pauta"
-     * (Planned.noticeInPauta) and "1 atrasado" / "2 atrasados" (Planned.late) joined by " · ". Always opens
-     * collapsed (P11); click toggles it. "$ON_THE_WAY.open" is present while it is open: then one [PLANNED_ROW]
-     * per open occurrence follows it, before the day groups. Stays open while the screen is open.
+     * The "A caminho" line, in [LIST] after the Pauta's section ([InboxTags.SECTION]) and before the day groups,
+     * always there, even with no open previsto. "A caminho", "4 previstos · R$ 539,80" ("1 previsto"; Σ Planned.cents)
+     * or "Nenhum previsto", and, only the parts that exist, "1 com recado na Pauta" (Planned.noticeInPauta) and
+     * "1 atrasado" / "2 atrasados" (Planned.late) joined by " · ". Always opens collapsed (P11); click toggles it.
+     * "$ON_THE_WAY.open" is present while it is open: then one [PLANNED_ROW] per open occurrence follows it, before
+     * the day groups, or, with none, [ON_THE_WAY_EMPTY]. Stays open while the screen is open.
      */
     const val ON_THE_WAY = "transactions.onTheWay"
+
+    /**
+     * Under the open [ON_THE_WAY] when there is no open previsto: "Um lançamento com data à frente ou com Repete ·
+     * Todo mês vira previsto." and "Novo lançamento", which opens the empty form.
+     */
+    const val ON_THE_WAY_EMPTY = "transactions.onTheWayEmpty"
 
     /**
      * Prefix: PLANNED_ROW + occurrence id, while [ON_THE_WAY] is open: late ones first, then by date. The
@@ -519,9 +526,12 @@ object TransactionTags {
     const val DELETE_DIALOG_CANCEL = "txForm.deleteDialog.cancel"
 }
 
-/** Lançamentos (spec §7.4, book 10.5): every transaction grouped by day, with Desfazer estorno. Tags: [TransactionTags]. */
+/**
+ * Lançamentos (spec §7.4, book 10.5): the Pauta first ([pauta]), then A caminho, then every transaction grouped by
+ * day, with Desfazer estorno. Tags: [TransactionTags], [InboxTags].
+ */
 @Composable
-fun Transactions(db: Db, snack: SnackHost, go: (Screen) -> Unit) {
+fun Transactions(db: Db, granted: Boolean, snack: SnackHost, go: (Screen) -> Unit) {
     val today = LocalToday.current()
     val scope = rememberCoroutineScope()
     val rows = query(db, today) { it.transactions(today) }
@@ -529,17 +539,19 @@ fun Transactions(db: Db, snack: SnackHost, go: (Screen) -> Unit) {
     // P11: always opens collapsed; open while this screen is.
     var open by rememberSaveable { mutableStateOf(false) }
     var sheet by rememberSaveable { mutableLongStateOf(0L) }
+    val pauta = pauta(db, granted, snack, go)
     Column {
         TopBar("Lançamentos") {
             Button("Novo lançamento", { go(Screen.NewTransaction) }, Modifier.testTag(TransactionTags.NEW), kind = ButtonKind.TEXT, icon = R.drawable.i_mais)
         }
         LazyColumn(Modifier.testTag(TransactionTags.LIST), contentPadding = PaddingValues(start = Margem.space.page, end = Margem.space.page, bottom = 32.dp)) {
-            if (rows == null) return@LazyColumn
-            if (!planned.isNullOrEmpty()) item(key = "onTheWay") { OnTheWay(planned, today, open, { open = !open }) { sheet = it.occurrence.v } }
+            pauta()
+            if (rows == null || planned == null) return@LazyColumn
+            item(key = "onTheWay") { OnTheWay(planned, today, open, { open = !open }, { go(Screen.NewTransaction) }) { sheet = it.occurrence.v } }
             if (rows.isEmpty()) item {
                 EmptyState(
                     R.drawable.i_lancamento, "Nenhum lançamento ainda.",
-                    "Cada recado que você lança da Pauta vira uma linha aqui. Compras sem recado entram como lançamento manual.",
+                    "Cada recado que você lança da Pauta, acima, vira uma linha aqui. Compras sem recado entram como lançamento manual.",
                     Modifier.testTag(TransactionTags.EMPTY).semantics(mergeDescendants = true) {},
                 )
             }
@@ -610,7 +622,7 @@ fun launchedText(p: Planned, budgetName: String): String =
 
 /** Book 8.11: the "A caminho" line and, open, its rows. Tags: [TransactionTags.ON_THE_WAY], [TransactionTags.PLANNED_ROW]. */
 @Composable
-private fun OnTheWay(rows: List<Planned>, today: LocalDate, open: Boolean, toggle: () -> Unit, pick: (Planned) -> Unit) {
+private fun OnTheWay(rows: List<Planned>, today: LocalDate, open: Boolean, toggle: () -> Unit, onNew: () -> Unit, pick: (Planned) -> Unit) {
     val c = Margem.colors
     val inPauta = rows.count { it.noticeInPauta }
     val late = rows.count { it.late }
@@ -629,7 +641,8 @@ private fun OnTheWay(rows: List<Planned>, today: LocalDate, open: Boolean, toggl
             Column(Modifier.weight(1f)) {
                 Text("A CAMINHO", sans(11f, 600, 14f, 0.12f), color = c.inkTertiary)
                 Text(
-                    "${rows.size} ${if (rows.size == 1) "previsto" else "previstos"} · ${money(Cents(rows.sumOf { it.cents.v }))}",
+                    if (rows.isEmpty()) "Nenhum previsto"
+                    else "${rows.size} ${if (rows.size == 1) "previsto" else "previstos"} · ${money(Cents(rows.sumOf { it.cents.v }))}",
                     serif(17, 500, 22, tabular = true),
                 )
                 if (notes.isNotEmpty()) Text(notes, sans(13f, 400, 17f), color = c.inkSecondary)
@@ -640,6 +653,10 @@ private fun OnTheWay(rows: List<Planned>, today: LocalDate, open: Boolean, toggl
         }
         if (open) {
             Spacer(Modifier.size(0.dp).semantics { testTag = TransactionTags.ON_THE_WAY + ".open" })
+            if (rows.isEmpty()) Column(Modifier.fillMaxWidth().testTag(TransactionTags.ON_THE_WAY_EMPTY).padding(vertical = 8.dp)) {
+                Text("Um lançamento com data à frente ou com Repete · Todo mês vira previsto.", sans(14f, 400, 20f), color = c.inkSecondary)
+                Button("Novo lançamento", onNew, kind = ButtonKind.TEXT, icon = R.drawable.i_mais)
+            }
             for (p in rows.sortedWith(compareByDescending<Planned> { it.late }.thenBy { it.date }.thenBy { it.occurrence.v })) {
                 val sub = when {
                     p.late -> "esperando desde ${dayMonth(p.date)}"

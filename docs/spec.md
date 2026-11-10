@@ -124,7 +124,7 @@ Uma **visualização** de quanto cabe por semana. Não é limite e não muda com
 
 ## 7. Telas
 
-Cinco abas: **Verbas** (início) · **Pauta** · **Lançamentos** · **Leitura** · **Ajustes**.
+Quatro abas: **Verbas** (início) · **Lançamentos** · **Leitura** · **Ajustes**. A Pauta é a primeira seção de Lançamentos (2026-11-10, decisão do usuário; `docs/mockups/redesign-v3-a.html`); o selo com a contagem de recados fica na aba Lançamentos.
 
 ### 7.1 Verbas
 - Lista das verbas do mês atual: nome, régua, margem, estado. **Régua com as fixas na frente** (2026-10-27, M11; [mock](mockups/margem-honesta.html), proposta A): os previstos do mês no começo do trilho — em aberto, só o contorno tracejado; lançado, tinta 3 cheia (é gasto, mas fora do ritmo, sem cor de estado) —, depois o gasto variável na cor do estado; a marca do ritmo fica em previstos do mês + ritmo ideal, sempre na parte livre; o excesso em hachura, como hoje. Leitor de tela: "Casa, R$ 40,00 de R$ 3.000,00, R$ 2.000,00 em previstos, no ritmo, margem de R$ 960,00." (os previstos só quando há em aberto).
@@ -148,13 +148,13 @@ Cinco abas: **Verbas** (início) · **Pauta** · **Lançamentos** · **Leitura**
 - Vazio: explica o que é uma verba e como criar a primeira.
 
 ### 7.2 Pauta
+- Primeira seção de Lançamentos (§7.4), com a rubrica "Pauta · 3 recados"; sem recado esperando, a seção não aparece (some o "Pauta limpa."). O aviso de anotação pausada vem antes dela. Abrir Lançamentos é abrir a Pauta: marca a visita (§2.11) e reabre a faixa tirada por "Não é".
 - Recados esperando decisão, mais recentes no topo: fonte, valor e estabelecimento lidos, hora.
 - Ações: Lançar (abre a tela de lançar; no recado de estorno, **Registrar estorno**) e Riscar (com Desfazer). Sem gestos de deslizar.
 - Recados **novos** (§2.11) ficam destacados.
-- **Recado reconhecido** de um previsto (§2.13): o cartão ganha a faixa "É o previsto Internet" (verba · marcadores · dia) e as ações **Não é** (tira a faixa enquanto a Pauta está aberta, sem gravar nada; girar a tela, ir a um Lançar e voltar ou tocar na aba Pauta com ela aberta não traz a faixa de volta; sair da Pauta e reabri-la traz, 2026-10-23, 2026-10-24), Riscar e **Lançar previsto** (lança direto). Tocar no corpo do cartão abre o Lançar já ligado. Snackbar: "Lançado: Internet, em Casa. O próximo é 10 nov." com Desfazer ("O próximo …" só em "Todo mês").
+- **Recado reconhecido** de um previsto (§2.13): o cartão ganha a faixa "É o previsto Internet" (verba · marcadores · dia) e as ações **Não é** (tira a faixa enquanto a Pauta está aberta, sem gravar nada; girar a tela, ir a um Lançar e voltar ou tocar na aba Lançamentos com ela aberta não traz a faixa de volta; sair de Lançamentos e reabrir traz, 2026-10-23, 2026-10-24), Riscar e **Lançar previsto** (lança direto). Tocar no corpo do cartão abre o Lançar já ligado. Snackbar: "Lançado: Internet, em Casa. O próximo é 10 nov." com Desfazer ("O próximo …" só em "Todo mês").
 - **Parece propaganda**: recado do qual não se leu valor nem estabelecimento ganha esse selo, e o botão vira "Lançar mesmo assim".
 - Aviso de **anotação pausada** quando o acesso às notificações está desligado.
-- Vazio: "Pauta limpa."
 
 ### 7.3 Lançar / editar lançamento
 - Valor total, estabelecimento (com apelido), legenda (opcional), data e hora, verba (obrigatória), marcadores (≥1), número de parcelas.
@@ -190,7 +190,8 @@ Cinco abas: **Verbas** (início) · **Pauta** · **Lançamentos** · **Leitura**
 - Se o recado deixou de estar na Pauta enquanto a tela estava aberta (lançado ou riscado por outro caminho), lançar é recusado: a tela avisa e volta.
 
 ### 7.4 Lançamentos
-- **A caminho** (§2.13, book 8.11): os previstos ficam no topo, num grupo que **sempre abre recolhido** (não lembra; aberto, fica aberto enquanto a tela estiver aberta), para a lista abrir nos lançamentos feitos. Recolhido, é uma linha: rubrica "A caminho", "4 previstos · R$ 539,80" (soma dos valores; não é gasto, mas cada um reserva na margem da sua verba, §3) e "1 com recado na Pauta · 1 atrasado" (só as partes que existem, em tinta 2, sem cor de estado). Sem previsto, a linha não existe. Todo previsto entra em "A caminho" 10 dias antes do dia dele (quando o recado dele já pode chegar, §2.13): o do mês seguinte e também um "Salvar previsto" com data longe, que fica guardado até lá (decisão do usuário, 2026-10-22). Aberto, os previstos pelo dia, o atrasado primeiro: folhinha do dia tracejada (em tinta 3 no atrasado), nome, "verba · marcadores · todo mês", "recado na Pauta" (anil) ou "esperando desde 5 out", e o valor em tinta 2. Tocar num previsto abre a folha dele (§2.13).
+- Ordem: aviso de anotação pausada, **Pauta** (§7.2), **A caminho**, lançamentos por dia (2026-11-10).
+- **A caminho** (§2.13, book 8.11): os previstos ficam no topo, num grupo que **sempre abre recolhido** (não lembra; aberto, fica aberto enquanto a tela estiver aberta), para a lista abrir nos lançamentos feitos. Recolhido, é uma linha: rubrica "A caminho", "4 previstos · R$ 539,80" (soma dos valores; não é gasto, mas cada um reserva na margem da sua verba, §3) e "1 com recado na Pauta · 1 atrasado" (só as partes que existem, em tinta 2, sem cor de estado). A linha aparece sempre, mesmo sem previsto (2026-11-10, decisão do usuário): "A caminho · Nenhum previsto"; aberta, "Um lançamento com data à frente ou com Repete · Todo mês vira previsto." e o botão Novo lançamento. Todo previsto entra em "A caminho" 10 dias antes do dia dele (quando o recado dele já pode chegar, §2.13): o do mês seguinte e também um "Salvar previsto" com data longe, que fica guardado até lá (decisão do usuário, 2026-10-22). Aberto, os previstos pelo dia, o atrasado primeiro: folhinha do dia tracejada (em tinta 3 no atrasado), nome, "verba · marcadores · todo mês", "recado na Pauta" (anil) ou "esperando desde 5 out", e o valor em tinta 2. Tocar num previsto abre a folha dele (§2.13).
 - Todos os lançamentos, mais recentes no topo, **agrupados por dia** como a Pauta: estabelecimento, valor, verba, marcadores; "‸ emendado" quando foi emendado; compras estornadas riscadas como "estornada" (o estorno não tem linha própria).
 - **Com legenda** (§2.12): a legenda é o nome, em itálico, até 2 linhas ("…" se passar); embaixo, "em Padaria do Zé" (apelido, senão texto do banco; sem estabelecimento, essa linha não existe); depois a linha de sempre. Estornada: legenda e "em …" em tinta 3, sem risco; só o valor riscado, como o nome hoje.
 - Parcelada mostra a parcela do mês atual ("Parcela 3 de 10", com o valor dela); sem parcela no mês atual, mostra o total e "10×".
@@ -243,7 +244,7 @@ Leitura v2 (2026-11-06, new-leitura-page; desenho em `docs/mockups/analise-v8-wi
 ## 8. Widgets
 
 Os dois são redimensionáveis de 2×2 a 4×4; o conteúdo se adapta. Tema segue o ajuste do app.
-Tocar em qualquer ponto abre a aba correspondente (Verbas ou Pauta).
+Tocar em qualquer ponto abre a aba correspondente (Verbas, ou Lançamentos no topo, onde fica a Pauta).
 
 ### 8.1 Verbas
 - Mostra **todas** as verbas, cabendo quantas o tamanho permitir (2×2 = 1, 4×2 = 3, 4×4 = 6), na ordem escolhida em Ajustes. Padrão: das mais em risco para as menos:

@@ -38,6 +38,7 @@ import com.kaiodelphino.margem.ui.InboxTags
 import com.kaiodelphino.margem.ui.LocalToday
 import com.kaiodelphino.margem.ui.Screen
 import com.kaiodelphino.margem.ui.SettingsTags
+import com.kaiodelphino.margem.ui.TransactionTags
 import com.kaiodelphino.margem.ui.dayTitle
 import com.kaiodelphino.margem.widgets.MargemTheme
 import com.kaiodelphino.margem.widgets.SnackTags
@@ -330,7 +331,7 @@ class AjustesLifecycleTest {
         settle()
         assertFalse("sem snack nem Desfazer (spec §7.6): ${texts(SnackTags.TEXT)}", exists(SnackTags.TEXT) || exists(SnackTags.ACTION))
 
-        tab = Screen.Inbox
+        tab = Screen.Transactions
         await("a na Pauta") { exists(InboxTags.CARD + a.v) && !exists(InboxTags.CARD + b.v) }
     }
 
@@ -1025,7 +1026,7 @@ class AjustesLifecycleTest {
         assertFalse("sem resultado depois de sair", exists(SettingsTags.COBUDGET_RESULT))
 
         // Os pendentes aparecem na Pauta; os riscados em Riscados.
-        tab = Screen.Inbox
+        tab = Screen.Transactions
         await("os três na Pauta") { pend.all { exists(InboxTags.CARD + it.id.v) } }
         assertFalse("riscados fora da Pauta", disp.any { exists(InboxTags.CARD + it.id.v) })
         tab = Screen.Settings
@@ -1061,12 +1062,12 @@ class AjustesLifecycleTest {
     fun `cobudget - Pauta aberta mostra os recados importados por fora`() {
         val file = cobudgetFile("fora.db", listOf(row("a", 13, 10, 0, 1_000), row("b", 12, 9, 0, 2_000)))
         composeRule.setContent { Content() }
-        tab = Screen.Inbox
-        await("Pauta limpa") { exists(InboxTags.EMPTY) }
+        tab = Screen.Transactions
+        await("Pauta limpa") { (exists(TransactionTags.LIST) && !exists(InboxTags.SECTION)) }
         val r = fora { importCobudget(db, file.path) }
         assertEquals(CobudgetImport(opened = true, pending = 2, dismissed = 0, skipped = 0), r)
         val ids = fora { db.pending() }.map { it.id }
-        await("os dois cards") { ids.all { exists(InboxTags.CARD + it.v) } && !exists(InboxTags.EMPTY) }
+        await("os dois cards") { ids.all { exists(InboxTags.CARD + it.v) } && exists(InboxTags.SECTION) }
     }
 
     @Test
@@ -1140,8 +1141,8 @@ class AjustesLifecycleTest {
         // Poucas linhas: todos os cards cabem na tela (a Pauta é preguiçosa).
         val file = cobudgetFile("pauta.db", (0 until 3).map { i -> row("o$i", 12, 8 + i, i, 100L + i) } + shared)
         composeRule.setContent { Content() }
-        tab = Screen.Inbox
-        await("Pauta limpa") { exists(InboxTags.EMPTY) }
+        tab = Screen.Transactions
+        await("Pauta limpa") { (exists(TransactionTags.LIST) && !exists(InboxTags.SECTION)) }
         val raw = RawNotice(
             packageName = BANK, appLabel = BANK_LABEL, key = shared.key, postedAt = shared.postedAt, whenMs = shared.whenMs,
             title = shared.title!!, text = shared.text!!, bigText = shared.bigText!!,

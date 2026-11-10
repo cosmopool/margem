@@ -125,7 +125,7 @@ class EscolhaEdgeTest {
 
     /** Waits for [tag], scrolling the lazy lists to it: items below the fold aren't composed. */
     private fun waitFor(tag: String) = compose.waitUntil(5_000) {
-        for (list in listOf(InboxTags.LIST, TransactionTags.LIST)) {
+        for (list in listOf(TransactionTags.LIST)) {
             if (count(tag) == 0 && count(list) > 0) runCatching { compose.onNodeWithTag(list).performScrollToNode(hasTestTag(tag)) }
         }
         count(tag) > 0

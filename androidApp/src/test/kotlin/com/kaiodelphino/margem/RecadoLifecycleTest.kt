@@ -646,7 +646,7 @@ class RecadoLifecycleTest {
         }
         assertEquals("um lançamento por recado", notices.size, txs.size)
         assertEquals("Pauta vazia no Db", 0, fora { db.pendingCount() })
-        await("Pauta limpa na tela") { exists(InboxTags.EMPTY) && notices.none { exists(InboxTags.CARD + it.v) } }
+        await("Pauta limpa na tela") { (exists(TransactionTags.LIST) && !exists(InboxTags.SECTION)) && notices.none { exists(InboxTags.CARD + it.v) } }
     }
 
     // ---- Lançamento apagado por fora com a edição aberta ----
@@ -766,7 +766,7 @@ class RecadoLifecycleTest {
         // Estorno de recado não lançado (§6): os dois saem; desfeito, os dois voltam.
         assertTrue(fora { db.registerRefund(e, n) })
         await("estorno de recado: os dois saem") { !exists(InboxTags.CARD + e.v) && !exists(InboxTags.CARD + n.v) }
-        await("Pauta limpa") { exists(InboxTags.EMPTY) }
+        await("Pauta limpa") { (exists(TransactionTags.LIST) && !exists(InboxTags.SECTION)) }
         assertTrue(fora { db.undoRefund(e) })
         await("desfeito: os dois voltam") { exists(InboxTags.CARD + e.v) && exists(InboxTags.CARD + n.v) }
     }
@@ -822,9 +822,9 @@ class RecadoLifecycleTest {
     // ---- Helpers: navegação ----
 
     private fun openPauta() {
-        if (!exists(InboxTags.LIST) && !exists(InboxTags.EMPTY)) {
+        if (!exists(TransactionTags.LIST)) {
             settle()
-            if (exists(BudgetTags.PAUTA_STRIP)) tap(BudgetTags.PAUTA_STRIP) else tab = Screen.Inbox
+            if (exists(BudgetTags.PAUTA_STRIP)) tap(BudgetTags.PAUTA_STRIP) else tab = Screen.Transactions
         }
         awaitPauta("Pauta aberta")
     }
@@ -832,7 +832,7 @@ class RecadoLifecycleTest {
     /** Voltar da raiz da Pauta leva a Verbas (outra aba). */
     private fun leavePauta() {
         pressBack()
-        await("Verbas depois de sair da Pauta") { exists(BudgetTags.HEADER) && !exists(InboxTags.LIST) && !exists(InboxTags.EMPTY) }
+        await("Verbas depois de sair da Pauta") { exists(BudgetTags.HEADER) && !exists(TransactionTags.LIST) }
     }
 
     private fun openTransactions() {
@@ -865,7 +865,7 @@ class RecadoLifecycleTest {
     }
 
     private fun awaitPauta(what: String) = await("Pauta na tela: $what", SnackTags.TEXT) {
-        !exists(TransactionTags.FORM_TITLE) && !exists(InboxTags.REFUND_TITLE) && (exists(InboxTags.LIST) || exists(InboxTags.EMPTY))
+        !exists(TransactionTags.FORM_TITLE) && !exists(InboxTags.REFUND_TITLE) && exists(TransactionTags.LIST)
     }
 
     private fun pressBack() = composeRule.runOnUiThread { composeRule.activity.onBackPressedDispatcher.onBackPressed() }

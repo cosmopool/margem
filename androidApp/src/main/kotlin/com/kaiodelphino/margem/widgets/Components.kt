@@ -931,15 +931,14 @@ fun HomeBar(modifier: Modifier = Modifier, actions: @Composable RowScope.() -> U
 
 enum class Tab(val label: String, val icon: Int) {
     BUDGETS("Verbas", R.drawable.i_verba),
-    INBOX("Pauta", R.drawable.i_pauta),
     TRANSACTIONS("Lançamentos", R.drawable.i_lancamento),
     INSIGHTS("Leitura", R.drawable.i_leitura),
     SETTINGS("Ajustes", R.drawable.i_ajustes),
 }
 
 /**
- * Book §8.7, bottom bar: 72 dp, five destinations, labels always visible. Active: ink 700 and a 2 dp
- * rule on top, like a bookmark ribbon. The Pauta counter is the bar's only argila.
+ * Book §8.7, bottom bar: 72 dp, four destinations, labels always visible. Active: ink 700 and a 2 dp
+ * rule on top, like a bookmark ribbon. The Pauta counter, on Lançamentos (the Pauta is its top), is the bar's only argila.
  */
 @Composable
 fun TabBar(selected: Tab, onSelect: (Tab) -> Unit, modifier: Modifier = Modifier, badge: Int = 0) {
@@ -960,7 +959,7 @@ fun TabBar(selected: Tab, onSelect: (Tab) -> Unit, modifier: Modifier = Modifier
                     Icon(tab.icon, tint = if (on) c.ink else c.inkTertiary)
                     Text(tab.label, sans(11.5f, if (on) 700 else 500, 14f), color = if (on) c.ink else c.inkTertiary, maxLines = 1)
                 }
-                if (tab == Tab.INBOX && badge > 0) Text(
+                if (tab == Tab.TRANSACTIONS && badge > 0) Text(
                     badge.toString(), sans(11f, 700, 18f, tabular = true),
                     Modifier.align(Alignment.TopCenter).offset(x = 16.dp, y = 9.dp).heightIn(min = 18.dp).widthIn(min = 18.dp)
                         .background(c.brand, RoundedCornerShape(9.dp)).padding(horizontal = 5.dp),

@@ -17,6 +17,7 @@ import androidx.compose.ui.test.assertIsNotEnabled
 import androidx.compose.ui.test.assertIsNotSelected
 import androidx.compose.ui.test.assertIsSelected
 import androidx.compose.ui.test.click
+import androidx.compose.ui.test.hasAnyAncestor
 import androidx.compose.ui.test.hasClickAction
 import androidx.compose.ui.test.hasTestTag
 import androidx.compose.ui.test.hasText
@@ -134,7 +135,7 @@ class PrevistoUiTest {
 
     /** Waits for [tag], scrolling the lazy lists to it: items below the fold aren't composed. */
     private fun waitFor(tag: String) = compose.waitUntil(5_000) {
-        for (list in listOf(InboxTags.LIST, TransactionTags.LIST)) {
+        for (list in listOf(TransactionTags.LIST)) {
             if (count(tag) == 0 && count(list) > 0) runCatching { compose.onNodeWithTag(list).performScrollToNode(hasTestTag(tag)) }
         }
         count(tag) > 0
@@ -296,7 +297,7 @@ class PrevistoUiTest {
     // ---- A caminho: the collapsed line (spec §7.4, book 8.11) ----
 
     @Test
-    fun `there is no a caminho line without a previsto`() {
+    fun `the a caminho line is there without a previsto`() {
         runBlocking {
             db.addManual(TransactionForm(budget = lazer, tags = listOf("feira"), total = Cents(4600), installments = 1, merchant = "Feira", date = OCT_8, time = LocalTime(10, 0)))
         }
@@ -304,7 +305,14 @@ class PrevistoUiTest {
         open()
         openTransactions()
         waitFor(TransactionTags.ROW + tx.v)
-        assertEquals("sem previsto, a linha não existe", 0, count(TransactionTags.ON_THE_WAY))
+        assertShows(TransactionTags.ON_THE_WAY, "Nenhum previsto")
+        assertEquals("recolhida", 0, count(TransactionTags.ON_THE_WAY + ".open"))
+        click(TransactionTags.ON_THE_WAY)
+        waitFor(TransactionTags.ON_THE_WAY_EMPTY)
+        assertShows(TransactionTags.ON_THE_WAY_EMPTY, "Um lançamento com data à frente ou com Repete · Todo mês vira previsto.")
+        assertEquals(0, countPrefix(TransactionTags.PLANNED_ROW))
+        compose.onNode(hasText("Novo lançamento") and hasClickAction() and hasAnyAncestor(hasTestTag(TransactionTags.ON_THE_WAY_EMPTY))).performClick()
+        waitFor(TransactionTags.FORM_SUBMIT)
     }
 
     @Test
@@ -500,7 +508,7 @@ class PrevistoUiTest {
     }
 
     @Test
-    fun `pular the only previsto of so uma vez says it goes and the line goes with it`() {
+    fun `pular the only previsto of so uma vez says it goes and the line says nenhum previsto`() {
         ahead("Estacionamento", transporte, listOf("estacionamento"), 15000, OCT_15, Repeats.ONCE)
         val e = occ("Estacionamento")
         open()
@@ -512,7 +520,10 @@ class PrevistoUiTest {
         assertNotShows(TransactionTags.PLANNED_SKIP, "volta em")
         click(TransactionTags.PLANNED_SKIP)
         waitGone(TransactionTags.PLANNED_SHEET)
-        waitGone(TransactionTags.ON_THE_WAY)
+        // The line stays (spec §7.4, 2026-11-10), open as it was, now empty.
+        compose.waitUntil(5_000) { shows(TransactionTags.ON_THE_WAY, "Nenhum previsto") }
+        waitFor(TransactionTags.ON_THE_WAY_EMPTY)
+        assertEquals(0, countPrefix(TransactionTags.PLANNED_ROW))
     }
 
     @Test
@@ -655,7 +666,7 @@ class PrevistoUiTest {
         // Nov 9 is more than 10 days away on Oct 9: not on its way yet.
         openTransactions()
         waitFor(TransactionTags.ROW + runBlocking { db.transactions() }.single().id.v)
-        assertEquals(0, count(TransactionTags.ON_THE_WAY))
+        assertShows(TransactionTags.ON_THE_WAY, "Nenhum previsto")
 
         // Read as of Nov 1 only now: that read creates the November occurrence.
         val next = runBlocking { db.planned(NOV_1) }
@@ -920,7 +931,7 @@ class PrevistoUiTest {
         // A previsto now (the screen follows the Db, D19): the link shows in Lançar; Editar still has none.
         ahead("Conta de luz", casa, listOf("contas", "luz"), 18000, OCT_12, Repeats.MONTHLY)
         waitFor(TransactionTags.FORM_LINK_OPEN)
-        pressBack(InboxTags.LIST)
+        pressBack(TransactionTags.LIST)
         openTab("Lançamentos", TransactionTags.NEW)
         click(TransactionTags.ROW + tx.v)
         waitFor(TransactionTags.FORM_REPEATS)
@@ -1303,18 +1314,18 @@ class PrevistoUiTest {
     }
 
     @Test
-    fun `lancar previsto mostra o desfazer mesmo saindo da pauta durante a escrita`() {
+    fun `lancar previsto mostra o desfazer mesmo saindo de lancamentos durante a escrita`() {
         val id = internetWithRecado()
         open()
         openPauta()
         waitFor(InboxTags.PLANNED_LAUNCH + id.v)
-        // Another writer holds the file, so Lançar previsto is still writing when the Pauta leaves.
+        // Another writer holds the file, so Lançar previsto is still writing when Lançamentos (and its Pauta) leaves.
         val other = AndroidSQLiteDriver().open(path)
         other.execSQL("BEGIN IMMEDIATE")
         try {
             click(InboxTags.PLANNED_LAUNCH + id.v)
-            compose.onNode(hasText("Lançamentos") and hasClickAction()).performClick()
-            waitGone(InboxTags.LIST)
+            compose.onNode(hasText("Verbas") and hasClickAction()).performClick()
+            waitGone(TransactionTags.LIST)
         } finally {
             other.execSQL("ROLLBACK")
             other.close()
@@ -1405,7 +1416,7 @@ class PrevistoUiTest {
 
         click(InboxTags.ACCEPT + other.v)
         waitFor(TransactionTags.FORM_TITLE)
-        pressBack(InboxTags.LIST)
+        pressBack(TransactionTags.LIST)
         waitFor(InboxTags.CARD + id.v)
         compose.waitForIdle()
         assertEquals("a faixa continua fora", 0, count(InboxTags.PLANNED_BAND + id.v))
@@ -1460,8 +1471,8 @@ class PrevistoUiTest {
     }
 
     @Test
-    fun `nao e sobrevive a um toque na aba pauta aberta`() {
-        // Spec §7.2 Recado reconhecido (2026-10-24): tapping the Pauta tab with the Pauta open doesn't bring the band back.
+    fun `nao e sobrevive a um toque na aba lancamentos aberta`() {
+        // Spec §7.2 Recado reconhecido (2026-10-24): tapping the Lançamentos tab with the Pauta open doesn't bring the band back.
         val id = internetWithRecado()
         open()
         openPauta()
@@ -1469,7 +1480,7 @@ class PrevistoUiTest {
         click(InboxTags.PLANNED_NOT_IT + id.v)
         waitGone(InboxTags.PLANNED_BAND + id.v)
 
-        compose.onNode(SemanticsMatcher.expectValue(SemanticsProperties.Role, Role.Tab) and hasText("Pauta")).performClick()
+        compose.onNode(SemanticsMatcher.expectValue(SemanticsProperties.Role, Role.Tab) and hasText("Lançamentos")).performClick()
         waitFor(InboxTags.CARD + id.v)
         compose.waitForIdle()
         assertEquals("a faixa continua fora", 0, count(InboxTags.PLANNED_BAND + id.v))

@@ -74,7 +74,6 @@ const val EXTRA_TAB = "tab"
 /** Navigation (D18): a stack of these, a `when` and BackHandler. */
 sealed interface Screen {
     data object Budgets : Screen
-    data object Inbox : Screen
     data object Transactions : Screen
     data object Insights : Screen
     /** A Leitura widget's page (spec R12), opened on [query]: the Leitura's, or Mês a mês de X's (R14). */
@@ -105,7 +104,6 @@ sealed interface Screen {
 
 private fun encode(s: Screen): String = when (s) {
     Screen.Budgets -> "budgets"
-    Screen.Inbox -> "inbox"
     Screen.Transactions -> "transactions"
     Screen.Insights -> "insights"
     is Screen.LeituraWidget -> "leitura:${s.widget}:${encodeQuery(s.query)}"
@@ -131,7 +129,8 @@ private fun encode(s: Screen): String = when (s) {
 private fun decode(s: String): Screen {
     val p = s.split(':')
     return when (p[0]) {
-        "inbox" -> Screen.Inbox
+        // The Pauta is the top of Lançamentos (spec §7.4): the widgets' and saved stacks' "inbox" opens it.
+        "inbox" -> Screen.Transactions
         "transactions" -> Screen.Transactions
         "insights" -> Screen.Insights
         "leitura" -> Screen.LeituraWidget(p[1], decodeQuery(p[2]))
@@ -179,8 +178,7 @@ private val StackSaver = Saver<List<Screen>, ArrayList<String>>(
 )
 
 private fun tabOf(s: Screen): Tab = when (s) {
-    Screen.Inbox, is Screen.Post, is Screen.Refund -> Tab.INBOX
-    Screen.Transactions, is Screen.Edit, Screen.NewTransaction, is Screen.FromPlanned, is Screen.EditPlanned -> Tab.TRANSACTIONS
+    Screen.Transactions, is Screen.Post, is Screen.Refund, is Screen.Edit, Screen.NewTransaction, is Screen.FromPlanned, is Screen.EditPlanned -> Tab.TRANSACTIONS
     Screen.Insights, is Screen.LeituraWidget -> Tab.INSIGHTS
     Screen.Settings, Screen.Dismissed, Screen.Sources, Screen.Tags, Screen.StartDays, Screen.Backup, Screen.Cobudget -> Tab.SETTINGS
     Screen.Budgets, is Screen.Budget, Screen.NewBudget, is Screen.EditBudget -> Tab.BUDGETS
@@ -188,7 +186,6 @@ private fun tabOf(s: Screen): Tab = when (s) {
 
 private fun screenOf(t: Tab): Screen = when (t) {
     Tab.BUDGETS -> Screen.Budgets
-    Tab.INBOX -> Screen.Inbox
     Tab.TRANSACTIONS -> Screen.Transactions
     Tab.INSIGHTS -> Screen.Insights
     Tab.SETTINGS -> Screen.Settings
@@ -297,8 +294,7 @@ fun App(db: Db, tabRequest: Screen?, onTabOpened: () -> Unit) {
         Box(Modifier.weight(1f)) {
             saved.SaveableStateProvider(keyOf(stack.lastIndex, stack)) { when (screen) {
                 Screen.Budgets -> Budgets(db, snack, go)
-                Screen.Inbox -> Inbox(db, granted, snack, go)
-                Screen.Transactions -> Transactions(db, snack, go)
+                Screen.Transactions -> Transactions(db, granted, snack, go)
                 Screen.Insights -> Insights(db, leitura, { leitura = it }, go)
                 is Screen.LeituraWidget -> LeituraWidgetPage(db, screen.widget, screen.query, go, back, leituraTo)
                 Screen.Settings -> Settings(db, granted, go)

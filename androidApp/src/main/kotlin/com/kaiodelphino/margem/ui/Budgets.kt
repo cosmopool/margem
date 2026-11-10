@@ -483,7 +483,7 @@ fun Budgets(db: Db, snack: SnackHost, go: (Screen) -> Unit) {
                 PageHeader(over, headline, Modifier.texts(BudgetTags.HEADER, over, headline, dek), dek)
                 if (any) CeilingLine(data.ceiling, data.budgets)
             }
-            if (data.pending > 0) PautaStrip(data.pending, data.fresh) { go(Screen.Inbox) }
+            if (data.pending > 0) PautaStrip(data.pending, data.fresh) { go(Screen.Transactions) }
             val ink = Margem.colors.ink
             Row(
                 Modifier.padding(top = 10.dp).drawBehind { drawLine(ink, Offset(0f, size.height - 0.5f), Offset(size.width, size.height - 0.5f), 1.dp.toPx()) },

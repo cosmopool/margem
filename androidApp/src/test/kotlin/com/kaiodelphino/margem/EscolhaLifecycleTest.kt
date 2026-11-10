@@ -954,9 +954,9 @@ class EscolhaLifecycleTest {
     // ---- Helpers: navegação ----
 
     private fun openPauta() {
-        await("App aberto") { exists(BudgetTags.HEADER) || exists(InboxTags.LIST) || exists(InboxTags.EMPTY) }
-        if (!exists(InboxTags.LIST) && !exists(InboxTags.EMPTY)) tab = Screen.Inbox
-        await("Pauta aberta") { exists(InboxTags.LIST) || exists(InboxTags.EMPTY) }
+        await("App aberto") { exists(BudgetTags.HEADER) || exists(TransactionTags.LIST) }
+        if (!exists(TransactionTags.LIST)) tab = Screen.Transactions
+        await("Pauta aberta") { exists(TransactionTags.LIST) }
     }
 
     private fun openPost(n: NoticeId) {

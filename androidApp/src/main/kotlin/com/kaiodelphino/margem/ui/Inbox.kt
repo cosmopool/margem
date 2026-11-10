@@ -10,6 +10,7 @@ import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.lazy.LazyColumn
+import androidx.compose.foundation.lazy.LazyListScope
 import androidx.compose.foundation.lazy.items
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.runtime.Composable
@@ -50,7 +51,6 @@ import com.kaiodelphino.margem.widgets.CapturePaused
 import com.kaiodelphino.margem.widgets.Check
 import com.kaiodelphino.margem.widgets.CreditLine
 import com.kaiodelphino.margem.widgets.DayHeader
-import com.kaiodelphino.margem.widgets.EmptyState
 import com.kaiodelphino.margem.widgets.Field
 import com.kaiodelphino.margem.widgets.Icon
 import com.kaiodelphino.margem.widgets.Margem
@@ -85,7 +85,8 @@ import kotlin.time.Instant
  * registered source. Dates and times of notices are read in the device's time zone
  * (TimeZone.currentSystemDefault()).
  *
- * The Pauta tab is reached by the tab bar or by BudgetTags.PAUTA_STRIP. The app-wide snackbar is
+ * The Pauta is the first section of Lançamentos (spec §7.4), in [TransactionTags.LIST]: reached by the Lançamentos
+ * tab or by BudgetTags.PAUTA_STRIP. The app-wide snackbar is
  * [com.kaiodelphino.margem.widgets.SnackTags]: a snack's action works even after the screen that showed
  * it is gone (it runs on the App's scope).
  *
@@ -99,14 +100,14 @@ object InboxTags {
 
     // ---- Pauta (spec §7.2, book 10.2) ----
 
-    /** The scrollable list: the paused notice, day headers and cards. Plain container. */
-    const val LIST = "inbox.list"
-
-    /** "A anotação automática está pausada.", first in the list, only while notification access is off. */
+    /** "A anotação automática está pausada.", first in Lançamentos' list, only while notification access is off. */
     const val PAUSED = "inbox.paused"
 
-    /** "Pauta limpa.", instead of the cards when nothing is pending. */
-    const val EMPTY = "inbox.empty"
+    /**
+     * The rubric "PAUTA" with "3 recados" ("1 recado") aside, first in Lançamentos' list ([TransactionTags.LIST])
+     * after [PAUSED]. Absent when nothing is pending: then the Pauta has no section at all.
+     */
+    const val SECTION = "inbox.section"
 
     /**
      * Prefix: DAY + the date ("inbox.day.2026-10-09"), one per day with pending notices, newest first:
@@ -124,7 +125,7 @@ object InboxTags {
 
     /**
      * Prefix: NEW + notice id: present exactly while the card is shown as new (NoticeRow.isNew, spec
-     * §2.11 — the argila double rule). Notices stay new while the Pauta is open; everything posted up to
+     * §2.11 — the argila double rule). Notices stay new while Lançamentos is open; everything posted up to
      * when it was opened is no longer new on the next visit (Db.markPautaSeen, written on opening).
      */
     const val NEW = "inbox.new."
@@ -156,7 +157,7 @@ object InboxTags {
 
     /**
      * Prefix: PLANNED_NOT_IT + notice id: "Não é". Takes the band away while the Pauta stays open, writing
-     * nothing (D60): the card turns into an ordinary one ("Lançar", "Riscar"); reopening the Pauta shows
+     * nothing (D60): the card turns into an ordinary one ("Lançar", "Riscar"); reopening Lançamentos shows
      * the band again.
      */
     const val PLANNED_NOT_IT = "inbox.plannedNotIt."
@@ -236,16 +237,18 @@ object InboxTags {
 }
 
 /**
- * Pauta (spec §7.2, book 10.2): the anotação pausada notice when access is off, the pending notices
- * grouped by day, newest first, or "Pauta limpa.". Tags: [InboxTags].
+ * Pauta (spec §7.2, §7.4, book 10.2): the first section of Lançamentos. Holds the Pauta's state while Lançamentos is
+ * open and returns its items: the anotação pausada notice when access is off, then, when something is pending, the
+ * rubric "Pauta · 3 recados" and the pending notices grouped by day, newest first. Nothing pending: no section.
+ * Tags: [InboxTags].
  */
 @Composable
-fun Inbox(db: Db, granted: Boolean, snack: SnackHost, go: (Screen) -> Unit) {
+fun pauta(db: Db, granted: Boolean, snack: SnackHost, go: (Screen) -> Unit): LazyListScope.() -> Unit {
     val context = LocalContext.current
     val scope = rememberCoroutineScope()
     val today = LocalToday.current()
     val pending = query(db, today) { it.pending(today) }
-    // "Não é" (D60): sets the band aside while the Pauta is open, across recreation and a Lançar and back; nothing is written.
+    // "Não é" (D60): sets the band aside while Lançamentos is open, across recreation and a Lançar and back; nothing is written.
     var notIt by rememberSaveable { mutableStateOf(longArrayOf()) }
     // Lançar previsto writing (no second tap while it runs, so its Desfazer isn't replaced by a refusal).
     var launching by remember { mutableStateOf(setOf<Long>()) }
@@ -258,29 +261,24 @@ fun Inbox(db: Db, granted: Boolean, snack: SnackHost, go: (Screen) -> Unit) {
         db.markPautaSeen(openedAt)
     }
     val zone = TimeZone.currentSystemDefault()
-    Column {
-        TopBar("Pauta")
-        LazyColumn(
-            Modifier.testTag(InboxTags.LIST),
-            contentPadding = PaddingValues(start = Margem.space.page, end = Margem.space.page, bottom = 96.dp), verticalArrangement = Arrangement.spacedBy(10.dp),
-        ) {
-            if (!granted) item {
-                CapturePaused(
-                    { context.startActivity(accessSettingsIntent(context)) },
-                    Modifier.padding(top = 8.dp).testTag(InboxTags.PAUSED).semantics(mergeDescendants = true) {}, onManual = { go(Screen.NewTransaction) },
-                )
-            }
-            if (pending == null || seenBefore < 0) return@LazyColumn
-            if (pending.isEmpty()) item {
-                EmptyState(
-                    R.drawable.i_pauta, "Pauta limpa.", "Nenhum recado esperando. Os próximos chegam sozinhos.",
-                    Modifier.testTag(InboxTags.EMPTY).semantics(mergeDescendants = true) {},
+    return {
+        if (!granted) item(key = "pauta-paused") {
+            CapturePaused(
+                { context.startActivity(accessSettingsIntent(context)) },
+                Modifier.padding(top = 8.dp).testTag(InboxTags.PAUSED).semantics(mergeDescendants = true) {}, onManual = { go(Screen.NewTransaction) },
+            )
+        }
+        if (pending != null && seenBefore >= 0 && pending.isNotEmpty()) {
+            item(key = "pauta") {
+                SectionLine(
+                    "Pauta", Modifier.testTag(InboxTags.SECTION).semantics(mergeDescendants = true) {},
+                    aside = if (pending.size == 1) "1 recado" else "${pending.size} recados",
                 )
             }
             val byDay = pending.groupBy { Instant.fromEpochMilliseconds(it.raw.postedAt).toLocalDateTime(zone).date }
             for ((day, notices) in byDay) {
-                item(key = "day-$day") { DayHeader(dayTitle(day, today), Modifier.testTag(InboxTags.DAY + day).semantics(mergeDescendants = true) {}) }
-                items(notices, key = { it.id.v }) { row ->
+                item(key = "pauta-day-$day") { DayHeader(dayTitle(day, today), Modifier.testTag(InboxTags.DAY + day).semantics(mergeDescendants = true) {}) }
+                items(notices, key = { "notice-${it.id.v}" }) { row ->
                     val n = row.copy(isNew = row.raw.postedAt > seenBefore)
                     val p = if (n.id.v in notIt) Planned() else n.planned
                     val recognized = p.occurrence.v != 0L
@@ -289,7 +287,7 @@ fun Inbox(db: Db, granted: Boolean, snack: SnackHost, go: (Screen) -> Unit) {
                         onAccept = {
                             when {
                                 // Lançar previsto (P5): no form, the previsto's budget, tags and name with the recado's values.
-                                // In the snack's scope: leaving the Pauta while it writes still shows Desfazer.
+                                // In the snack's scope: leaving Lançamentos while it writes still shows Desfazer.
                                 recognized -> if (n.id.v !in launching) {
                                     launching = launching + n.id.v
                                     snack.scope.launch {
@@ -304,7 +302,7 @@ fun Inbox(db: Db, granted: Boolean, snack: SnackHost, go: (Screen) -> Unit) {
                             }
                         },
                         onDismiss = { scope.launch { riscar(db, n.id, snack) } },
-                        modifier = Modifier.testTag(InboxTags.CARD + n.id.v).semantics(mergeDescendants = true) {},
+                        modifier = Modifier.padding(bottom = 10.dp).testTag(InboxTags.CARD + n.id.v).semantics(mergeDescendants = true) {},
                         acceptTag = (if (recognized) InboxTags.PLANNED_LAUNCH else InboxTags.ACCEPT) + n.id.v,
                         dismissTag = InboxTags.DISMISS + n.id.v, newTag = InboxTags.NEW + n.id.v,
                         planned = p, onNotIt = { notIt = notIt + n.id.v }, acceptEnabled = n.id.v !in launching,

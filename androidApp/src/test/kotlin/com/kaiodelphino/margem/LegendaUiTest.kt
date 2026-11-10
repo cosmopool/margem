@@ -105,7 +105,7 @@ class LegendaUiTest {
 
     /** Waits for [tag], scrolling the lazy lists to it: on Robolectric's small screen, items below the fold aren't composed. */
     private fun waitFor(tag: String) = compose.waitUntil(5_000) {
-        for (list in listOf(InboxTags.LIST, InboxTags.REFUND_LIST, TransactionTags.LIST, SettingsTags.DISMISSED_LIST)) {
+        for (list in listOf(InboxTags.REFUND_LIST, TransactionTags.LIST, SettingsTags.DISMISSED_LIST)) {
             if (count(tag) == 0 && count(list) > 0) runCatching { compose.onNodeWithTag(list).performScrollToNode(hasTestTag(tag)) }
         }
         count(tag) > 0

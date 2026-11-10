@@ -91,12 +91,14 @@ class RecadoUiTest {
     private fun count(tag: String) = compose.onAllNodes(hasTestTag(tag)).fetchSemanticsNodes().size
     /** Waits for [tag], scrolling the lazy lists to it: on Robolectric's small screen, items below the fold aren't composed. */
     private fun waitFor(tag: String) = compose.waitUntil(5_000) {
-        for (list in listOf(InboxTags.LIST, InboxTags.REFUND_LIST, TransactionTags.LIST)) {
+        for (list in listOf(InboxTags.REFUND_LIST, TransactionTags.LIST)) {
             if (count(tag) == 0 && count(list) > 0) runCatching { compose.onNodeWithTag(list).performScrollToNode(hasTestTag(tag)) }
         }
         count(tag) > 0
     }
     private fun waitGone(tag: String) = compose.waitUntil(5_000) { count(tag) == 0 }
+    /** Back on Lançamentos with nothing pending: the Pauta has no section (spec §7.4). */
+    private fun waitPautaClean() = compose.waitUntil(5_000) { count(TransactionTags.LIST) > 0 && count(InboxTags.SECTION) == 0 }
     private fun click(tag: String) {
         waitFor(tag)
         // Bottom bars and dialogs don't scroll; everything else may be below the fold.
@@ -160,7 +162,7 @@ class RecadoUiTest {
 
         waitFor(SnackTags.TEXT)
         compose.onNodeWithTag(SnackTags.TEXT).assertTextContains("Lançado em Lazer. Margem: ${money(Cents(34500))}.")
-        waitFor(InboxTags.EMPTY)
+        waitPautaClean()
         val row = runBlocking { db.transactions(OCT_9) }.single()
         assertEquals(listOf("móveis") to 10, row.tags to row.installments)
         assertEquals(Cents(34500), runBlocking { db.budgetDetail(lazer, OCT, OCT_9) }.month.remaining)
@@ -176,6 +178,28 @@ class RecadoUiTest {
     private fun openTransactions() {
         compose.onNode(hasText("Lançamentos") and hasClickAction()).performClick()
         waitFor(TransactionTags.NEW)
+    }
+
+    @Test
+    fun `the pauta is the first section of lancamentos, above a caminho`() {
+        val a = post("Compra aprovada: R$ 23,90 em PADARIA DO ZE", at(7, 0))
+        val b = post("Compra aprovada: R$ 12,00 em BANCA CENTRAL", at(8, 0))
+        open()
+        openTransactions()
+        waitFor(InboxTags.SECTION)
+        compose.onNodeWithTag(InboxTags.SECTION).assertTextContains("Pauta", substring = true, ignoreCase = true)
+            .assertTextContains("2 recados", substring = true, ignoreCase = true)
+        // Order in the lazy list by item key (only the paused notice may come before the Pauta).
+        val index = compose.onNodeWithTag(TransactionTags.LIST).fetchSemanticsNode().config[SemanticsProperties.IndexForKey]
+        assertTrue("a Pauta abre a lista", index("pauta") <= 1 && (index("pauta") == 0 || index("pauta-paused") == 0))
+        assertTrue("Pauta acima de A caminho", index("notice-${a.v}") < index("onTheWay"))
+
+        click(InboxTags.DISMISS + b.v)
+        waitGone(InboxTags.CARD + b.v)
+        compose.onNodeWithTag(InboxTags.SECTION).assertTextContains("1 recado", substring = true, ignoreCase = true)
+        click(InboxTags.DISMISS + a.v)
+        waitPautaClean()
+        compose.onNodeWithTag(TransactionTags.ON_THE_WAY).assertExists()
     }
 
     @Test
@@ -196,7 +220,7 @@ class RecadoUiTest {
         click(TransactionTags.TAG + "café") // the first touch takes it off (spec §2.5)
         waitGone(TransactionTags.TAG + "café")
         click(TransactionTags.FORM_SUBMIT)
-        waitFor(InboxTags.EMPTY)
+        waitPautaClean()
         assertEquals(listOf("padaria"), runBlocking { db.transactions() }.first { it.notice == second }.tags)
     }
 
@@ -220,7 +244,7 @@ class RecadoUiTest {
         pickTag("bar")
         // Book 10.3: Lazer margem 465,00 → 419,00.
         click(TransactionTags.FORM_SUBMIT)
-        waitFor(InboxTags.EMPTY)
+        waitPautaClean()
 
         val row = runBlocking { db.transactions() }.single()
         assertEquals(Triple("Bar do Ponto", Cents(4600), true), Triple(row.name, row.total, row.corrected))
